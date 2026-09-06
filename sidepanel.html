@@ -8,6 +8,9 @@
   <body>
     <main>
       <header><h1>PIXEL JUKEBOX</h1><p>YOUTUBE MUSIC PLAYER</p></header>
+      <label for="tab-select">YOUTUBE TAB</label>
+      <select id="tab-select" aria-label="제어할 YouTube 탭" disabled><option>연결 대기</option></select>
+      <section id="player" class="pixel-panel" aria-label="YouTube Player"></section>
       <section class="pixel-panel" aria-labelledby="connection-title">
         <h2 id="connection-title">YOUTUBE CONNECTION</h2>
         <p id="connection-status" role="status" aria-live="polite">연결 확인 중…</p>

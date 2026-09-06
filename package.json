@@ -13,7 +13,9 @@
     "check:manifest": "node scripts/check-manifest.mjs",
     "chrome:start": "node scripts/start-chrome.mjs",
     "chrome:stop": "node scripts/stop-chrome.mjs",
-    "test:chrome": "node scripts/test-chrome-phase0.mjs"
+    "test:chrome": "node scripts/test-chrome-phase1.mjs",
+    "test:chrome:phase0": "node scripts/test-chrome-phase0.mjs",
+    "chrome:inspect-youtube": "node scripts/inspect-youtube.mjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.1.0",

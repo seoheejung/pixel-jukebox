@@ -8,7 +8,7 @@ Pixel Jukebox는 Chrome Desktop 환경에서 YouTube 음악 감상 경험을 확
 
 기본 Player는 AI 없이 동작하며, 사용자가 `AI PICKS`를 활성화한 경우에만 자신의 OpenAI API Key를 이용해 현재 Track과 Playlist 문맥을 기준으로 비슷한 음악을 탐색합니다.
 
-현재 저장소는 **Phase 0 기반 구성과 자동·실제 Chrome 검증이 완료된 상태**이며, 실제 기능은 Phase 단위로 구현·검증합니다.
+현재 저장소는 **Phase 1 YouTube Player와 자동·실제 Chrome 검증이 완료된 상태**이며, 실제 기능은 Phase 단위로 구현·검증합니다.
 
 ## 주요 기능
 
@@ -131,7 +131,7 @@ Selection은 Candidate ID만 선택하며 Artist와 Track을 새로 생성하지
 | Phase | 범위 | 상태 |
 |---|---|---|
 | Phase 0 | Extension 기반 구성 | 구현·자동/Chrome 검증 완료 |
-| Phase 1 | YouTube Player | 예정 |
+| Phase 1 | YouTube Player | 구현·자동/Chrome 검증 완료 |
 | Phase 2 | Playlist · Design · Export · PiP | 예정 |
 | Phase 3 | OpenAI 연결 | 예정 |
 | Phase 4 | AI Recommendation | 예정 |
@@ -223,3 +223,5 @@ npm run test:chrome
 ```
 
 `chrome:start`는 테스트 중 실행 상태를 유지합니다. 현재 실행 환경에서는 Chrome 시작 시 샌드박스 밖 실행이 필요했습니다. 테스트 프로필은 `.chrome-test/`에 저장됩니다. [Phase 0 실제 결과](docs/results/phase0-extension-foundation.md)를 참고하세요.
+
+`npm run test:chrome`은 현재 Phase의 브라우저 검증을 실행합니다. [Phase 1 실제 결과와 YouTube DOM 관찰](docs/results/phase1-youtube-player.md)에 검증 범위를 기록했습니다.

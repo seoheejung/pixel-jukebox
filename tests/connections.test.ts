@@ -91,3 +91,35 @@ describe('status payload boundary', () => {
     expect(isConnectionStatus({ type: MESSAGE.status, connectedTabs: 2 })).toBe(true);
   });
 });
+
+describe('Phase 1 tab player routing', () => {
+  const snapshot = (videoId: string) => ({
+    track: { videoId, videoTitle: 'Track', channelTitle: 'Channel', thumbnail: '', videoUrl: `https://www.youtube.com/watch?v=${videoId}`, playbackState: 'paused' },
+    previous: false, next: true, error: false,
+  });
+
+  it('keeps two tracks separate and sends controls only to the selected tab', () => {
+    const connect = createConnections(panelUrl);
+    const first = fakePort(PORT.content, youtubeSender(1));
+    const second = fakePort(PORT.content, youtubeSender(2));
+    const panel = fakePort(PORT.panel, { url: panelUrl });
+    [first, second, panel].forEach(({ port }) => connect(port));
+    [first, second].forEach((port) => port.receive({ type: MESSAGE.ready }));
+    first.receive({ type: MESSAGE.track, snapshot: snapshot('dQw4w9WgXcQ'), tabId: 2 });
+    second.receive({ type: MESSAGE.track, snapshot: snapshot('4Ygvv_Ae3dg') });
+    expect(panel.postMessage).toHaveBeenCalledWith({ type: MESSAGE.playerState, tabs: [
+      { tabId: 1, active: false, snapshot: snapshot('dQw4w9WgXcQ') },
+      { tabId: 2, active: false, snapshot: snapshot('4Ygvv_Ae3dg') },
+    ] });
+    first.postMessage.mockClear();
+    second.postMessage.mockClear();
+    const command = { type: MESSAGE.control, tabId: 2, videoId: '4Ygvv_Ae3dg', action: 'toggle' };
+    panel.receive(command);
+    expect(second.postMessage).toHaveBeenCalledExactlyOnceWith(command);
+    expect(first.postMessage).not.toHaveBeenCalled();
+    panel.receive({ ...command, videoId: 'dQw4w9WgXcQ' });
+    expect(second.postMessage).toHaveBeenCalledTimes(1);
+    first.receive(command);
+    expect(second.postMessage).toHaveBeenCalledTimes(1);
+  });
+});
