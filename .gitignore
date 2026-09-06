@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+.chrome-test/
+.env
+.env.*
+*.pem
+*.key
+id_rsa*
+*.log

@@ -1,0 +1,45 @@
+:root {
+  color-scheme: light;
+  --color-bg: #fff4d8;
+  --color-surface: #fff9ea;
+  --color-ink: #28172f;
+  --color-violet: #7437ff;
+  --color-orange: #ff6a3d;
+  --color-green: #34c878;
+  --color-danger: #d94b4b;
+  --space: 4px;
+  font-family: 'Courier New', 'Noto Sans KR', monospace;
+  color: var(--color-ink);
+  background: var(--color-bg);
+  font-size: 12px;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 480px; margin: 0 auto; padding: calc(var(--space) * 4); }
+header { margin-bottom: calc(var(--space) * 6); }
+h1 { font-size: 20px; margin: 0 0 8px; }
+h2 { font-size: 14px; margin: 0 0 12px; }
+p { line-height: 1.6; overflow-wrap: anywhere; }
+.pixel-panel {
+  padding: 12px;
+  border: 2px solid var(--color-ink);
+  background: var(--color-surface);
+  box-shadow: 4px 4px 0 var(--color-ink);
+}
+button {
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 2px solid var(--color-ink);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 2px 2px 0 var(--color-ink);
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: var(--color-orange); }
+button:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: none; }
+button:disabled { opacity: 0.5; cursor: default; }
+:focus-visible { outline: 4px solid var(--color-violet); outline-offset: 4px; }

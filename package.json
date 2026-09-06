@@ -1,0 +1,25 @@
+{
+  "name": "pixel-jukebox",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@11.17.0",
+  "engines": { "node": ">=22.12.0" },
+  "scripts": {
+    "build": "vite build && vite build --config vite.content.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check:manifest": "node scripts/check-manifest.mjs",
+    "chrome:start": "node scripts/start-chrome.mjs",
+    "chrome:stop": "node scripts/stop-chrome.mjs",
+    "test:chrome": "node scripts/test-chrome-phase0.mjs"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.0",
+    "@types/node": "^24.0.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.1.0",
+    "vitest": "^4.0.0"
+  }
+}

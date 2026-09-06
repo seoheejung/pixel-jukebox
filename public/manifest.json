@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "minimum_chrome_version": "140",
+  "name": "Pixel Jukebox",
+  "description": "Chrome Music Discovery Extension — YouTube Side Panel",
+  "version": "0.0.0",
+  "permissions": ["sidePanel"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_title": "Pixel Jukebox 열기" },
+  "side_panel": { "default_path": "sidepanel.html" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

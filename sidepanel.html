@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pixel Jukebox</title>
+  </head>
+  <body>
+    <main>
+      <header><h1>PIXEL JUKEBOX</h1><p>YOUTUBE MUSIC PLAYER</p></header>
+      <section class="pixel-panel" aria-labelledby="connection-title">
+        <h2 id="connection-title">YOUTUBE CONNECTION</h2>
+        <p id="connection-status" role="status" aria-live="polite">연결 확인 중…</p>
+        <p>YouTube 탭을 열어 연결 상태를 확인하세요.</p>
+        <button id="recheck" type="button" disabled>연결 다시 확인</button>
+      </section>
+    </main>
+    <script type="module" src="/src/sidepanel/index.ts"></script>
+  </body>
+</html>
