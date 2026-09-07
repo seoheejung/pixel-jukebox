@@ -1,4 +1,6 @@
 import type { PlayerAction, PlayerSnapshot } from '../shared/track';
+import { defaultSettings } from '../shared/settings';
+import type { DesignSettings } from '../shared/settings';
 
 export function createPlayer(root: HTMLElement, onCommand: (action: PlayerAction) => void) {
   root.innerHTML = `
@@ -24,10 +26,13 @@ export function createPlayer(root: HTMLElement, onCommand: (action: PlayerAction
   artwork.addEventListener('error', () => { artwork.hidden = true; });
   let imageUrl = '';
   return {
-    render(snapshot: PlayerSnapshot) {
+    render(snapshot: PlayerSnapshot, settings: DesignSettings = defaultSettings, playlistNavigation = { previous: false, next: false }) {
       const track = snapshot.track;
       const playing = track?.playbackState === 'playing';
       disc.dataset.playing = String(playing);
+      disc.dataset.style = settings.discStyle;
+      artwork.hidden = !settings.artwork || !track?.thumbnail;
+      disc.style.setProperty('--disc-accent', settings.accent);
       root.dataset.videoId = track?.videoId ?? '';
       title.textContent = track?.videoTitle ?? 'YouTube에서 음악을 재생해주세요.';
       channel.textContent = track ? `채널 · ${track.channelTitle}` : '';
@@ -40,8 +45,8 @@ export function createPlayer(root: HTMLElement, onCommand: (action: PlayerAction
         if (imageUrl) artwork.src = imageUrl;
         else artwork.removeAttribute('src');
       }
-      buttons.previous.disabled = !track || !snapshot.previous;
-      buttons.next.disabled = !track || !snapshot.next;
+      buttons.previous.disabled = !track || (!snapshot.previous && !playlistNavigation.previous);
+      buttons.next.disabled = !track || (!snapshot.next && !playlistNavigation.next);
       buttons.toggle.disabled = !track;
       buttons.toggle.setAttribute('aria-label', playing || track?.playbackState === 'buffering' ? '일시정지' : '재생');
       buttons.toggle.dataset.playing = String(playing || track?.playbackState === 'buffering');

@@ -1,5 +1,5 @@
-import { hasType, isPlayerCommand, MESSAGE, PORT } from '../shared/messages';
-import { controlYouTube, observeYouTube } from './youtube';
+import { hasType, isPlayerCommand, isRestart, MESSAGE, PORT } from '../shared/messages';
+import { controlYouTube, observeYouTube, restartYouTube } from './youtube';
 
 function connect() {
   try {
@@ -17,6 +17,8 @@ function connect() {
       } else if (isPlayerCommand(message)) {
         void controlYouTube(document, location.href, message.videoId, message.action)
           .then(observer.publish).catch(observer.error);
+      } else if (isRestart(message)) {
+        void restartYouTube(document, location.href, message.videoId).then(observer.publish).catch(observer.error);
       }
     });
     port.onDisconnect.addListener(() => {

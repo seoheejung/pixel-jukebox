@@ -39,8 +39,8 @@ try {
   assert.equal(await evaluate(browser, panel, "document.querySelector('#recheck').disabled"), false);
   console.log('PASS: actual Side Panel, YouTube Content Script and runtime connection probe');
   const permissions = await evaluate(browser, panel, 'chrome.permissions.getAll()');
-  assert.deepEqual(permissions.permissions, ['sidePanel']);
-  console.log('PASS: required permissions contain only sidePanel');
+  assert.deepEqual(permissions.permissions, ['sidePanel', 'storage']);
+  console.log('PASS: required permissions contain sidePanel and storage');
   mkdirSync('.chrome-test', { recursive: true });
   try {
     const { data } = await browser.send('Page.captureScreenshot', {}, panel);

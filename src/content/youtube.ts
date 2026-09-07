@@ -104,3 +104,11 @@ export function observeYouTube(document: Document, window: Window, onChange: (sn
     },
   };
 }
+
+export async function restartYouTube(document: Document, href: string, videoId: string) {
+  if (videoIdFromUrl(href) !== videoId) throw new Error('STALE_TRACK');
+  const video = document.querySelector<HTMLVideoElement>(SELECTOR.video);
+  if (!video) throw new Error('NO_VIDEO');
+  video.currentTime = 0;
+  await video.play();
+}

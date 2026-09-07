@@ -63,6 +63,6 @@ export async function evaluate(browser, sessionId, expression, options = {}) {
   const response = await browser.send('Runtime.evaluate', {
     expression, awaitPromise: true, returnByValue: true, ...options,
   }, sessionId);
-  if (response.exceptionDetails) throw new Error('Chrome evaluation failed (exception details omitted)');
+  if (response.exceptionDetails) throw new Error(`Chrome evaluation failed: ${response.exceptionDetails.exception?.className ?? 'exception'} at line ${response.exceptionDetails.lineNumber} (values omitted)`);
   return response.result.value;
 }

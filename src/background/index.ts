@@ -1,6 +1,20 @@
 import { createConnections } from './connections';
+import { createCoreStore } from './core-store';
 
-chrome.runtime.onConnect.addListener(createConnections(chrome.runtime.getURL('sidepanel.html')));
+const store = createCoreStore({
+  get: (keys) => chrome.storage.local.get(keys),
+  set: (values) => chrome.storage.local.set(values),
+});
+const connections = createConnections(chrome.runtime.getURL('sidepanel.html'), {
+  store,
+  async navigate(tabId, videoId) {
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
+    if (tabId === null) await chrome.tabs.create({ url });
+    else await chrome.tabs.update(tabId, { url });
+  },
+});
+chrome.runtime.onConnect.addListener(connections);
+chrome.tabs.onRemoved.addListener(connections.removeTab);
 
 chrome.action.onClicked.addListener((tab) => {
   if (tab.windowId === undefined) return;

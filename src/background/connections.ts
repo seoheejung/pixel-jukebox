@@ -1,11 +1,21 @@
-import { hasType, isPlayerCommand, isTrackUpdate, isYouTubeSender, MESSAGE, PORT } from '../shared/messages';
+import { hasType, isCoreEdit, isPlayerCommand, isPlaylistPlay, isTrackUpdate, isYouTubeSender, MESSAGE, PORT } from '../shared/messages';
+import type { CoreChange, CORE_ERRORS, PlayerCommand } from '../shared/messages';
+import { addTrack, adjacentTrack, moveTrack, playlistTrack, removeTrack } from '../shared/playlist';
+import type { CoreState } from '../shared/storage';
 import { emptySnapshot } from '../shared/track';
 import type { TabPlayer } from '../shared/track';
+import type { CoreStore } from './core-store';
 
-export function createConnections(panelUrl: string) {
+interface CoreServices {
+  store: CoreStore;
+  navigate(tabId: number | null, videoId: string): Promise<void>;
+}
+
+export function createConnections(panelUrl: string, core?: CoreServices) {
   const contents = new Map<number, chrome.runtime.Port>();
   const panels = new Set<chrome.runtime.Port>();
   const states = new Map<number, TabPlayer>();
+  const navigating = new Map<number, { videoId: string; timer: ReturnType<typeof setTimeout> }>();
 
   function send(port: chrome.runtime.Port, message: object) {
     try {
@@ -26,7 +36,74 @@ export function createConnections(panelUrl: string) {
     }
   }
 
-  return function connect(port: chrome.runtime.Port) {
+  function coreError(code: keyof typeof CORE_ERRORS, port?: chrome.runtime.Port) {
+    for (const panel of port ? [port] : panels) send(panel, { type: MESSAGE.coreError, code });
+  }
+
+  function sendCore(state: CoreState, port?: chrome.runtime.Port) {
+    for (const panel of port ? [port] : panels) send(panel, { type: MESSAGE.coreState, state });
+  }
+
+  function loadCore(port: chrome.runtime.Port) {
+    if (core) void core.store.get().then((state) => sendCore(state, port)).catch(() => coreError('LOAD_FAILED', port));
+  }
+
+  async function navigate(tabId: number | null, videoId: string) {
+    if (!core || (tabId !== null && navigating.has(tabId))) return;
+    const previous = tabId === null ? undefined : states.get(tabId);
+    if (tabId !== null && previous?.snapshot.track?.videoId === videoId && contents.has(tabId)) {
+      send(contents.get(tabId)!, { type: MESSAGE.restart, videoId });
+      return;
+    }
+    if (tabId !== null) {
+      const timer = setTimeout(() => {
+        navigating.delete(tabId);
+        coreError('NAVIGATION_FAILED');
+      }, 20000);
+      navigating.set(tabId, { videoId, timer });
+      if (previous) states.set(tabId, { ...previous, snapshot: emptySnapshot() });
+      broadcast();
+    }
+    try { await core.navigate(tabId, videoId); }
+    catch {
+      if (tabId !== null) {
+        clearTimeout(navigating.get(tabId)?.timer);
+        navigating.delete(tabId);
+        if (previous) states.set(tabId, previous);
+        broadcast();
+      }
+      coreError('NAVIGATION_FAILED');
+    }
+  }
+
+  function editCore(change: CoreChange, port: chrome.runtime.Port) {
+    if (!core) return;
+    const track = change.kind === 'add' ? states.get(change.tabId)?.snapshot.track : null;
+    if (change.kind === 'add' && (!track || track.videoId !== change.videoId)) { coreError('TRACK_CHANGED', port); return; }
+    void core.store.update((state) => {
+      switch (change.kind) {
+        case 'add': return { ...state, playlist: addTrack(state.playlist, playlistTrack(track!)) };
+        case 'remove': return { ...state, playlist: removeTrack(state.playlist, change.videoId) };
+        case 'move': return { ...state, playlist: moveTrack(state.playlist, change.videoId, change.beforeId) };
+        case 'design': return { ...state, settings: change.settings };
+      }
+    }).then((state) => sendCore(state)).catch((error: unknown) => {
+      coreError(error instanceof Error && error.message === 'INVALID_SETTINGS' ? 'INVALID_SETTINGS' : 'SAVE_FAILED', port);
+    });
+  }
+
+  async function control(message: PlayerCommand) {
+    const content = contents.get(message.tabId);
+    if (!content || states.get(message.tabId)?.snapshot.track?.videoId !== message.videoId) { broadcast(); return; }
+    if (core && message.action !== 'toggle') {
+      const { playlist } = await core.store.get();
+      const next = adjacentTrack(playlist, message.videoId, message.action === 'next' ? 1 : -1);
+      if (next) { await navigate(message.tabId, next.videoId); return; }
+    }
+    if (states.get(message.tabId)?.snapshot.track?.videoId === message.videoId) send(content, message);
+  }
+
+  function connect(port: chrome.runtime.Port) {
     if (port.name === PORT.content && isYouTubeSender(port.sender)) {
       const tabId = port.sender!.tab!.id!;
       port.onMessage.addListener((message: unknown) => {
@@ -36,34 +113,67 @@ export function createConnections(panelUrl: string) {
           send(port, { type: MESSAGE.ack });
           broadcast();
         } else if (isTrackUpdate(message) && contents.get(tabId) === port) {
+          const pending = navigating.get(tabId);
+          if (pending && message.snapshot.track?.videoId !== pending.videoId) return;
+          if (pending) { clearTimeout(pending.timer); navigating.delete(tabId); }
+          const previous = states.get(tabId)?.snapshot.track;
           states.set(tabId, { tabId, active: Boolean(port.sender?.tab?.active), snapshot: message.snapshot });
           broadcast();
+          const track = message.snapshot.track;
+          if (core && track?.playbackState === 'ended' && (previous?.videoId !== track.videoId || previous.playbackState !== 'ended')) {
+            void core.store.get().then(async ({ playlist }) => {
+              if (playlist.some((item) => item.videoId === track.videoId)) {
+                const next = adjacentTrack(playlist, track.videoId, 1);
+                if (next) await navigate(tabId, next.videoId);
+              }
+            }).catch(() => coreError('LOAD_FAILED'));
+          }
         }
       });
       port.onDisconnect.addListener(() => {
-        if (contents.get(tabId) === port) { contents.delete(tabId); states.delete(tabId); }
+        if (contents.get(tabId) === port) {
+          contents.delete(tabId);
+          if (!navigating.has(tabId)) states.delete(tabId);
+        }
         broadcast();
       });
       return;
     }
 
-    if (port.name === PORT.panel && port.sender?.url === panelUrl && !port.sender.tab) {
+    if (port.name === PORT.panel && port.sender?.url === panelUrl) {
       panels.add(port);
       port.onMessage.addListener((message: unknown) => {
         if (hasType(message, MESSAGE.probe)) {
           for (const content of contents.values()) send(content, { type: MESSAGE.probe });
           broadcast();
+          loadCore(port);
         } else if (isPlayerCommand(message)) {
-          const content = contents.get(message.tabId);
-          if (content && states.get(message.tabId)?.snapshot.track?.videoId === message.videoId) send(content, message);
-          else broadcast();
+          void control(message).catch(() => coreError('LOAD_FAILED', port));
+        } else if (isCoreEdit(message)) {
+          editCore(message.change, port);
+        } else if (isPlaylistPlay(message) && core) {
+          if (message.tabId !== null && !states.has(message.tabId)) { coreError('NAVIGATION_FAILED', port); return; }
+          void core.store.get().then(async ({ playlist }) => {
+            if (playlist.some((track) => track.videoId === message.videoId)) await navigate(message.tabId, message.videoId);
+          }).catch(() => coreError('LOAD_FAILED', port));
         }
       });
       port.onDisconnect.addListener(() => panels.delete(port));
       broadcast();
+      loadCore(port);
       return;
     }
 
     port.disconnect();
-  };
+  }
+
+  return Object.assign(connect, {
+    removeTab(tabId: number) {
+      clearTimeout(navigating.get(tabId)?.timer);
+      navigating.delete(tabId);
+      contents.delete(tabId);
+      states.delete(tabId);
+      broadcast();
+    },
+  });
 }

@@ -591,11 +591,11 @@ AI 없이 사용할 수 있는 Core Player 기능 완성.
 
 ### 완료 기준
 
-- [ ] 여러 Track Playlist 관리 및 반복 재생
-- [ ] Chrome 재실행 후 Playlist·Design 복구
-- [ ] PNG / GIF 생성
-- [ ] Side Panel에서 Document PiP 실제 실행
-- [ ] PiP Controller 동작 및 오류 격리
+- [x] 여러 Track Playlist 관리 및 반복 재생
+- [x] Chrome 재실행 후 Playlist·Design 복구
+- [x] PNG / GIF 생성
+- [x] Side Panel에서 Document PiP 실제 실행
+- [x] PiP Controller 동작 및 오류 격리
 
 ---
 
