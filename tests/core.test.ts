@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addTrack, adjacentTrack, moveTrack, removeTrack } from '../src/shared/playlist';
+import { addTrack, adjacentTrack, moveTrack, removeTrack, updateTrack } from '../src/shared/playlist';
 import { contrast, defaultSettings, isDesignSettings, readableSettings } from '../src/shared/settings';
 import { createCoreStore } from '../src/background/core-store';
 import { STORAGE } from '../src/shared/storage';
@@ -26,14 +26,21 @@ describe('Phase 2 playlist operations', () => {
     expect(adjacentTrack(playlist, 'dQw4w9WgXcQ', -1)?.videoId).toBe('4Ygvv_Ae3dg');
     expect(adjacentTrack(playlist, '4Ygvv_Ae3dg', 1)?.videoId).toBe('dQw4w9WgXcQ');
   });
+
+  it('updates metadata without changing playlist order', () => {
+    const first = track('dQw4w9WgXcQ');
+    const second = track('4Ygvv_Ae3dg');
+    const updated = { ...first, videoTitle: 'Updated title', channelTitle: 'Updated channel' };
+    expect(updateTrack([first, second], updated)).toEqual([updated, second]);
+  });
 });
 
 describe('Phase 2 design and storage', () => {
   it('accepts readable settings and rejects insufficient text contrast', () => {
     expect(isDesignSettings(defaultSettings)).toBe(true);
     expect(readableSettings(defaultSettings)).toBe(true);
-    const unreadable = { ...defaultSettings, text: '#fff4d8' };
-    expect(contrast(unreadable.text, unreadable.background)).toBe(1);
+    const unreadable = { ...defaultSettings, background: '#28172f' };
+    expect(contrast('#28172f', unreadable.background)).toBeLessThan(4.5);
     expect(readableSettings(unreadable)).toBe(false);
   });
 

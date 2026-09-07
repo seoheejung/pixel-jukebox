@@ -1,4 +1,4 @@
-import { defaultSettings } from '../shared/settings';
+import { defaultSettings, isDesignSettings } from '../shared/settings';
 import { isCoreState, STORAGE } from '../shared/storage';
 import type { CoreState, StorageArea } from '../shared/storage';
 
@@ -11,7 +11,11 @@ export function createCoreStore(area: StorageArea) {
     if (state) return state;
     if (!loading) {
       loading = area.get([STORAGE.playlist, STORAGE.settings]).then((stored) => {
-        const next = { playlist: stored[STORAGE.playlist] ?? [], settings: stored[STORAGE.settings] ?? defaultSettings };
+        const storedSettings = stored[STORAGE.settings];
+        const settings = isDesignSettings(storedSettings)
+          ? { discStyle: storedSettings.discStyle, background: storedSettings.background, accent: storedSettings.accent }
+          : defaultSettings;
+        const next = { playlist: stored[STORAGE.playlist] ?? [], settings };
         if (!isCoreState(next)) throw new Error('INVALID_STORAGE');
         state = structuredClone(next);
         return state;

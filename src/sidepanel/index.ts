@@ -1,14 +1,14 @@
-import { isCoreError, isCoreStateMessage, isPlayerState, MESSAGE, MESSAGE_AI, PORT } from '../shared/messages';
+import { isCoreStateMessage, MESSAGE, MESSAGE_AI, PORT } from '../shared/messages';
 import { isAiRecommendationErrorMessage, isAiRecommendationsMessage, isAiStateMessage, OPENAI_API_KEY, OPENAI_ORIGIN } from '../shared/ai';
-import type { Recommendation } from '../shared/recommendation';
-import { youtubeSearchUrl } from '../shared/recommendation';
 import type { AiState } from '../shared/ai';
+import { recommendationTrack } from '../shared/recommendation';
+import type { Recommendation } from '../shared/recommendation';
+import { adjacentTrack, playlistTrack } from '../shared/playlist';
 import { applyDesign, defaultSettings, isDesignSettings } from '../shared/settings';
 import type { DesignSettings } from '../shared/settings';
-import { emptySnapshot, videoIdFromUrl } from '../shared/track';
+import { emptySnapshot, trackFromVideoId, videoIdFromUrl } from '../shared/track';
+import type { PlayerAction, PlayerSnapshot, Track } from '../shared/track';
 import type { CoreState } from '../shared/storage';
-import type { TabPlayer } from '../shared/track';
-import { canvasBlob, downloadBlob, exportGif, renderPlayerCanvas } from './export';
 import { openPip } from './pip';
 import { createPlayer } from './player';
 import './style.css';
@@ -16,27 +16,15 @@ import './style.css';
 const videoUrl = document.querySelector<HTMLInputElement>('#video-url')!;
 const addVideo = document.querySelector<HTMLButtonElement>('#add-video')!;
 const videoMessage = document.querySelector<HTMLParagraphElement>('#video-message')!;
-const selector = document.querySelector<HTMLSelectElement>('#tab-select')!;
 const playlistList = document.querySelector<HTMLDivElement>('#playlist-list')!;
 const playlistEmpty = document.querySelector<HTMLParagraphElement>('#playlist-empty')!;
-const exportStatus = document.querySelector<HTMLParagraphElement>('#export-status')!;
-const exportPngButton = document.querySelector<HTMLButtonElement>('#export-png')!;
-const exportGifButton = document.querySelector<HTMLButtonElement>('#export-gif')!;
 const openPipButton = document.querySelector<HTMLButtonElement>('#open-pip')!;
 const discStyle = document.querySelector<HTMLSelectElement>('#disc-style')!;
-const artwork = document.querySelector<HTMLInputElement>('#artwork')!;
 const background = document.querySelector<HTMLInputElement>('#background')!;
-const panelColor = document.querySelector<HTMLInputElement>('#panel-color')!;
 const accent = document.querySelector<HTMLInputElement>('#accent')!;
-const textColor = document.querySelector<HTMLInputElement>('#text-color')!;
-const resetDesign = document.querySelector<HTMLButtonElement>('#reset-design')!;
-const aiStatus = document.querySelector<HTMLParagraphElement>('#ai-status')!;
+const saveDesign = document.querySelector<HTMLButtonElement>('#save-design')!;
 const aiKey = document.querySelector<HTMLInputElement>('#ai-key')!;
-const aiPersist = document.querySelector<HTMLInputElement>('#ai-persist')!;
-const aiEnable = document.querySelector<HTMLButtonElement>('#ai-enable')!;
-const aiSave = document.querySelector<HTMLButtonElement>('#ai-save')!;
-const aiRemove = document.querySelector<HTMLButtonElement>('#ai-remove')!;
-const aiTest = document.querySelector<HTMLButtonElement>('#ai-test')!;
+const aiConnect = document.querySelector<HTMLButtonElement>('#ai-connect')!;
 const aiMessage = document.querySelector<HTMLParagraphElement>('#ai-message')!;
 const aiPicks = document.querySelector<HTMLButtonElement>('#ai-picks')!;
 const aiPicksMessage = document.querySelector<HTMLParagraphElement>('#ai-picks-message')!;
@@ -44,52 +32,32 @@ const aiPicksList = document.querySelector<HTMLDivElement>('#ai-picks-list')!;
 const aiSettings = document.querySelector<HTMLDetailsElement>('.ai-settings')!;
 
 let currentPort: chrome.runtime.Port | undefined;
-let tabs: TabPlayer[] = [];
-let selected: number | undefined;
+let snapshot: PlayerSnapshot = emptySnapshot();
 let coreState: CoreState = { playlist: [], settings: { ...defaultSettings } };
+let draftSettings: DesignSettings = { ...defaultSettings };
 let aiState: AiState = { configured: false, persisted: false, permission: false, trustedContexts: false };
 let hasRecommendations = false;
-let pendingVideoId: string | undefined;
-let pip: { update(snapshot: TabPlayer['snapshot'], settings: DesignSettings): void; close(): void } | undefined;
-
-function currentTab() { return tabs.find((tab) => tab.tabId === selected); }
+let pendingRecommendations = false;
+let bridgeMetadataTrack: Track | undefined;
+let pip: { update(snapshot: PlayerSnapshot, settings: DesignSettings): void; close(): void } | undefined;
 
 function send(message: object) {
-  try { currentPort?.postMessage(message); }
-  catch { videoMessage.textContent = 'CONNECTION LOST.'; }
+  try { currentPort?.postMessage(message); } catch { videoMessage.textContent = 'CONNECTION LOST.'; }
 }
 
-function renderAi() {
-  aiStatus.textContent = !aiState.permission ? 'OPENAI PERMISSION NOT GRANTED' : aiState.configured ? (aiState.persisted ? 'CONFIGURED · PERSISTENT' : 'CONFIGURED · SESSION ONLY') : 'NOT CONFIGURED';
-  aiEnable.textContent = aiState.permission ? 'OPENAI ENABLED' : 'ENABLE OPENAI';
-  aiEnable.disabled = aiState.permission;
-  aiSave.disabled = !aiState.permission || !aiKey.value.trim();
-  aiRemove.disabled = !aiState.configured;
-  aiTest.disabled = !aiState.configured || !aiState.permission;
-  aiPicks.textContent = hasRecommendations ? 'REFRESH PICKS' : 'AI PICKS';
-  aiPicks.disabled = false;
+function playlistTrackFor(track: Track) {
+  return playlistTrack(track);
 }
 
-function renderRecommendations(recommendations: Recommendation[]) {
-  aiPicksList.replaceChildren(...recommendations.map((recommendation, index) => {
-    const card = document.createElement('article');
-    card.className = 'ai-pick-card';
-    const title = document.createElement('h3');
-    title.textContent = `${String(index + 1).padStart(2, '0')} · ${recommendation.title}`;
-    const artist = document.createElement('p');
-    artist.textContent = recommendation.artist;
-    const reason = document.createElement('p');
-    reason.textContent = recommendation.reason;
-    const tags = document.createElement('p');
-    tags.textContent = recommendation.tags.map((tag) => `[${tag}]`).join(' ');
-    const search = document.createElement('a');
-    search.href = youtubeSearchUrl(recommendation);
-    search.target = '_blank';
-    search.rel = 'noreferrer';
-    search.textContent = 'SEARCH ON YOUTUBE';
-    card.append(title, artist, reason, tags, search);
-    return card;
-  }));
+function persistBridgeMetadata() {
+  if (!bridgeMetadataTrack) return;
+  const stored = coreState.playlist.find((item) => item.videoId === bridgeMetadataTrack?.videoId);
+  if (!stored) return;
+  if (stored.videoTitle === bridgeMetadataTrack.videoTitle && stored.channelTitle === bridgeMetadataTrack.channelTitle) {
+    bridgeMetadataTrack = undefined;
+    return;
+  }
+  send({ type: MESSAGE.coreEdit, change: { kind: 'update', track: playlistTrackFor(bridgeMetadataTrack) } });
 }
 
 function renderPlaylist() {
@@ -100,7 +68,7 @@ function renderPlaylist() {
     row.draggable = true;
     row.dataset.videoId = track.videoId;
     row.setAttribute('role', 'listitem');
-    if (currentTab()?.snapshot.track?.videoId === track.videoId) row.classList.add('current');
+    if (snapshot.track?.videoId === track.videoId) row.classList.add('current');
     row.addEventListener('dragstart', (event) => {
       event.dataTransfer?.setData('text/plain', track.videoId);
       row.classList.add('dragging');
@@ -117,7 +85,7 @@ function renderPlaylist() {
     play.className = 'playlist-play';
     play.textContent = `${String(index + 1).padStart(2, '0')}  ${track.videoTitle}`;
     play.title = `Play ${track.videoTitle}`;
-    play.addEventListener('click', () => send({ type: MESSAGE.playlistPlay, tabId: selected ?? null, videoId: track.videoId }));
+    play.addEventListener('click', () => loadTrack(trackFromVideoId(track.videoId, track), true));
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'playlist-remove';
@@ -130,158 +98,181 @@ function renderPlaylist() {
 }
 
 function renderDesign(settings: DesignSettings) {
+  draftSettings = { discStyle: settings.discStyle, background: settings.background, accent: settings.accent };
   discStyle.value = settings.discStyle;
-  artwork.checked = settings.artwork;
   background.value = settings.background;
-  panelColor.value = settings.panel;
   accent.value = settings.accent;
-  textColor.value = settings.text;
   applyDesign(document, settings);
 }
 
 function renderPlayer() {
-  if (!tabs.some((tab) => tab.tabId === selected)) selected = tabs.find((tab) => tab.active && tab.snapshot.track)?.tabId ?? tabs.find((tab) => tab.snapshot.track)?.tabId ?? tabs[0]?.tabId;
-  selector.replaceChildren(...tabs.map((tab, index) => {
-    const option = document.createElement('option');
-    option.value = String(tab.tabId);
-    option.textContent = `TAB ${index + 1} · ${tab.snapshot.track?.videoTitle ?? 'No video'}`;
-    return option;
-  }));
-  if (selected !== undefined) selector.value = String(selected);
-  selector.disabled = tabs.length === 0;
-  const snapshot = currentTab()?.snapshot ?? emptySnapshot();
-  const hasTrack = Boolean(snapshot.track);
-  const inPlaylist = snapshot.track ? coreState.playlist.some((track) => track.videoId === snapshot.track?.videoId) : false;
-  player.render(snapshot, coreState.settings, { previous: inPlaylist && coreState.playlist.length > 1, next: inPlaylist && coreState.playlist.length > 1 });
-  exportPngButton.disabled = !hasTrack;
-  exportGifButton.disabled = !hasTrack;
-  openPipButton.disabled = !hasTrack;
+  const inPlaylist = Boolean(snapshot.track && coreState.playlist.some((track) => track.videoId === snapshot.track?.videoId));
+  player.render(snapshot, draftSettings, { previous: inPlaylist && coreState.playlist.length > 1, next: inPlaylist && coreState.playlist.length > 1 });
+  openPipButton.disabled = !snapshot.track;
+  aiPicks.disabled = !snapshot.track;
   renderPlaylist();
   pip?.update(snapshot, coreState.settings);
-  renderAi();
 }
 
-const player = createPlayer(document.querySelector<HTMLElement>('#player')!, (action) => {
-  const current = currentTab();
-  if (!current?.snapshot.track) return;
-  send({ type: MESSAGE.control, tabId: current.tabId, videoId: current.snapshot.track.videoId, action });
+function handlePlayerAction(action: PlayerAction) {
+  const track = snapshot.track;
+  if (!track) return;
+  if (action === 'toggle') {
+    player.command(track.playbackState === 'playing' || track.playbackState === 'buffering' ? 'pause' : 'play');
+    return;
+  }
+  const next = adjacentTrack(coreState.playlist, track.videoId, action === 'next' ? 1 : -1);
+  if (next) loadTrack(trackFromVideoId(next.videoId, next), true);
+}
+
+const player = createPlayer(document.querySelector<HTMLElement>('#player')!, handlePlayerAction, (event) => {
+  const current = snapshot.track;
+  if (!current) return;
+  if (event.type === 'metadata') {
+    if (event.videoId !== current.videoId || (event.videoTitle === current.videoTitle && event.channelTitle === current.channelTitle)) return;
+    const track = { ...current, videoTitle: event.videoTitle, channelTitle: event.channelTitle };
+    snapshot = { ...snapshot, track };
+    bridgeMetadataTrack = track;
+    renderPlayer();
+    persistBridgeMetadata();
+    return;
+  }
+  const { state } = event;
+  snapshot = { ...snapshot, error: state === 'error', track: { ...current, playbackState: state } };
+  if (state === 'ended') {
+    const next = adjacentTrack(coreState.playlist, current.videoId, 1);
+    if (next && coreState.playlist.length > 1) loadTrack(trackFromVideoId(next.videoId, next), true);
+    else renderPlayer();
+  } else renderPlayer();
 });
 
-function updateDesign() {
-  const settings = { discStyle: discStyle.value, artwork: artwork.checked, background: background.value, panel: panelColor.value, accent: accent.value, text: textColor.value };
-  if (isDesignSettings(settings)) send({ type: MESSAGE.coreEdit, change: { kind: 'design', settings } });
+function loadTrack(track: Track, autoplay: boolean, add = false) {
+  snapshot = { track: { ...track, playbackState: autoplay ? 'buffering' : 'paused' }, previous: false, next: false, error: false };
+  player.load(track, autoplay);
+  renderPlayer();
+  if (add) send({ type: MESSAGE.coreEdit, change: { kind: 'add', track: playlistTrackFor(track) } });
 }
 
-function withExportStatus(action: () => Promise<void>) {
-  exportStatus.textContent = 'RENDERING...';
-  void action().then(() => { exportStatus.textContent = 'EXPORT COMPLETE'; }).catch(() => { exportStatus.textContent = 'EXPORT FAILED'; });
+function previewDesign() {
+  const next = { discStyle: discStyle.value, background: background.value, accent: accent.value };
+  if (!isDesignSettings(next)) return;
+  draftSettings = next;
+  applyDesign(document, next);
+  player.render(snapshot, next, { previous: false, next: false });
 }
 
-selector.addEventListener('change', () => { selected = Number(selector.value); renderPlayer(); });
-function openVideoFromInput() {
-  const id = videoIdFromUrl(videoUrl.value.trim());
-  if (!id) { videoMessage.textContent = 'INVALID LINK.'; return; }
-  videoMessage.textContent = 'OPENING…';
-  pendingVideoId = id;
-  send({ type: MESSAGE.openVideo, videoId: id, tabId: selected ?? null });
-  videoUrl.value = '';
+function renderRecommendations(recommendations: Recommendation[]) {
+  aiPicksList.replaceChildren(...recommendations.map((recommendation) => {
+    const card = document.createElement('article');
+    card.className = 'ai-pick-card';
+    const image = document.createElement('img');
+    image.alt = '';
+    image.referrerPolicy = 'no-referrer';
+    image.src = recommendation.thumbnail || (recommendation.videoId ? `https://i.ytimg.com/vi/${recommendation.videoId}/hqdefault.jpg` : '');
+    const meta = document.createElement('div');
+    meta.className = 'ai-pick-meta';
+    const title = document.createElement('h3');
+    title.className = 'ai-pick-title';
+    title.textContent = recommendation.title;
+    const artist = document.createElement('p');
+    artist.className = 'ai-pick-artist';
+    artist.textContent = recommendation.channelTitle && recommendation.channelTitle !== recommendation.artist
+      ? `${recommendation.artist} · ${recommendation.channelTitle}`
+      : recommendation.artist || recommendation.channelTitle;
+    meta.append(title, artist);
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.textContent = 'ADD TO PLAYLIST';
+    const track = recommendationTrack(recommendation);
+    add.disabled = !track;
+    add.addEventListener('click', () => { if (track) send({ type: MESSAGE.coreEdit, change: { kind: 'add', track: playlistTrackFor(track) } }); });
+    card.append(image, meta, add);
+    return card;
+  }));
 }
-addVideo.addEventListener('click', openVideoFromInput);
-videoUrl.addEventListener('keydown', (event) => { if (event.key === 'Enter') openVideoFromInput(); });
-for (const control of [discStyle, artwork, background, panelColor, accent, textColor]) control.addEventListener('change', updateDesign);
-resetDesign.addEventListener('click', () => send({ type: MESSAGE.coreEdit, change: { kind: 'design', settings: { ...defaultSettings } } }));
-exportPngButton.addEventListener('click', () => withExportStatus(async () => {
-  const canvas = await renderPlayerCanvas(currentTab()?.snapshot ?? emptySnapshot(), coreState.settings);
-  downloadBlob(await canvasBlob(canvas, 'image/png'), 'pixel-jukebox.png');
-}));
-exportGifButton.addEventListener('click', () => withExportStatus(async () => {
-  downloadBlob(await exportGif(currentTab()?.snapshot ?? emptySnapshot(), coreState.settings), 'pixel-jukebox.gif');
-}));
-openPipButton.addEventListener('click', () => {
-  const snapshot = currentTab()?.snapshot ?? emptySnapshot();
-  void openPip(document, (action) => {
-    const track = currentTab()?.snapshot.track;
-    if (track) send({ type: MESSAGE.control, tabId: selected!, videoId: track.videoId, action });
-  }, snapshot, coreState.settings).then((controller) => { pip?.close(); pip = controller; }).catch((error: unknown) => {
-    exportStatus.textContent = error instanceof Error && error.message === 'PIP_UNSUPPORTED' ? 'Document PiP is not supported.' : 'PiP could not be opened.';
-  });
-});
 
 function connect() {
   try {
     const port = chrome.runtime.connect({ name: PORT.panel });
     currentPort = port;
     port.onMessage.addListener((message: unknown) => {
-      if (isPlayerState(message)) { tabs = message.tabs; renderPlayer(); return; }
-      if (isCoreStateMessage(message)) {
-        coreState = message.state;
-        if (pendingVideoId && coreState.playlist.some((track) => track.videoId === pendingVideoId)) {
-          videoMessage.textContent = 'ADDED';
-          pendingVideoId = undefined;
+      if (isCoreStateMessage(message)) { coreState = message.state; persistBridgeMetadata(); renderDesign(coreState.settings); renderPlayer(); return; }
+      if (isAiStateMessage(message)) {
+        aiState = message.state;
+        if (pendingRecommendations && aiState.configured) {
+          pendingRecommendations = false;
+          if (snapshot.track) send({ type: MESSAGE_AI.recommend, current: snapshot.track, refresh: hasRecommendations });
         }
-        renderDesign(coreState.settings); renderPlayer(); return;
+        return;
       }
-      if (isAiStateMessage(message)) { aiState = message.state; renderAi(); return; }
-      if (isAiRecommendationsMessage(message)) { hasRecommendations = true; aiPicksMessage.textContent = 'RECOMMENDATIONS READY'; renderRecommendations(message.recommendations); renderAi(); return; }
+      if (isAiRecommendationsMessage(message)) { hasRecommendations = true; aiPicksMessage.textContent = ''; renderRecommendations(message.recommendations); return; }
       if (isAiRecommendationErrorMessage(message)) {
-        aiPicksMessage.textContent = ({ NO_TRACK: 'NO CURRENT TRACK.', NO_CANDIDATES: 'NO CANDIDATES FOUND.', INVALID_SELECTION: 'RECOMMENDATION RESPONSE INVALID.', AUTH_ERROR: 'OPENAI AUTHENTICATION FAILED.', RATE_LIMIT: 'OPENAI RATE LIMIT REACHED.', USAGE_ERROR: 'OPENAI USAGE LIMIT REACHED.', OPENAI_REQUEST_FAILED: 'OPENAI REQUEST FAILED.', FAILED: 'AI PICKS FAILED.' } as Record<string, string>)[message.code] ?? 'AI PICKS FAILED.';
+        aiPicksMessage.textContent = ({ NO_TRACK: 'OPEN A VIDEO FIRST.', NO_CANDIDATES: 'NO PICKS FOUND.', INVALID_SELECTION: 'PICKS COULD NOT BE READ.', AUTH_ERROR: 'OPENAI AUTHENTICATION FAILED.', RATE_LIMIT: 'OPENAI RATE LIMIT REACHED.', USAGE_ERROR: 'OPENAI USAGE LIMIT REACHED.', OPENAI_REQUEST_FAILED: 'OPENAI REQUEST FAILED.', FAILED: 'AI PICKS FAILED.' } as Record<string, string>)[message.code] ?? 'AI PICKS FAILED.';
         return;
       }
       if (message && typeof message === 'object' && 'type' in message && message.type === MESSAGE_AI.result) {
         const result = 'result' in message && typeof message.result === 'string' ? message.result : 'failed';
-        aiMessage.textContent = ({ saved: 'KEY SAVED', 'save-failed': 'PERSISTENT STORAGE IS UNAVAILABLE; KEY REMAINS SESSION ONLY.', cleared: 'KEY REMOVED', 'clear-failed': 'KEY COULD NOT BE REMOVED.', 'test-ok': 'OPENAI CONNECTION OK', 'permission-denied': 'OPENAI PERMISSION WAS NOT GRANTED.', 'not-configured': 'SAVE AN API KEY FIRST.', failed: 'OPENAI CONNECTION FAILED.' } as Record<string, string>)[result] ?? 'OPENAI ACTION FAILED.';
+        if (result === 'saved') {
+          aiMessage.textContent = '';
+          aiSettings.open = false;
+          if (pendingRecommendations && snapshot.track) {
+            pendingRecommendations = false;
+            send({ type: MESSAGE_AI.recommend, current: snapshot.track, refresh: hasRecommendations });
+          }
+        } else if (result !== 'cleared') aiMessage.textContent = 'OPENAI COULD NOT CONNECT.';
         return;
       }
-      if (isCoreError(message)) { videoMessage.textContent = message.code === 'NAVIGATION_FAILED' ? 'OPEN FAILED.' : 'PLAYER ERROR.'; return; }
+      if (message && typeof message === 'object' && 'type' in message && message.type === MESSAGE.coreError) videoMessage.textContent = 'CHANGE COULD NOT BE SAVED.';
     });
     port.onDisconnect.addListener(() => {
       void chrome.runtime.lastError;
       currentPort = undefined;
-      tabs = [];
-      renderPlayer();
-      videoMessage.textContent = 'RECONNECTING…';
+      videoMessage.textContent = 'RECONNECTING...';
       window.setTimeout(connect, 1000);
     });
     port.postMessage({ type: MESSAGE.probe });
     port.postMessage({ type: MESSAGE_AI.status });
-  } catch {
-    videoMessage.textContent = 'RELOAD EXTENSION.';
-  }
+  } catch { videoMessage.textContent = 'RELOAD EXTENSION.'; }
 }
 
-aiKey.addEventListener('input', renderAi);
-aiEnable.addEventListener('click', () => {
-  void chrome.permissions.request({ origins: [OPENAI_ORIGIN] }).then((granted) => {
-    aiMessage.textContent = granted ? 'OPENAI PERMISSION ENABLED.' : 'OPENAI PERMISSION WAS NOT GRANTED.';
-    send({ type: MESSAGE_AI.status });
-  }).catch(() => { aiMessage.textContent = 'OPENAI PERMISSION REQUEST FAILED.'; });
-});
-aiSave.addEventListener('click', () => {
+function openVideoFromInput() {
+  const id = videoIdFromUrl(videoUrl.value.trim());
+  if (!id) { videoMessage.textContent = 'INVALID LINK.'; return; }
+  const track = trackFromVideoId(id);
+  videoMessage.textContent = '';
+  videoUrl.value = '';
+  loadTrack(track, true, true);
+}
+
+function connectAi() {
   const key = aiKey.value.trim();
   if (!key) return;
-  void chrome.storage.session.set({ [OPENAI_API_KEY]: key }).then(() => {
-    aiKey.value = '';
-    send({ type: MESSAGE_AI.save, persist: aiPersist.checked });
-    renderAi();
-  }).catch(() => { aiMessage.textContent = 'SESSION STORAGE IS UNAVAILABLE.'; });
-});
-aiRemove.addEventListener('click', () => {
-  void chrome.storage.session.remove([OPENAI_API_KEY]).then(() => send({ type: MESSAGE_AI.clear })).catch(() => { aiMessage.textContent = 'SESSION STORAGE IS UNAVAILABLE.'; });
-});
-aiTest.addEventListener('click', () => send({ type: MESSAGE_AI.test }));
+  void chrome.permissions.request({ origins: [OPENAI_ORIGIN] }).then(async (granted) => {
+    if (!granted) { aiMessage.textContent = 'OPENAI COULD NOT CONNECT.'; return; }
+    try {
+      await chrome.storage.session.set({ [OPENAI_API_KEY]: key });
+      aiKey.value = '';
+      send({ type: MESSAGE_AI.save, persist: false });
+    } catch { aiMessage.textContent = 'OPENAI COULD NOT CONNECT.'; }
+  }).catch(() => { aiMessage.textContent = 'OPENAI COULD NOT CONNECT.'; });
+}
+
+for (const control of [discStyle, background, accent]) control.addEventListener('input', previewDesign);
+saveDesign.addEventListener('click', () => send({ type: MESSAGE.coreEdit, change: { kind: 'design', settings: draftSettings } }));
+addVideo.addEventListener('click', openVideoFromInput);
+videoUrl.addEventListener('keydown', (event) => { if (event.key === 'Enter') openVideoFromInput(); });
+aiConnect.addEventListener('click', connectAi);
 aiPicks.addEventListener('click', () => {
-  if (!aiState.permission || !aiState.configured) {
-    aiSettings.open = true;
-    aiMessage.textContent = !aiState.permission ? 'ENABLE OPENAI TO CONTINUE.' : 'ADD AN API KEY TO CONTINUE.';
-    (!aiState.permission ? aiEnable : aiKey).focus();
-    return;
-  }
-  if (!currentTab()?.snapshot.track) { aiPicksMessage.textContent = 'OPEN A VIDEO FIRST.'; return; }
-  aiPicksMessage.textContent = 'AI PICKS SEARCHING...';
-  send({ type: MESSAGE_AI.recommend, tabId: selected, refresh: hasRecommendations });
+  if (!snapshot.track) return;
+  if (!aiState.configured) { pendingRecommendations = true; aiSettings.open = true; aiKey.focus(); return; }
+  send({ type: MESSAGE_AI.recommend, current: snapshot.track, refresh: hasRecommendations });
+});
+openPipButton.addEventListener('click', () => {
+  if (!snapshot.track) return;
+  void openPip(document, handlePlayerAction, snapshot, coreState.settings).then((controller) => { pip?.close(); pip = controller; }).catch(() => { videoMessage.textContent = 'PIP IS UNAVAILABLE.'; });
 });
 window.addEventListener('beforeunload', () => pip?.close());
+
 renderDesign(coreState.settings);
 renderPlayer();
-renderAi();
 connect();

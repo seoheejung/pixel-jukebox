@@ -44,7 +44,7 @@ function discoveryBody(context: RecommendationContext): Record<string, unknown> 
     store: false,
     tools: [{ type: 'web_search' }],
     input: [
-      { role: 'developer', content: 'Find real music candidates using web search. Return only lines in CANDIDATE|C01|Artist|Track format. Return at most 10 candidates. Do not return JSON, explanations, URLs, or video IDs.' },
+      { role: 'developer', content: 'Find real music candidates using web search. Return only lines in CANDIDATE|C01|Artist|Track|YouTubeURL format. Return at most 10 candidates. The final field must be a verified canonical YouTube watch or youtu.be URL found by search; never invent a video ID. Do not return JSON or explanations.' },
       { role: 'user', content: contextPrompt(context) },
     ],
   };

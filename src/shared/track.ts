@@ -16,15 +16,20 @@ export interface PlayerSnapshot {
   error: boolean;
 }
 
-export interface TabPlayer {
-  tabId: number;
-  active: boolean;
-  snapshot: PlayerSnapshot;
-}
-
 export type PlayerAction = 'previous' | 'toggle' | 'next';
 
 export const emptySnapshot = (): PlayerSnapshot => ({ track: null, previous: false, next: false, error: false });
+
+export function trackFromVideoId(videoId: string, metadata: Partial<Pick<Track, 'videoTitle' | 'channelTitle' | 'thumbnail'>> = {}): Track {
+  return {
+    videoId,
+    videoTitle: metadata.videoTitle?.trim() || `YouTube video ${videoId}`,
+    channelTitle: metadata.channelTitle?.trim() || 'YouTube',
+    thumbnail: metadata.thumbnail && isThumbnail(metadata.thumbnail, videoId) ? metadata.thumbnail : `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+    videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
+    playbackState: 'paused',
+  };
+}
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -74,9 +79,4 @@ export function isTrack(value: unknown): value is Track {
 export function isPlayerSnapshot(value: unknown): value is PlayerSnapshot {
   return isRecord(value) && (value.track === null || isTrack(value.track)) &&
     typeof value.previous === 'boolean' && typeof value.next === 'boolean' && typeof value.error === 'boolean';
-}
-
-export function isTabPlayer(value: unknown): value is TabPlayer {
-  return isRecord(value) && typeof value.tabId === 'number' && Number.isSafeInteger(value.tabId) && value.tabId >= 0 &&
-    typeof value.active === 'boolean' && isPlayerSnapshot(value.snapshot);
 }

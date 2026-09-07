@@ -1,5 +1,6 @@
-import { isRecord } from './track';
+import { isRecord, isTrack } from './track';
 import type { Recommendation } from './recommendation';
+import type { Track } from './track';
 
 export const OPENAI_ORIGIN = 'https://api.openai.com/*';
 export const OPENAI_API_KEY = 'openaiApiKey';
@@ -34,14 +35,14 @@ export function isAiStateMessage(value: unknown): value is { type: typeof MESSAG
   return isRecord(value) && value.type === MESSAGE_AI.state && isAiState(value.state);
 }
 
-export function isAiRecommendationMessage(value: unknown): value is { type: typeof MESSAGE_AI.recommend; tabId: number; refresh?: boolean } {
-  return isRecord(value) && value.type === MESSAGE_AI.recommend && Object.keys(value).every((key) => key === 'type' || key === 'tabId' || key === 'refresh') && typeof value.tabId === 'number' && Number.isSafeInteger(value.tabId) && value.tabId >= 0 && (value.refresh === undefined || typeof value.refresh === 'boolean');
+export function isAiRecommendationMessage(value: unknown): value is { type: typeof MESSAGE_AI.recommend; current: Track; refresh?: boolean } {
+  return isRecord(value) && value.type === MESSAGE_AI.recommend && Object.keys(value).every((key) => key === 'type' || key === 'current' || key === 'refresh') && isTrack(value.current) && (value.refresh === undefined || typeof value.refresh === 'boolean');
 }
 
 export function isAiRecommendationsMessage(value: unknown): value is { type: typeof MESSAGE_AI.recommendations; recommendations: Recommendation[] } {
   if (!isRecord(value) || value.type !== MESSAGE_AI.recommendations || !Array.isArray(value.recommendations) || value.recommendations.length > 5) return false;
   return value.recommendations.every((item) => {
-    if (!isRecord(item) || typeof item.candidateId !== 'string' || typeof item.artist !== 'string' || typeof item.title !== 'string' || typeof item.reason !== 'string' || !Array.isArray(item.tags) || item.tags.length < 1 || item.tags.length > 3) return false;
+    if (!isRecord(item) || typeof item.candidateId !== 'string' || typeof item.artist !== 'string' || typeof item.title !== 'string' || typeof item.channelTitle !== 'string' || (item.videoId !== null && typeof item.videoId !== 'string') || (item.videoUrl !== null && typeof item.videoUrl !== 'string') || typeof item.thumbnail !== 'string' || typeof item.reason !== 'string' || !Array.isArray(item.tags) || item.tags.length < 1 || item.tags.length > 3) return false;
     return item.tags.every((tag) => typeof tag === 'string');
   });
 }

@@ -10,7 +10,7 @@ Chrome Desktop 환경의 YouTube 음악 감상 경험 확장
 ### Core Player
 
 - OpenAI 없이 독립 동작
-- 현재 YouTube 영상 및 재생 상태 연동
+- HTTPS Player Bridge 기반 YouTube 재생 상태 연동
 - LP/CD 기반 음악 Player
 - Playlist 관리
 - 사용자 설정 저장 및 복구
@@ -27,8 +27,8 @@ Chrome Desktop 환경의 YouTube 음악 감상 경험 확장
 ### 현재 상태
 
 - Phase 0 Extension 기반 구성 구현·자동/Chrome 검증 완료
-- Phase 1 YouTube Player 구현·자동/Chrome 검증 완료
-- Phase 2 Playlist · Design · Export · PiP 구현·자동/Chrome 검증 완료
+- Phase 1 YouTube Player Bridge 구현·자동 검증 완료 · Pages 배포/Chrome 검증 미완료
+- Phase 2 Playlist · Design · PiP 구현·자동 검증 완료
 - Phase 3 OpenAI 연결 구현·자동/Chrome 검증 완료
 - Phase 4 AI Recommendation 구현·자동 검증 완료
 - Phase 5 Cache · 안정성 구현·자동 검증 완료
@@ -40,12 +40,12 @@ Chrome Desktop 환경의 YouTube 음악 감상 경험 확장
 
 ### Core Player
 
-- 현재 YouTube 영상 및 재생 상태 감지
+- YouTube URL 입력 및 HTTPS Player Bridge 재생
 - LP/CD 회전 Player
 - Playlist 추가·삭제·순서 변경
 - 이전·다음 Track 및 반복 재생
 - 색상 및 Disc Style 설정
-- PNG/GIF 저장
+- 새 YouTube 탭 없는 Bridge Player
 - Document Picture-in-Picture
 - Playlist 및 사용자 설정 복구
 
@@ -57,7 +57,7 @@ Chrome Desktop 환경의 YouTube 음악 감상 경험 확장
 - Candidate Set 기반 최종 Selection
 - Structured Output 검증
 - 추천 이유 및 Music Tag
-- YouTube 검색 연결
+- 검증된 YouTube 추천을 Playlist에 직접 추가
 - Recommendation Cache
 - AI 오류와 Core Player 오류 격리
 
@@ -67,10 +67,16 @@ Chrome Desktop 환경의 YouTube 음악 감상 경험 확장
 
 ## 전체 구조
 
+```text
+Side Panel
+→ HTTPS Player Bridge
+→ YouTube IFrame Player
+```
+
 ```mermaid
 flowchart LR
-    YouTube["YouTube Tab"]
-    Content["Content Script"]
+    YouTube["YouTube IFrame Player"]
+    Bridge["HTTPS Player Bridge"]
     Worker["Service Worker"]
     Panel["Side Panel"]
     Storage["Chrome Storage"]
@@ -81,8 +87,8 @@ flowchart LR
     Selection["Selection<br/>Structured Output"]
     Validation["Application Validation"]
 
-    YouTube --> Content
-    Content <--> Worker
+    YouTube <--> Bridge
+    Bridge <--> Panel
     Worker <--> Panel
     Worker <--> Storage
     Panel --> PiP
@@ -108,7 +114,7 @@ flowchart LR
 | Build | Vite |
 | Main UI | Chrome Side Panel |
 | Background | Extension Service Worker |
-| YouTube 연동 | Content Script |
+| Player Bridge | GitHub Pages · YouTube IFrame Player API |
 | Storage | `chrome.storage.local`, `chrome.storage.session` |
 | PiP | Document Picture-in-Picture |
 | AI | OpenAI Responses API |
@@ -162,7 +168,7 @@ AI PICKS
 | --- | --- | --- |
 | Phase 0 | Extension 기반 구성 | 구현·자동/Chrome 검증 완료 |
 | Phase 1 | YouTube Player | 구현·자동/Chrome 검증 완료 |
-| Phase 2 | Playlist · Design · Export · PiP | 구현·자동/Chrome 검증 완료 |
+| Phase 2 | Playlist · Design · PiP | 구현·자동 검증 완료 |
 | Phase 3 | OpenAI 연결 | 구현·자동/Chrome 검증 완료 · 실제 OpenAI 인증 미검증 |
 | Phase 4 | AI Recommendation | 구현·자동 검증 완료 · 실제 OpenAI API/Web Search 미검증 |
 | Phase 5 | Cache · 안정성 검증 | 구현·자동 검증 완료 · 실제 OpenAI 외부 환경 검증 필요 |
@@ -222,7 +228,7 @@ pixel-jukebox/
 - `chrome.storage.local` 사용
 - `TRUSTED_CONTEXTS` 접근 제한 적용
 - Service Worker Local Key 조회 성공 확인
-- Content Script Local·Session Key 조회 차단 확인
+- Side Panel 외부 Context Local·Session Key 조회 차단 확인
 - 접근 제한 설정 실패 시 Local 저장 차단
 - Session 저장 유지
 
@@ -232,7 +238,7 @@ pixel-jukebox/
 - Git Commit 금지
 - `storage.sync` 저장 금지
 - Runtime Message Key 포함 금지
-- Content Script Key 전달 금지
+- Embedded Player Key 전달 금지
 - Console·오류 로그 Key 출력 금지
 
 ### 배포 범위
@@ -261,35 +267,49 @@ npm install
 npm run build
 npm run typecheck
 npm test
+npm run check:bridge
 npm run check:manifest
 ```
 
-### Chrome 실행
+### HTTPS Player Bridge 배포
+
+Bridge는 `player-bridge/`의 정적 파일만 GitHub Pages에 배포한다. GitHub 저장소의 **Settings → Pages → Source**를 **GitHub Actions**로 한 번 설정한 뒤 `Deploy player bridge` workflow를 실행한다.
+
+기본 배포 URL:
+
+```text
+https://seoheejung.github.io/pixel-jukebox/player.html
+```
+
+Fork 또는 별도 도메인을 사용하면 `src/shared/player-bridge.ts`의 URL과 `public/manifest.json`의 `frame-src` origin을 함께 변경한다.
+
+### Chrome Extension 실행
+
+1. 의존성 설치 및 빌드
+
+```sh
+npm install
+npm run build
 
 ```
-chrome://extensions
-→ 개발자 모드 활성화
-→ 압축해제된 확장 프로그램 로드
-→ dist/ 선택
-→ YouTube 실행
+`chrome://extensions` 접속
+→ **개발자 모드** 활성화
+→ **압축해제된 확장 프로그램** 로드
+→ `dist/` 선택
 → Extension 아이콘 클릭
 → Side Panel 실행
-```
 
-### 실제 Chrome 자동 검증
+### 실제 Chrome 검증
 
 ```
 npm run chrome:start
-
-# 별도 터미널
-npm run test:chrome
 ```
 
 - Windows 설치 Chrome 기반 전용 테스트 프로필 사용
 - `.chrome-test/` 테스트 프로필 저장
 - 현재 실행 환경의 Chrome 시작 시 샌드박스 외부 실행 필요
-- 실제 Chrome Extension API 기반 검증
-- Chrome API Mock 테스트와 실제 Chrome 검증 분리
+- 배포된 Bridge URL 응답, 영상 재생, Play/Pause, Previous/Next를 수동 확인
+- 검증 종료 후 `npm run chrome:stop`
 
 ---
 
@@ -332,7 +352,7 @@ AI PICKS 실행
 - Candidate ID Whitelist 통과
 - 최대 5개 추천 표시
 - 한국어 추천 이유 및 Music Tag 표시
-- YouTube 검색 연결
+- 추천 카드의 Playlist 직접 추가 및 Bridge 재생
 - API Key 로그·메시지 노출 없음
 
 > 실제 외부 API 호출 완료 전까지 OpenAI 연동의 실제 검증 완료 처리 금지

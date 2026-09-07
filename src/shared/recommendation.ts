@@ -1,4 +1,4 @@
-import { isRecord } from './track';
+import { isRecord, isThumbnail, isVideoId, trackFromVideoId, videoIdFromUrl } from './track';
 import type { PlaylistTrack } from './playlist';
 import type { Track } from './track';
 
@@ -9,12 +9,20 @@ export interface Candidate {
   candidateId: string;
   artist: string;
   title: string;
+  channelTitle: string;
+  thumbnail: string;
+  videoId: string | null;
+  videoUrl: string | null;
 }
 
 export interface Recommendation {
   candidateId: string;
   artist: string;
   title: string;
+  channelTitle: string;
+  thumbnail: string;
+  videoId: string | null;
+  videoUrl: string | null;
   reason: string;
   tags: string[];
 }
@@ -25,22 +33,28 @@ function normalize(value: string): string {
 
 function isKorean(value: string): boolean { return /[가-힣]/u.test(value); }
 
+function candidateSource(value: string): Pick<Candidate, 'videoId' | 'videoUrl' | 'thumbnail'> {
+  const videoId = videoIdFromUrl(value);
+  return videoId ? { videoId, videoUrl: `https://www.youtube.com/watch?v=${videoId}`, thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` } : { videoId: null, videoUrl: null, thumbnail: '' };
+}
+
 export function parseDiscovery(text: string, excluded: Array<{ artist: string; title: string }> = []): Candidate[] {
   const blocked = new Set(excluded.map((item) => `${normalize(item.artist)}\u0000${normalize(item.title)}`));
   const ids = new Set<string>();
   const tracks = new Set<string>();
   const candidates: Candidate[] = [];
   for (const line of text.split(/\r?\n/u)) {
-    const match = /^CANDIDATE\|(C\d{2})\|([^|\r\n]+)\|([^|\r\n]+)$/u.exec(line.trim());
+    const match = /^CANDIDATE\|(C\d{2})\|([^|\r\n]+)\|([^|\r\n]+)(?:\|(https:\/\/[^|\r\n]+))?$/u.exec(line.trim());
     if (!match) continue;
     const candidateId = match[1]!.trim();
     const artist = match[2]!.trim();
     const title = match[3]!.trim();
+    const source = match[4] ? candidateSource(match[4].trim()) : { videoId: null, videoUrl: null, thumbnail: '' };
     const trackKey = `${normalize(artist)}\u0000${normalize(title)}`;
     if (!artist || !title || ids.has(candidateId) || tracks.has(trackKey) || blocked.has(trackKey)) continue;
     ids.add(candidateId);
     tracks.add(trackKey);
-    candidates.push({ candidateId, artist, title });
+    candidates.push({ candidateId, artist, title, channelTitle: artist, ...source });
     if (candidates.length === MAX_CANDIDATES) break;
   }
   return candidates;
@@ -69,11 +83,17 @@ export function parseSelection(value: unknown, candidates: Candidate[]): Recomme
     const candidate = allowed.get(item.candidateId);
     if (!candidate || selected.has(item.candidateId)) return null;
     selected.add(item.candidateId);
-    recommendations.push({ candidateId: candidate.candidateId, artist: candidate.artist, title: candidate.title, reason: item.reason.trim(), tags: item.tags.map((tag) => tag.trim()) });
+    recommendations.push({ ...candidate, reason: item.reason.trim(), tags: item.tags.map((tag) => tag.trim()) });
   }
   return recommendations;
 }
 
-export function youtubeSearchUrl(recommendation: Recommendation): string {
-  return `https://www.youtube.com/results?search_query=${encodeURIComponent(`${recommendation.artist} ${recommendation.title}`)}`;
+export function recommendationTrack(recommendation: Recommendation) {
+  if (!recommendation.videoId || !isVideoId(recommendation.videoId)) return null;
+  const metadata: { videoTitle: string; channelTitle: string; thumbnail?: string } = {
+    videoTitle: recommendation.title,
+    channelTitle: recommendation.channelTitle || recommendation.artist,
+  };
+  if (isThumbnail(recommendation.thumbnail, recommendation.videoId)) metadata.thumbnail = recommendation.thumbnail;
+  return trackFromVideoId(recommendation.videoId, metadata);
 }

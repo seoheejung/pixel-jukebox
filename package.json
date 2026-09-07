@@ -6,19 +6,14 @@
   "packageManager": "npm@11.17.0",
   "engines": { "node": ">=22.12.0" },
   "scripts": {
-    "build": "vite build && vite build --config vite.content.config.ts",
+    "build": "vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check:bridge": "node --check player-bridge/player.js",
     "check:manifest": "node scripts/check-manifest.mjs",
     "chrome:start": "node scripts/start-chrome.mjs",
-    "chrome:stop": "node scripts/stop-chrome.mjs",
-    "test:chrome": "node scripts/test-chrome-phase1.mjs",
-    "test:chrome:phase0": "node scripts/test-chrome-phase0.mjs",
-    "test:chrome:phase2": "node scripts/test-chrome-phase2.mjs",
-    "test:chrome:phase3": "node scripts/test-chrome-phase3.mjs",
-    "chrome:inspect-youtube": "node scripts/inspect-youtube.mjs",
-    "chrome:inspect-export-pip": "node scripts/inspect-export-pip.mjs"
+    "chrome:stop": "node scripts/stop-chrome.mjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.1.0",

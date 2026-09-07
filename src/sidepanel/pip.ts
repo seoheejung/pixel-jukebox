@@ -69,8 +69,8 @@ export async function openPip(
     channel.textContent = track?.channelTitle ?? '';
     toggle.textContent = playing ? 'Ⅱ' : '▶';
     root.style.setProperty('--pip-bg', nextSettings.background);
-    root.style.setProperty('--pip-panel', nextSettings.panel);
-    root.style.setProperty('--pip-text', nextSettings.text);
+    root.style.setProperty('--pip-panel', '#fff9ea');
+    root.style.setProperty('--pip-text', '#28172f');
   };
   pipWindow.addEventListener('pagehide', () => root.remove());
   update(snapshot, settings);

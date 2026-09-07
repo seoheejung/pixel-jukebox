@@ -1,21 +1,36 @@
-import type { PlayerAction, PlayerSnapshot } from '../shared/track';
-import { defaultSettings } from '../shared/settings';
 import type { DesignSettings } from '../shared/settings';
+import { defaultSettings } from '../shared/settings';
+import {
+  isPlayerBridgeEvent,
+  PLAYER_BRIDGE_ORIGIN,
+  PLAYER_BRIDGE_URL,
+  playerBridgeCommand,
+  playerBridgeInit,
+  playerBridgeLoad,
+} from '../shared/player-bridge';
+import type { PlayerBridgeCommand } from '../shared/player-bridge';
+import type { PlayerAction, PlayerSnapshot, PlaybackState, Track } from '../shared/track';
 
-export function createPlayer(root: HTMLElement, onCommand: (action: PlayerAction) => void) {
+type EmbeddedPlayerEvent =
+  | { type: 'state'; state: PlaybackState }
+  | { type: 'metadata'; videoId: string; videoTitle: string; channelTitle: string };
+
+export function createPlayer(root: HTMLElement, onCommand: (action: PlayerAction) => void, onEmbeddedEvent: (event: EmbeddedPlayerEvent) => void) {
   root.innerHTML = `
-    <div class="disc-stage"><div class="disc" data-style="lp" data-playing="false" aria-label="LP 디스크">
-      <div class="disc-label"><img class="artwork" alt="현재 영상 썸네일" referrerpolicy="no-referrer" hidden></div><div class="disc-hole"></div>
+    <div class="embedded-video"><iframe title="YouTube Player Bridge" allow="autoplay; encrypted-media; picture-in-picture" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+    <div class="disc-stage"><div class="disc" data-style="lp" data-playing="false" aria-label="LP disc">
+      <div class="disc-label"><img class="artwork" alt="Current video thumbnail" referrerpolicy="no-referrer" hidden /></div><div class="disc-hole"></div>
     </div></div>
     <p class="eyebrow">NOW PLAYING</p>
-    <h2 class="track-title">YouTube에서 음악을 재생해주세요.</h2>
+    <h2 class="track-title">Paste a YouTube link to start.</h2>
     <p class="channel-title"></p>
-    <p class="playback-status" role="status" aria-live="polite">연결 대기</p>
+    <p class="playback-status" role="status" aria-live="polite"></p>
     <div class="playback-controls">
-      <button class="previous" type="button" aria-label="이전 영상" title="YouTube 이전 영상" disabled><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h2v12H2zM14 2v12L5 8z"/></svg></button>
-      <button class="toggle" type="button" aria-label="재생" disabled><svg viewBox="0 0 16 16" aria-hidden="true"><path class="play-icon" d="M4 2v12l10-6z"/><path class="pause-icon" d="M3 2h4v12H3zM9 2h4v12H9z"/></svg></button>
-      <button class="next" type="button" aria-label="다음 영상" title="YouTube 다음 영상" disabled><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M12 2h2v12h-2zM2 2v12l9-6z"/></svg></button>
+      <button class="previous" type="button" aria-label="Previous" title="Previous" disabled>◀</button>
+      <button class="toggle" type="button" aria-label="Play" disabled><span class="play-icon">▶</span><span class="pause-icon">Ⅱ</span></button>
+      <button class="next" type="button" aria-label="Next" title="Next" disabled>▶</button>
     </div>`;
+  const iframe = root.querySelector<HTMLIFrameElement>('iframe')!;
   const disc = root.querySelector<HTMLElement>('.disc')!;
   const title = root.querySelector<HTMLElement>('.track-title')!;
   const channel = root.querySelector<HTMLElement>('.channel-title')!;
@@ -25,19 +40,60 @@ export function createPlayer(root: HTMLElement, onCommand: (action: PlayerAction
   for (const action of ['previous', 'toggle', 'next'] as const) buttons[action].addEventListener('click', () => onCommand(action));
   artwork.addEventListener('error', () => { artwork.hidden = true; });
   let imageUrl = '';
+  let loadedVideoId = '';
+  let bridgeReady = false;
+  let activeLoad: PlayerBridgeCommand | null = null;
+
+  iframe.addEventListener('load', () => {
+    bridgeReady = false;
+    iframe.contentWindow?.postMessage(playerBridgeInit(), PLAYER_BRIDGE_ORIGIN);
+  });
+  iframe.src = PLAYER_BRIDGE_URL;
+
+  function post(message: PlayerBridgeCommand) {
+    if (!bridgeReady || !iframe.contentWindow) return;
+    iframe.contentWindow.postMessage(message, PLAYER_BRIDGE_ORIGIN);
+  }
+
+  function load(track: Track, autoplay = true) {
+    loadedVideoId = track.videoId;
+    activeLoad = playerBridgeLoad(track.videoId, autoplay);
+    if (activeLoad) post(activeLoad);
+  }
+
+  function command(action: 'play' | 'pause') {
+    post(playerBridgeCommand(action));
+  }
+
+  window.addEventListener('message', (event) => {
+    if (event.origin !== PLAYER_BRIDGE_ORIGIN || event.source !== iframe.contentWindow || !isPlayerBridgeEvent(event.data)) return;
+    if (event.data.type === 'ready') {
+      bridgeReady = true;
+      if (activeLoad) post(activeLoad);
+      return;
+    }
+    if (event.data.type === 'state') onEmbeddedEvent({ type: 'state', state: event.data.state });
+    if (event.data.type === 'metadata') onEmbeddedEvent({
+      type: 'metadata',
+      videoId: event.data.videoId,
+      videoTitle: event.data.videoTitle,
+      channelTitle: event.data.channelTitle,
+    });
+    if (event.data.type === 'error') onEmbeddedEvent({ type: 'state', state: 'error' });
+  });
+
   return {
+    load,
     render(snapshot: PlayerSnapshot, settings: DesignSettings = defaultSettings, playlistNavigation = { previous: false, next: false }) {
       const track = snapshot.track;
       const playing = track?.playbackState === 'playing';
       disc.dataset.playing = String(playing);
       disc.dataset.style = settings.discStyle;
-      artwork.hidden = !settings.artwork || !track?.thumbnail;
       disc.style.setProperty('--disc-accent', settings.accent);
       root.dataset.videoId = track?.videoId ?? '';
-      title.textContent = track?.videoTitle ?? 'YouTube에서 음악을 재생해주세요.';
-      channel.textContent = track ? `채널 · ${track.channelTitle}` : '';
-      status.textContent = snapshot.error ? '재생을 제어하지 못했습니다. YouTube 탭에서 확인해주세요.'
-        : track ? ({ playing: '재생 중', paused: '일시정지', buffering: '버퍼링 중', ended: '재생 종료', error: '영상 재생 오류' }[track.playbackState]) : '영상 연결 대기';
+      title.textContent = track?.videoTitle ?? 'Paste a YouTube link to start.';
+      channel.textContent = track?.channelTitle ? `CHANNEL · ${track.channelTitle}` : '';
+      status.textContent = snapshot.error ? 'Playback error.' : '';
       status.classList.toggle('error-text', snapshot.error);
       if ((track?.thumbnail ?? '') !== imageUrl) {
         imageUrl = track?.thumbnail ?? '';
@@ -45,11 +101,13 @@ export function createPlayer(root: HTMLElement, onCommand: (action: PlayerAction
         if (imageUrl) artwork.src = imageUrl;
         else artwork.removeAttribute('src');
       }
-      buttons.previous.disabled = !track || (!snapshot.previous && !playlistNavigation.previous);
-      buttons.next.disabled = !track || (!snapshot.next && !playlistNavigation.next);
+      buttons.previous.disabled = !track || !playlistNavigation.previous;
+      buttons.next.disabled = !track || !playlistNavigation.next;
       buttons.toggle.disabled = !track;
-      buttons.toggle.setAttribute('aria-label', playing || track?.playbackState === 'buffering' ? '일시정지' : '재생');
+      buttons.toggle.setAttribute('aria-label', playing || track?.playbackState === 'buffering' ? 'Pause' : 'Play');
       buttons.toggle.dataset.playing = String(playing || track?.playbackState === 'buffering');
     },
+    command,
+    get loadedVideoId() { return loadedVideoId; },
   };
 }

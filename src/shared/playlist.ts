@@ -7,13 +7,21 @@ export function playlistTrack(track: Track): PlaylistTrack {
   return { videoId: track.videoId, videoTitle: track.videoTitle, channelTitle: track.channelTitle, thumbnail: track.thumbnail, videoUrl: track.videoUrl };
 }
 
+export function isPlaylistTrack(value: unknown): value is PlaylistTrack {
+  return isRecord(value) && isTrack({ ...value, playbackState: 'paused' });
+}
+
 export function isPlaylist(value: unknown): value is PlaylistTrack[] {
-  return Array.isArray(value) && value.every((track) => isRecord(track) && isTrack({ ...track, playbackState: 'paused' })) &&
+  return Array.isArray(value) && value.every(isPlaylistTrack) &&
     new Set(value.map((track: PlaylistTrack) => track.videoId)).size === value.length;
 }
 
 export function addTrack(playlist: PlaylistTrack[], track: PlaylistTrack): PlaylistTrack[] {
   return playlist.some((item) => item.videoId === track.videoId) ? playlist : [...playlist, track];
+}
+
+export function updateTrack(playlist: PlaylistTrack[], track: PlaylistTrack): PlaylistTrack[] {
+  return playlist.map((item) => item.videoId === track.videoId ? track : item);
 }
 
 export function removeTrack(playlist: PlaylistTrack[], videoId: string): PlaylistTrack[] {

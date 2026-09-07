@@ -30,14 +30,8 @@ const connections = createConnections(chrome.runtime.getURL('sidepanel.html'), {
   store,
   ai,
   recommendations: createRecommendationService(ai),
-  async navigate(tabId, videoId) {
-    const url = `https://www.youtube.com/watch?v=${videoId}`;
-    if (tabId === null) await chrome.tabs.create({ url });
-    else await chrome.tabs.update(tabId, { url });
-  },
 });
 chrome.runtime.onConnect.addListener(connections);
-chrome.tabs.onRemoved.addListener(connections.removeTab);
 
 chrome.action.onClicked.addListener((tab) => {
   if (tab.windowId === undefined) return;

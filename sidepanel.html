@@ -12,11 +12,9 @@
         <h2 id="link-title">ADD YOUTUBE VIDEO</h2>
         <label for="video-url">YOUTUBE LINK</label>
         <div class="video-link-row"><input id="video-url" type="url" autocomplete="off" spellcheck="false" placeholder="Paste a YouTube link" /><button id="add-video" type="button">ADD &amp; PLAY</button></div>
-        <p id="video-message" role="status" aria-live="polite">PASTE A LINK</p>
+        <p id="video-message" role="status" aria-live="polite"></p>
       </section>
-      <label for="tab-select">OPEN YOUTUBE TABS</label>
-      <select id="tab-select" aria-label="제어할 YouTube 탭" disabled><option>연결 대기</option></select>
-      <section id="player" class="pixel-panel" aria-label="YouTube Player"></section>
+      <section id="player" class="pixel-panel" aria-label="YouTube Player Bridge"></section>
       <section class="pixel-panel" aria-labelledby="playlist-title">
         <h2 id="playlist-title">PLAYLIST</h2>
         <p id="playlist-empty">Playlist is empty. Paste a YouTube link above.</p>
@@ -28,33 +26,24 @@
           <h2 id="design-title">DESIGN</h2>
           <div class="design-grid">
             <label>DISC <select id="disc-style"><option value="lp">LP</option><option value="cd">CD</option></select></label>
-            <label><input id="artwork" type="checkbox" checked /> ALBUM ARTWORK</label>
             <label>BACKGROUND <input id="background" type="color" value="#fff4d8" /></label>
-            <label>PANEL <input id="panel-color" type="color" value="#fff9ea" /></label>
             <label>ACCENT <input id="accent" type="color" value="#ff6a3d" /></label>
-            <label>TEXT <input id="text-color" type="color" value="#28172f" /></label>
           </div>
-          <button id="reset-design" type="button">RESET DESIGN</button>
+          <p class="design-preview">PREVIEW UPDATES IMMEDIATELY</p>
+          <button id="save-design" type="button">SAVE</button>
         </section>
-        <section class="pixel-panel" aria-labelledby="export-title">
-          <h2 id="export-title">EXPORT</h2>
-          <p id="export-status" role="status" aria-live="polite">Export the current player visual.</p>
-          <div class="export-controls"><button id="export-png" type="button" disabled>PNG</button><button id="export-gif" type="button" disabled>GIF</button><button id="open-pip" type="button" disabled>OPEN PIP</button></div>
-        </section>
+        <button id="open-pip" type="button" disabled>OPEN PIP</button>
       </details>
       <section class="pixel-panel" aria-labelledby="ai-title">
         <h2 id="ai-title">AI PICKS</h2>
-        <p id="ai-status" role="status" aria-live="polite">NOT CONFIGURED</p>
         <button id="ai-picks" type="button" disabled>AI PICKS</button>
         <p id="ai-picks-message" role="status" aria-live="polite"></p>
         <div id="ai-picks-list" class="ai-picks-list"></div>
         <details class="ai-settings">
           <summary>OPENAI SETTINGS</summary>
           <label for="ai-key">API KEY</label>
-          <input id="ai-key" type="password" autocomplete="off" spellcheck="false" aria-describedby="ai-help" />
-          <label class="checkbox-label"><input id="ai-persist" type="checkbox" /> KEEP KEY AFTER BROWSER RESTART</label>
-          <p id="ai-help">The key stays in this browser only when you explicitly select persistence.</p>
-          <div class="ai-controls"><button id="ai-enable" type="button">ENABLE OPENAI</button><button id="ai-save" type="button" disabled>SAVE KEY</button><button id="ai-remove" type="button" disabled>REMOVE KEY</button><button id="ai-test" type="button" disabled>TEST CONNECTION</button></div>
+          <input id="ai-key" type="password" autocomplete="off" spellcheck="false" />
+          <button id="ai-connect" type="button">CONNECT</button>
           <p id="ai-message" role="status" aria-live="polite"></p>
         </details>
       </section>
