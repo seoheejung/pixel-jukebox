@@ -22,6 +22,7 @@ export const MESSAGE = {
   coreState: 'CORE_STATE',
   coreEdit: 'CORE_EDIT',
   coreError: 'CORE_ERROR',
+  openVideo: 'OPEN_VIDEO',
   playlistPlay: 'PLAYLIST_PLAY',
   restart: 'PLAYER_RESTART',
 } as const;
@@ -94,6 +95,10 @@ export function isCoreStateMessage(value: unknown): value is { type: typeof MESS
 export function isPlaylistPlay(value: unknown): value is { type: typeof MESSAGE.playlistPlay; tabId: number | null; videoId: string } {
   return isRecord(value) && value.type === MESSAGE.playlistPlay && isVideoId(value.videoId) &&
     (value.tabId === null || (typeof value.tabId === 'number' && Number.isSafeInteger(value.tabId) && value.tabId >= 0));
+}
+
+export function isOpenVideo(value: unknown): value is { type: typeof MESSAGE.openVideo; videoId: string } {
+  return isRecord(value) && value.type === MESSAGE.openVideo && Object.keys(value).length === 2 && isVideoId(value.videoId);
 }
 
 export const CORE_ERRORS = {

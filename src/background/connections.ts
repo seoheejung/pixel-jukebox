@@ -1,4 +1,4 @@
-import { hasType, isAiMessage, isCoreEdit, isPlayerCommand, isPlaylistPlay, isTrackUpdate, isYouTubeSender, MESSAGE, MESSAGE_AI, PORT } from '../shared/messages';
+import { hasType, isAiMessage, isCoreEdit, isOpenVideo, isPlayerCommand, isPlaylistPlay, isTrackUpdate, isYouTubeSender, MESSAGE, MESSAGE_AI, PORT } from '../shared/messages';
 import { isAiRecommendationMessage, type RecommendationErrorCode } from '../shared/ai';
 import type { CoreChange, CORE_ERRORS, PlayerCommand } from '../shared/messages';
 import { addTrack, adjacentTrack, moveTrack, playlistTrack, removeTrack } from '../shared/playlist';
@@ -21,6 +21,7 @@ export function createConnections(panelUrl: string, core?: CoreServices) {
   const panels = new Set<chrome.runtime.Port>();
   const states = new Map<number, TabPlayer>();
   const navigating = new Map<number, { videoId: string; timer: ReturnType<typeof setTimeout> }>();
+  const pendingLinks = new Map<string, ReturnType<typeof setTimeout>>();
 
   function send(port: chrome.runtime.Port, message: object) {
     try {
@@ -89,12 +90,12 @@ export function createConnections(panelUrl: string, core?: CoreServices) {
     send(port, { type: MESSAGE_AI.recommendations, recommendations: result.recommendations });
   }
 
-  async function navigate(tabId: number | null, videoId: string) {
-    if (!core || (tabId !== null && navigating.has(tabId))) return;
+  async function navigate(tabId: number | null, videoId: string): Promise<boolean> {
+    if (!core || (tabId !== null && navigating.has(tabId))) return false;
     const previous = tabId === null ? undefined : states.get(tabId);
     if (tabId !== null && previous?.snapshot.track?.videoId === videoId && contents.has(tabId)) {
       send(contents.get(tabId)!, { type: MESSAGE.restart, videoId });
-      return;
+      return true;
     }
     if (tabId !== null) {
       const timer = setTimeout(() => {
@@ -105,7 +106,7 @@ export function createConnections(panelUrl: string, core?: CoreServices) {
       if (previous) states.set(tabId, { ...previous, snapshot: emptySnapshot() });
       broadcast();
     }
-    try { await core.navigate(tabId, videoId); }
+    try { await core.navigate(tabId, videoId); return true; }
     catch {
       if (tabId !== null) {
         clearTimeout(navigating.get(tabId)?.timer);
@@ -114,7 +115,21 @@ export function createConnections(panelUrl: string, core?: CoreServices) {
         broadcast();
       }
       coreError('NAVIGATION_FAILED');
+      return false;
     }
+  }
+
+  function rememberLink(videoId: string) {
+    clearTimeout(pendingLinks.get(videoId));
+    pendingLinks.set(videoId, setTimeout(() => pendingLinks.delete(videoId), 30000));
+  }
+
+  function consumeLink(videoId: string): boolean {
+    const timer = pendingLinks.get(videoId);
+    if (!timer) return false;
+    clearTimeout(timer);
+    pendingLinks.delete(videoId);
+    return true;
   }
 
   function editCore(change: CoreChange, port: chrome.runtime.Port) {
@@ -161,6 +176,11 @@ export function createConnections(panelUrl: string, core?: CoreServices) {
           states.set(tabId, { tabId, active: Boolean(port.sender?.tab?.active), snapshot: message.snapshot });
           broadcast();
           const track = message.snapshot.track;
+          if (core && track && consumeLink(track.videoId)) {
+            void core.store.update((state) => ({ ...state, playlist: addTrack(state.playlist, playlistTrack(track)) }))
+              .then((state) => sendCore(state))
+              .catch(() => coreError('SAVE_FAILED'));
+          }
           if (core && track?.playbackState === 'ended' && (previous?.videoId !== track.videoId || previous.playbackState !== 'ended')) {
             void core.store.get().then(async ({ playlist }) => {
               if (playlist.some((item) => item.videoId === track.videoId)) {
@@ -192,6 +212,9 @@ export function createConnections(panelUrl: string, core?: CoreServices) {
           void control(message).catch(() => coreError('LOAD_FAILED', port));
         } else if (isCoreEdit(message)) {
           editCore(message.change, port);
+        } else if (isOpenVideo(message) && core) {
+          rememberLink(message.videoId);
+          void navigate(null, message.videoId).then((opened) => { if (!opened) consumeLink(message.videoId); });
         } else if (isPlaylistPlay(message) && core) {
           if (message.tabId !== null && !states.has(message.tabId)) { coreError('NAVIGATION_FAILED', port); return; }
           void core.store.get().then(async ({ playlist }) => {

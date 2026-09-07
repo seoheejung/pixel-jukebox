@@ -37,8 +37,19 @@ export function isVideoId(value: unknown): value is string {
 export function videoIdFromUrl(value: string): string | null {
   try {
     const url = new URL(value);
-    const id = url.searchParams.get('v');
-    return url.origin === 'https://www.youtube.com' && url.pathname === '/watch' && isVideoId(id) ? id : null;
+    if (url.origin === 'https://www.youtube.com' && url.pathname === '/watch') {
+      const id = url.searchParams.get('v');
+      return isVideoId(id) ? id : null;
+    }
+    if (url.origin === 'https://www.youtube.com' && url.pathname.startsWith('/shorts/')) {
+      const id = url.pathname.split('/')[2] ?? null;
+      return isVideoId(id) ? id : null;
+    }
+    if (url.origin === 'https://youtu.be') {
+      const id = url.pathname.slice(1).split('/')[0] ?? null;
+      return isVideoId(id) ? id : null;
+    }
+    return null;
   } catch { return null; }
 }
 

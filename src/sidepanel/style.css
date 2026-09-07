@@ -46,6 +46,17 @@ button:disabled { opacity: 0.5; cursor: default; }
 
 select { width: 100%; min-height: 40px; margin: 8px 0 24px; border: 2px solid var(--color-ink); padding: 8px; color: var(--color-ink); background: var(--color-surface); font: inherit; }
 section + section { margin-top: 24px; }
+.link-panel { margin-bottom: 24px; }
+.video-link-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 8px; }
+.video-link-row input { min-width: 0; min-height: 48px; border: 2px solid var(--color-ink); padding: 8px; color: var(--color-ink); background: var(--color-surface); font: inherit; }
+.video-link-row button { min-height: 48px; }
+#video-message, #connection-status { min-height: 20px; margin: 8px 0 0; color: var(--color-muted); font-size: 11px; }
+.small-action { min-height: 32px; margin-top: 4px; padding: 4px 8px; font-size: 10px; }
+.secondary-tools, .ai-settings { margin-top: 24px; }
+summary { cursor: pointer; font-size: 12px; font-weight: 700; }
+.secondary-tools[open], .ai-settings[open] { display: grid; gap: 12px; }
+.secondary-tools[open] summary, .ai-settings[open] summary { margin-bottom: 4px; }
+.secondary-tools section { margin-top: 0; }
 .disc-stage { display: grid; place-items: center; padding: 20px 0; }
 .disc {
   position: relative; width: min(220px, 64vw); aspect-ratio: 1; border-radius: 50%;

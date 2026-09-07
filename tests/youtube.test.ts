@@ -79,6 +79,9 @@ describe('track input boundary', () => {
   it.each(['https://www.youtube.com.attacker.test/watch?v=dQw4w9WgXcQ', 'http://www.youtube.com/watch?v=dQw4w9WgXcQ', 'https://www.youtube.com/watch?v=invalid', 'invalid'])('rejects noncanonical video URL %s', (value) => {
     expect(videoIdFromUrl(value)).toBeNull();
   });
+  it.each([`https://youtu.be/${videoId}`, `https://www.youtube.com/shorts/${videoId}`])('accepts direct YouTube link %s', (value) => {
+    expect(videoIdFromUrl(value)).toBe(videoId);
+  });
   it('rejects an external video URL in a content payload', () => {
     const { document } = fixture();
     expect(isTrack({ ...readYouTube(document, href).track, videoUrl: 'javascript:alert(1)' })).toBe(false);

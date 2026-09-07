@@ -5,7 +5,7 @@ import { youtubeSearchUrl } from '../shared/recommendation';
 import type { AiState } from '../shared/ai';
 import { applyDesign, defaultSettings, isDesignSettings } from '../shared/settings';
 import type { DesignSettings } from '../shared/settings';
-import { emptySnapshot } from '../shared/track';
+import { emptySnapshot, videoIdFromUrl } from '../shared/track';
 import type { CoreState } from '../shared/storage';
 import type { TabPlayer } from '../shared/track';
 import { canvasBlob, downloadBlob, exportGif, renderPlayerCanvas } from './export';
@@ -15,10 +15,12 @@ import './style.css';
 
 const status = document.querySelector<HTMLParagraphElement>('#connection-status')!;
 const recheck = document.querySelector<HTMLButtonElement>('#recheck')!;
+const videoUrl = document.querySelector<HTMLInputElement>('#video-url')!;
+const addVideo = document.querySelector<HTMLButtonElement>('#add-video')!;
+const videoMessage = document.querySelector<HTMLParagraphElement>('#video-message')!;
 const selector = document.querySelector<HTMLSelectElement>('#tab-select')!;
 const playlistList = document.querySelector<HTMLDivElement>('#playlist-list')!;
 const playlistEmpty = document.querySelector<HTMLParagraphElement>('#playlist-empty')!;
-const addTrack = document.querySelector<HTMLButtonElement>('#add-track')!;
 const exportStatus = document.querySelector<HTMLParagraphElement>('#export-status')!;
 const exportPngButton = document.querySelector<HTMLButtonElement>('#export-png')!;
 const exportGifButton = document.querySelector<HTMLButtonElement>('#export-gif')!;
@@ -48,6 +50,7 @@ let selected: number | undefined;
 let coreState: CoreState = { playlist: [], settings: { ...defaultSettings } };
 let aiState: AiState = { configured: false, persisted: false, permission: false, trustedContexts: false };
 let hasRecommendations = false;
+let pendingVideoId: string | undefined;
 let pip: { update(snapshot: TabPlayer['snapshot'], settings: DesignSettings): void; close(): void } | undefined;
 
 function currentTab() { return tabs.find((tab) => tab.tabId === selected); }
@@ -151,7 +154,6 @@ function renderPlayer() {
   const hasTrack = Boolean(snapshot.track);
   const inPlaylist = snapshot.track ? coreState.playlist.some((track) => track.videoId === snapshot.track?.videoId) : false;
   player.render(snapshot, coreState.settings, { previous: inPlaylist && coreState.playlist.length > 1, next: inPlaylist && coreState.playlist.length > 1 });
-  addTrack.disabled = !hasTrack || inPlaylist;
   exportPngButton.disabled = !hasTrack;
   exportGifButton.disabled = !hasTrack;
   openPipButton.disabled = !hasTrack;
@@ -177,10 +179,16 @@ function withExportStatus(action: () => Promise<void>) {
 }
 
 selector.addEventListener('change', () => { selected = Number(selector.value); renderPlayer(); });
-addTrack.addEventListener('click', () => {
-  const track = currentTab()?.snapshot.track;
-  if (track) send({ type: MESSAGE.coreEdit, change: { kind: 'add', tabId: selected!, videoId: track.videoId } });
-});
+function openVideoFromInput() {
+  const id = videoIdFromUrl(videoUrl.value.trim());
+  if (!id) { videoMessage.textContent = 'PASTE A VALID YOUTUBE LINK.'; return; }
+  videoMessage.textContent = 'OPENING VIDEO…';
+  pendingVideoId = id;
+  send({ type: MESSAGE.openVideo, videoId: id });
+  videoUrl.value = '';
+}
+addVideo.addEventListener('click', openVideoFromInput);
+videoUrl.addEventListener('keydown', (event) => { if (event.key === 'Enter') openVideoFromInput(); });
 for (const control of [discStyle, artwork, background, panelColor, accent, textColor]) control.addEventListener('change', updateDesign);
 resetDesign.addEventListener('click', () => send({ type: MESSAGE.coreEdit, change: { kind: 'design', settings: { ...defaultSettings } } }));
 exportPngButton.addEventListener('click', () => withExportStatus(async () => {
@@ -206,7 +214,14 @@ function connect() {
     currentPort = port;
     port.onMessage.addListener((message: unknown) => {
       if (isPlayerState(message)) { tabs = message.tabs; renderPlayer(); return; }
-      if (isCoreStateMessage(message)) { coreState = message.state; renderDesign(coreState.settings); renderPlayer(); return; }
+      if (isCoreStateMessage(message)) {
+        coreState = message.state;
+        if (pendingVideoId && coreState.playlist.some((track) => track.videoId === pendingVideoId)) {
+          videoMessage.textContent = 'ADDED TO PLAYLIST.';
+          pendingVideoId = undefined;
+        }
+        renderDesign(coreState.settings); renderPlayer(); return;
+      }
       if (isAiStateMessage(message)) { aiState = message.state; renderAi(); return; }
       if (isAiRecommendationsMessage(message)) { hasRecommendations = true; aiPicksMessage.textContent = 'RECOMMENDATIONS READY'; renderRecommendations(message.recommendations); renderAi(); return; }
       if (isAiRecommendationErrorMessage(message)) {

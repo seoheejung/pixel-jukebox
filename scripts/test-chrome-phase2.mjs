@@ -20,24 +20,17 @@ try {
   const panel = await attach(browser, panelTarget.targetId);
   await until(() => evaluate(browser, panel, "document.querySelector('#player')?.dataset.videoId === 'dQw4w9WgXcQ'"), 'first player track');
 
-  await evaluate(browser, panel, "document.querySelector('#add-track').click()", { userGesture: true });
+  await evaluate(browser, panel, `(() => { const input = document.querySelector('#video-url'); input.value = 'https://www.youtube.com/watch?v=${firstId}'; document.querySelector('#add-video').click(); })()`, { userGesture: true });
   await until(() => evaluate(browser, panel, "document.querySelectorAll('.playlist-row').length === 1"), 'add current track');
-  assert.equal(await evaluate(browser, panel, "document.querySelector('#add-track').disabled"), true);
 
-  const { targetId: secondTarget } = await browser.send('Target.createTarget', { url: 'https://www.youtube.com/watch?v=4Ygvv_Ae3dg' });
-  const second = await attach(browser, secondTarget);
-  await ready(second);
-  await until(() => evaluate(browser, panel, "document.querySelectorAll('#tab-select option').length >= 2"), 'second YouTube tab');
-  await evaluate(browser, panel, "(() => { const select = document.querySelector('#tab-select'); select.value = [...select.options].find(option => option.value !== select.options[0].value).value; select.dispatchEvent(new Event('change')); })()");
-  await until(() => evaluate(browser, panel, "document.querySelector('#player')?.dataset.videoId === '4Ygvv_Ae3dg'"), 'second selected track');
-  await evaluate(browser, panel, "document.querySelector('#add-track').click()", { userGesture: true });
+  await evaluate(browser, panel, "(() => { const input = document.querySelector('#video-url'); input.value = 'https://youtu.be/4Ygvv_Ae3dg'; document.querySelector('#add-video').click(); })()", { userGesture: true });
   await until(() => evaluate(browser, panel, "document.querySelectorAll('.playlist-row').length === 2"), 'second playlist track');
   await evaluate(browser, panel, "(() => { const rows = [...document.querySelectorAll('.playlist-row')]; const transfer = new DataTransfer(); transfer.setData('text/plain', rows[1].dataset.videoId); rows[0].dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: transfer })); })()");
   await until(() => evaluate(browser, panel, "document.querySelector('.playlist-row')?.dataset.videoId === '4Ygvv_Ae3dg'"), 'playlist reorder');
   await evaluate(browser, panel, "document.querySelector('.next').click()", { userGesture: true });
-  await until(() => evaluate(browser, panel, "document.querySelector('#player')?.dataset.videoId === 'dQw4w9WgXcQ'"), 'playlist next navigation');
+  await until(() => evaluate(browser, panel, "document.querySelector('#player')?.dataset.videoId === '4Ygvv_Ae3dg'"), 'playlist next navigation');
   await evaluate(browser, panel, "document.querySelector('.previous').click()", { userGesture: true });
-  await until(() => evaluate(browser, panel, "document.querySelector('#player')?.dataset.videoId === '4Ygvv_Ae3dg'"), 'playlist previous navigation');
+  await until(() => evaluate(browser, panel, "document.querySelector('#player')?.dataset.videoId === 'dQw4w9WgXcQ'"), 'playlist previous navigation');
 
   await evaluate(browser, panel, "(() => { const input = document.querySelector('#background'); input.value = '#ffffff'; input.dispatchEvent(new Event('change', { bubbles: true })); })()");
   await until(() => evaluate(browser, panel, "getComputedStyle(document.documentElement).getPropertyValue('--color-bg').trim() === '#ffffff'"), 'design persistence');

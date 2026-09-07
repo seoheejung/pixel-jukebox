@@ -9,6 +9,7 @@ Pixel Jukebox는 Chrome Desktop 환경에서 YouTube 음악 감상 경험을 확
 기본 기능은 AI 없이 동작한다.
 
 - 현재 YouTube 영상 및 재생 상태 감지
+- YouTube 영상 링크 입력으로 재생 및 Playlist 추가
 - LP/CD 회전 Player
 - Playlist 추가·삭제·순서 변경
 - 이전·다음 Track 및 반복 재생
@@ -30,9 +31,9 @@ Pixel Jukebox는 Chrome Desktop 환경에서 YouTube 음악 감상 경험을 확
 ### Core Player
 
 ```text
-YouTube 음악 재생
+YouTube 영상 링크 입력 또는 현재 YouTube 영상 감지
         ↓
-현재 Track 감지
+재생 및 Track 추가
         ↓
 Side Panel
         ↓
@@ -225,7 +226,8 @@ playbackState
 
 지원 기능:
 
-- 현재 YouTube 영상 추가
+- YouTube 영상 링크 입력으로 Track 추가
+- 연결된 YouTube 탭의 현재 영상 추가
 - Track 삭제
 - Drag & Drop 순서 변경
 - Previous / Next

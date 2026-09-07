@@ -236,7 +236,8 @@ Side Panel은 폭이 변할 수 있으므로 고정 Desktop Page처럼 설계하
 ```text
 ┌──────────────────────────────┐
 │ PIXEL JUKEBOX                │
-│ YOUTUBE PLAYER               │
+│ ADD YOUTUBE VIDEO            │
+│ [ YouTube link       ][ADD]  │
 ├──────────────────────────────┤
 │                              │
 │             ◉                │
@@ -269,6 +270,16 @@ Section Gap: 24px
 Card Padding: 12px
 Control Gap: 8px
 ```
+
+## 링크 입력 우선
+
+기본 사용 흐름은 YouTube 탭 연결 확인이 아니라 영상 링크 입력이다.
+
+```text
+링크 붙여넣기 → ADD & PLAY → 재생 및 Playlist 자동 추가
+```
+
+연결된 YouTube 탭 선택, Design, Export, OpenAI 설정은 기본 흐름을 방해하지 않는 보조 영역으로 배치한다.
 
 ## 폭 대응
 
