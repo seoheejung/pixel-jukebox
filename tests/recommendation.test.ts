@@ -47,4 +47,23 @@ describe('Phase 4 workflow boundaries', () => {
     expect(bodies[1]!.text).toBeDefined();
     expect(bodies[2]!.input).toEqual(bodies[1]!.input);
   });
+
+  it('hits cache for the same context, bypasses it on refresh and sends recent recommendations', async () => {
+    let calls = 0;
+    const bodies: Record<string, unknown>[] = [];
+    const responses = [
+      { output_text: 'CANDIDATE|C01|New Artist|New Song' },
+      { output_text: '{"recommendations":[{"candidateId":"C01","reason":"현재 곡과 잘 어울리는 분위기","tags":["indie"]}]}' },
+      { output_text: 'CANDIDATE|C01|New Artist|Other Song' },
+      { output_text: '{"recommendations":[{"candidateId":"C01","reason":"새로운 분위기로 이어지는 곡입니다","tags":["indie"]}]}' },
+    ];
+    const service = createRecommendationService({ response: async (body) => { calls += 1; bodies.push(body); return responses.shift(); } });
+    const context = { current: { videoId: 'dQw4w9WgXcQ', videoTitle: 'Current', channelTitle: 'Artist', thumbnail: '', videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', playbackState: 'paused' as const }, playlist: [], recent: [] };
+    await service.run(context);
+    await service.run(context);
+    expect(calls).toBe(2);
+    await service.run(context, { refresh: true });
+    expect(calls).toBe(4);
+    expect(String((bodies[2]!.input as Array<{ content: string }>)[1]!.content)).toContain('New Song');
+  });
 });

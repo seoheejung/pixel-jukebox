@@ -692,13 +692,13 @@ OpenAI 호출 비용과 AI 실패 처리, Extension 안정성 검증.
 
 ### 완료 기준
 
-- [ ] Cache Hit 시 OpenAI 요청 0건
-- [ ] REFRESH PICKS Cache 우회
-- [ ] Selection 실패 시 Web Search 재호출 없음
-- [ ] Retry 재실패 UI 처리
-- [ ] Partial JSON 자동 복구 없음
-- [ ] AI 비활성 상태 OpenAI 요청 0건
-- [ ] 불필요한 Permission 및 Remote Hosted Code 없음
+- [x] Cache Hit 시 OpenAI 요청 0건
+- [x] REFRESH PICKS Cache 우회
+- [x] Selection 실패 시 Web Search 재호출 없음
+- [x] Retry 재실패 UI 처리
+- [x] Partial JSON 자동 복구 없음
+- [x] AI 비활성 상태 OpenAI 요청 0건
+- [x] 불필요한 Permission 및 Remote Hosted Code 없음
 
 ---
 

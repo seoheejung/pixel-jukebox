@@ -16,6 +16,8 @@ export const MESSAGE_AI = {
   recommendationError: 'AI_RECOMMENDATION_ERROR',
 } as const;
 
+export type RecommendationErrorCode = 'NO_TRACK' | 'NO_CANDIDATES' | 'INVALID_SELECTION' | 'AUTH_ERROR' | 'RATE_LIMIT' | 'USAGE_ERROR' | 'OPENAI_REQUEST_FAILED' | 'FAILED';
+
 export interface AiState {
   configured: boolean;
   persisted: boolean;
@@ -32,8 +34,8 @@ export function isAiStateMessage(value: unknown): value is { type: typeof MESSAG
   return isRecord(value) && value.type === MESSAGE_AI.state && isAiState(value.state);
 }
 
-export function isAiRecommendationMessage(value: unknown): value is { type: typeof MESSAGE_AI.recommend; tabId: number } {
-  return isRecord(value) && value.type === MESSAGE_AI.recommend && typeof value.tabId === 'number' && Number.isSafeInteger(value.tabId) && value.tabId >= 0;
+export function isAiRecommendationMessage(value: unknown): value is { type: typeof MESSAGE_AI.recommend; tabId: number; refresh?: boolean } {
+  return isRecord(value) && value.type === MESSAGE_AI.recommend && Object.keys(value).every((key) => key === 'type' || key === 'tabId' || key === 'refresh') && typeof value.tabId === 'number' && Number.isSafeInteger(value.tabId) && value.tabId >= 0 && (value.refresh === undefined || typeof value.refresh === 'boolean');
 }
 
 export function isAiRecommendationsMessage(value: unknown): value is { type: typeof MESSAGE_AI.recommendations; recommendations: Recommendation[] } {
@@ -42,6 +44,10 @@ export function isAiRecommendationsMessage(value: unknown): value is { type: typ
     if (!isRecord(item) || typeof item.candidateId !== 'string' || typeof item.artist !== 'string' || typeof item.title !== 'string' || typeof item.reason !== 'string' || !Array.isArray(item.tags) || item.tags.length < 1 || item.tags.length > 3) return false;
     return item.tags.every((tag) => typeof tag === 'string');
   });
+}
+
+export function isAiRecommendationErrorMessage(value: unknown): value is { type: typeof MESSAGE_AI.recommendationError; code: RecommendationErrorCode } {
+  return isRecord(value) && value.type === MESSAGE_AI.recommendationError && ['NO_TRACK', 'NO_CANDIDATES', 'INVALID_SELECTION', 'AUTH_ERROR', 'RATE_LIMIT', 'USAGE_ERROR', 'OPENAI_REQUEST_FAILED', 'FAILED'].includes(value.code as string);
 }
 
 export function isAiAction(value: unknown, type: string): boolean {

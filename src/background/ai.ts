@@ -111,7 +111,12 @@ export function createAiService(options: AiServicesOptions) {
         headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (!response.ok) throw new Error('OPENAI_REQUEST_FAILED');
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) throw new Error('AUTH_ERROR');
+        if (response.status === 429) throw new Error('RATE_LIMIT');
+        if (response.status === 402) throw new Error('USAGE_ERROR');
+        throw new Error('OPENAI_REQUEST_FAILED');
+      }
       return response.json();
     },
   };

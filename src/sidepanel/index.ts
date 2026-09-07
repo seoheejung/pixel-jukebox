@@ -1,5 +1,5 @@
 import { CORE_ERRORS, isConnectionStatus, isCoreError, isCoreStateMessage, isPlayerState, MESSAGE, MESSAGE_AI, PORT } from '../shared/messages';
-import { isAiRecommendationsMessage, isAiStateMessage, OPENAI_API_KEY, OPENAI_ORIGIN } from '../shared/ai';
+import { isAiRecommendationErrorMessage, isAiRecommendationsMessage, isAiStateMessage, OPENAI_API_KEY, OPENAI_ORIGIN } from '../shared/ai';
 import type { Recommendation } from '../shared/recommendation';
 import { youtubeSearchUrl } from '../shared/recommendation';
 import type { AiState } from '../shared/ai';
@@ -47,6 +47,7 @@ let tabs: TabPlayer[] = [];
 let selected: number | undefined;
 let coreState: CoreState = { playlist: [], settings: { ...defaultSettings } };
 let aiState: AiState = { configured: false, persisted: false, permission: false, trustedContexts: false };
+let hasRecommendations = false;
 let pip: { update(snapshot: TabPlayer['snapshot'], settings: DesignSettings): void; close(): void } | undefined;
 
 function currentTab() { return tabs.find((tab) => tab.tabId === selected); }
@@ -63,6 +64,7 @@ function renderAi() {
   aiSave.disabled = !aiState.permission || !aiKey.value.trim();
   aiRemove.disabled = !aiState.configured;
   aiTest.disabled = !aiState.configured || !aiState.permission;
+  aiPicks.textContent = hasRecommendations ? 'REFRESH PICKS' : 'AI PICKS';
   aiPicks.disabled = !aiState.configured || !aiState.permission || !currentTab()?.snapshot.track;
 }
 
@@ -206,8 +208,11 @@ function connect() {
       if (isPlayerState(message)) { tabs = message.tabs; renderPlayer(); return; }
       if (isCoreStateMessage(message)) { coreState = message.state; renderDesign(coreState.settings); renderPlayer(); return; }
       if (isAiStateMessage(message)) { aiState = message.state; renderAi(); return; }
-      if (isAiRecommendationsMessage(message)) { aiPicksMessage.textContent = 'RECOMMENDATIONS READY'; renderRecommendations(message.recommendations); return; }
-      if (message && typeof message === 'object' && 'type' in message && message.type === MESSAGE_AI.recommendationError) { aiPicksMessage.textContent = 'AI PICKS FAILED. CORE PLAYER IS STILL AVAILABLE.'; return; }
+      if (isAiRecommendationsMessage(message)) { hasRecommendations = true; aiPicksMessage.textContent = 'RECOMMENDATIONS READY'; renderRecommendations(message.recommendations); renderAi(); return; }
+      if (isAiRecommendationErrorMessage(message)) {
+        aiPicksMessage.textContent = ({ NO_TRACK: 'NO CURRENT TRACK.', NO_CANDIDATES: 'NO CANDIDATES FOUND.', INVALID_SELECTION: 'RECOMMENDATION RESPONSE INVALID.', AUTH_ERROR: 'OPENAI AUTHENTICATION FAILED.', RATE_LIMIT: 'OPENAI RATE LIMIT REACHED.', USAGE_ERROR: 'OPENAI USAGE LIMIT REACHED.', OPENAI_REQUEST_FAILED: 'OPENAI REQUEST FAILED.', FAILED: 'AI PICKS FAILED.' } as Record<string, string>)[message.code] ?? 'AI PICKS FAILED.';
+        return;
+      }
       if (message && typeof message === 'object' && 'type' in message && message.type === MESSAGE_AI.result) {
         const result = 'result' in message && typeof message.result === 'string' ? message.result : 'failed';
         aiMessage.textContent = ({ saved: 'KEY SAVED', 'save-failed': 'PERSISTENT STORAGE IS UNAVAILABLE; KEY REMAINS SESSION ONLY.', cleared: 'KEY REMOVED', 'clear-failed': 'KEY COULD NOT BE REMOVED.', 'test-ok': 'OPENAI CONNECTION OK', 'permission-denied': 'OPENAI PERMISSION WAS NOT GRANTED.', 'not-configured': 'SAVE AN API KEY FIRST.', failed: 'OPENAI CONNECTION FAILED.' } as Record<string, string>)[result] ?? 'OPENAI ACTION FAILED.';
@@ -259,7 +264,7 @@ aiTest.addEventListener('click', () => send({ type: MESSAGE_AI.test }));
 aiPicks.addEventListener('click', () => {
   if (selected === undefined) return;
   aiPicksMessage.textContent = 'AI PICKS SEARCHING...';
-  send({ type: MESSAGE_AI.recommend, tabId: selected });
+  send({ type: MESSAGE_AI.recommend, tabId: selected, refresh: hasRecommendations });
 });
 window.addEventListener('beforeunload', () => pip?.close());
 renderDesign(coreState.settings);

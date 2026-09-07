@@ -63,6 +63,24 @@ describe('Phase 3 API key boundary', () => {
     expect(await ai.testConnection()).toBe('ok');
   });
 
+  it('does not request OpenAI while permission or configuration is inactive', async () => {
+    let requests = 0;
+    const ai = createAiService({
+      session: area(), local: area(), containsPermission: async () => false, requestPermission: async () => false,
+      request: async () => { requests += 1; return new Response(null, { status: 200 }); },
+    });
+    await expect(ai.response({})).rejects.toThrow('PERMISSION_DENIED');
+    expect(requests).toBe(0);
+  });
+
+  it.each([[401, 'AUTH_ERROR'], [429, 'RATE_LIMIT'], [402, 'USAGE_ERROR']] as const)('classifies OpenAI status %i as %s', async (status, code) => {
+    const ai = createAiService({
+      session: area({ [OPENAI_API_KEY]: 'session-secret' }), local: area(), containsPermission: async () => true, requestPermission: async () => true,
+      request: async () => new Response(null, { status }),
+    });
+    await expect(ai.response({})).rejects.toThrow(code);
+  });
+
   it('rejects key-bearing runtime payloads', () => {
     expect(isAiMessage({ type: MESSAGE_AI.save, persist: true })).toBe(true);
     expect(isAiMessage({ type: MESSAGE_AI.save, persist: true, key: 'blocked' })).toBe(false);

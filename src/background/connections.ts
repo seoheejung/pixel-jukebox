@@ -1,5 +1,5 @@
 import { hasType, isAiMessage, isCoreEdit, isPlayerCommand, isPlaylistPlay, isTrackUpdate, isYouTubeSender, MESSAGE, MESSAGE_AI, PORT } from '../shared/messages';
-import { isAiRecommendationMessage } from '../shared/ai';
+import { isAiRecommendationMessage, type RecommendationErrorCode } from '../shared/ai';
 import type { CoreChange, CORE_ERRORS, PlayerCommand } from '../shared/messages';
 import { addTrack, adjacentTrack, moveTrack, playlistTrack, removeTrack } from '../shared/playlist';
 import type { CoreState } from '../shared/storage';
@@ -13,7 +13,7 @@ interface CoreServices {
   store: CoreStore;
   navigate(tabId: number | null, videoId: string): Promise<void>;
   ai: AiService;
-  recommendations: { run(context: { current: import('../shared/track').Track | null; playlist: import('../shared/playlist').PlaylistTrack[]; recent: import('../shared/recommendation').Recommendation[] }): Promise<RecommendationResult> };
+  recommendations: { run(context: { current: import('../shared/track').Track | null; playlist: import('../shared/playlist').PlaylistTrack[]; recent: import('../shared/recommendation').Recommendation[] }, options?: { refresh?: boolean }): Promise<RecommendationResult> };
 }
 
 export function createConnections(panelUrl: string, core?: CoreServices) {
@@ -75,12 +75,17 @@ export function createConnections(panelUrl: string, core?: CoreServices) {
     }
   }
 
-  async function recommend(tabId: number, port: chrome.runtime.Port) {
+  function recommendationErrorCode(error: unknown): RecommendationErrorCode {
+    const code = error instanceof Error ? error.message : '';
+    return ['NO_TRACK', 'NO_CANDIDATES', 'INVALID_SELECTION', 'AUTH_ERROR', 'RATE_LIMIT', 'USAGE_ERROR', 'OPENAI_REQUEST_FAILED'].includes(code) ? code as RecommendationErrorCode : 'FAILED';
+  }
+
+  async function recommend(tabId: number, port: chrome.runtime.Port, refresh = false) {
     if (!core || !states.has(tabId)) { send(port, { type: MESSAGE_AI.recommendationError, code: 'NO_TRACK' }); return; }
     const current = states.get(tabId)?.snapshot.track ?? null;
     if (!current) { send(port, { type: MESSAGE_AI.recommendationError, code: 'NO_TRACK' }); return; }
     const { playlist } = await core.store.get();
-    const result = await core.recommendations.run({ current, playlist, recent: [] });
+    const result = await core.recommendations.run({ current, playlist, recent: [] }, { refresh });
     send(port, { type: MESSAGE_AI.recommendations, recommendations: result.recommendations });
   }
 
@@ -193,7 +198,7 @@ export function createConnections(panelUrl: string, core?: CoreServices) {
             if (playlist.some((track) => track.videoId === message.videoId)) await navigate(message.tabId, message.videoId);
           }).catch(() => coreError('LOAD_FAILED', port));
         } else if (isAiRecommendationMessage(message)) {
-          void recommend(message.tabId, port).catch(() => send(port, { type: MESSAGE_AI.recommendationError, code: 'FAILED' }));
+          void recommend(message.tabId, port, message.refresh).catch((error: unknown) => send(port, { type: MESSAGE_AI.recommendationError, code: recommendationErrorCode(error) }));
         } else if (isAiMessage(message)) {
           void handleAi(message, port).catch(() => send(port, { type: MESSAGE_AI.result, result: 'failed' }));
         }

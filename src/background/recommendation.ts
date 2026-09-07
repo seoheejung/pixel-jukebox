@@ -15,6 +15,14 @@ export interface RecommendationResult {
   recommendations: Recommendation[];
 }
 
+export interface RecommendationRunOptions {
+  refresh?: boolean;
+}
+
+function cacheKey(context: RecommendationContext): string {
+  return `${context.current?.videoId ?? 'none'}|${context.playlist.map((track) => track.videoId).join(',')}`;
+}
+
 function outputText(response: unknown): string {
   if (typeof response === 'object' && response !== null && 'output_text' in response && typeof response.output_text === 'string') return response.output_text;
   if (typeof response !== 'object' || response === null || !('output' in response) || !Array.isArray(response.output)) return '';
@@ -82,15 +90,28 @@ function selectionBody(candidates: Candidate[]): Record<string, unknown> {
 }
 
 export function createRecommendationService(ai: Pick<AiService, 'response'>) {
+  const cache = new Map<string, RecommendationResult>();
+  let recentRecommendations: Recommendation[] = [];
+
   return {
-    async run(context: RecommendationContext): Promise<RecommendationResult> {
-      const candidates = parseDiscovery(outputText(await ai.response(discoveryBody(context))), excludedTracks(context.current, context.playlist, context.recent));
+    async run(context: RecommendationContext, options: RecommendationRunOptions = {}): Promise<RecommendationResult> {
+      const key = cacheKey(context);
+      if (!options.refresh) {
+        const cached = cache.get(key);
+        if (cached) return { candidates: [...cached.candidates], recommendations: [...cached.recommendations] };
+      }
+      const recent = [...context.recent, ...recentRecommendations];
+      const discoveryContext = { ...context, recent };
+      const candidates = parseDiscovery(outputText(await ai.response(discoveryBody(discoveryContext))), excludedTracks(discoveryContext.current, discoveryContext.playlist, discoveryContext.recent));
       if (candidates.length === 0) throw new Error('NO_CANDIDATES');
       const selection = selectionBody(candidates);
       let recommendations = parseSelection(outputText(await ai.response(selection)), candidates);
       if (!recommendations) recommendations = parseSelection(outputText(await ai.response(selection)), candidates);
       if (!recommendations) throw new Error('INVALID_SELECTION');
-      return { candidates, recommendations };
+      const result = { candidates, recommendations };
+      cache.set(key, result);
+      recentRecommendations = [...recommendations, ...recentRecommendations].slice(0, 20);
+      return { candidates: [...candidates], recommendations: [...recommendations] };
     },
   };
 }
