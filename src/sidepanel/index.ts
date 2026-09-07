@@ -1,4 +1,6 @@
-import { CORE_ERRORS, isConnectionStatus, isCoreError, isCoreStateMessage, isPlayerState, MESSAGE, PORT } from '../shared/messages';
+import { CORE_ERRORS, isConnectionStatus, isCoreError, isCoreStateMessage, isPlayerState, MESSAGE, MESSAGE_AI, PORT } from '../shared/messages';
+import { isAiStateMessage, OPENAI_API_KEY, OPENAI_ORIGIN } from '../shared/ai';
+import type { AiState } from '../shared/ai';
 import { applyDesign, defaultSettings, isDesignSettings } from '../shared/settings';
 import type { DesignSettings } from '../shared/settings';
 import { emptySnapshot } from '../shared/track';
@@ -26,11 +28,20 @@ const panelColor = document.querySelector<HTMLInputElement>('#panel-color')!;
 const accent = document.querySelector<HTMLInputElement>('#accent')!;
 const textColor = document.querySelector<HTMLInputElement>('#text-color')!;
 const resetDesign = document.querySelector<HTMLButtonElement>('#reset-design')!;
+const aiStatus = document.querySelector<HTMLParagraphElement>('#ai-status')!;
+const aiKey = document.querySelector<HTMLInputElement>('#ai-key')!;
+const aiPersist = document.querySelector<HTMLInputElement>('#ai-persist')!;
+const aiEnable = document.querySelector<HTMLButtonElement>('#ai-enable')!;
+const aiSave = document.querySelector<HTMLButtonElement>('#ai-save')!;
+const aiRemove = document.querySelector<HTMLButtonElement>('#ai-remove')!;
+const aiTest = document.querySelector<HTMLButtonElement>('#ai-test')!;
+const aiMessage = document.querySelector<HTMLParagraphElement>('#ai-message')!;
 
 let currentPort: chrome.runtime.Port | undefined;
 let tabs: TabPlayer[] = [];
 let selected: number | undefined;
 let coreState: CoreState = { playlist: [], settings: { ...defaultSettings } };
+let aiState: AiState = { configured: false, persisted: false, permission: false, trustedContexts: false };
 let pip: { update(snapshot: TabPlayer['snapshot'], settings: DesignSettings): void; close(): void } | undefined;
 
 function currentTab() { return tabs.find((tab) => tab.tabId === selected); }
@@ -38,6 +49,15 @@ function currentTab() { return tabs.find((tab) => tab.tabId === selected); }
 function send(message: object) {
   try { currentPort?.postMessage(message); }
   catch { status.textContent = 'Connection lost. Reconnect and try again.'; }
+}
+
+function renderAi() {
+  aiStatus.textContent = !aiState.permission ? 'OPENAI PERMISSION NOT GRANTED' : aiState.configured ? (aiState.persisted ? 'CONFIGURED · PERSISTENT' : 'CONFIGURED · SESSION ONLY') : 'NOT CONFIGURED';
+  aiEnable.textContent = aiState.permission ? 'OPENAI ENABLED' : 'ENABLE OPENAI';
+  aiEnable.disabled = aiState.permission;
+  aiSave.disabled = !aiState.permission || !aiKey.value.trim();
+  aiRemove.disabled = !aiState.configured;
+  aiTest.disabled = !aiState.configured || !aiState.permission;
 }
 
 function renderPlaylist() {
@@ -156,6 +176,12 @@ function connect() {
     port.onMessage.addListener((message: unknown) => {
       if (isPlayerState(message)) { tabs = message.tabs; renderPlayer(); return; }
       if (isCoreStateMessage(message)) { coreState = message.state; renderDesign(coreState.settings); renderPlayer(); return; }
+      if (isAiStateMessage(message)) { aiState = message.state; renderAi(); return; }
+      if (message && typeof message === 'object' && 'type' in message && message.type === MESSAGE_AI.result) {
+        const result = 'result' in message && typeof message.result === 'string' ? message.result : 'failed';
+        aiMessage.textContent = ({ saved: 'KEY SAVED', 'save-failed': 'PERSISTENT STORAGE IS UNAVAILABLE; KEY REMAINS SESSION ONLY.', cleared: 'KEY REMOVED', 'clear-failed': 'KEY COULD NOT BE REMOVED.', 'test-ok': 'OPENAI CONNECTION OK', 'permission-denied': 'OPENAI PERMISSION WAS NOT GRANTED.', 'not-configured': 'SAVE AN API KEY FIRST.', failed: 'OPENAI CONNECTION FAILED.' } as Record<string, string>)[result] ?? 'OPENAI ACTION FAILED.';
+        return;
+      }
       if (isCoreError(message)) { status.textContent = CORE_ERRORS[message.code]; return; }
       if (!isConnectionStatus(message)) return;
       status.textContent = message.connectedTabs > 0 ? `CONNECTED · YouTube tabs: ${message.connectedTabs}` : 'Waiting for a YouTube connection.';
@@ -171,6 +197,7 @@ function connect() {
       window.setTimeout(connect, 1000);
     });
     port.postMessage({ type: MESSAGE.probe });
+    port.postMessage({ type: MESSAGE_AI.status });
   } catch {
     recheck.disabled = true;
     status.textContent = 'Reload the extension and try again.';
@@ -178,7 +205,28 @@ function connect() {
 }
 
 recheck.addEventListener('click', () => send({ type: MESSAGE.probe }));
+aiKey.addEventListener('input', renderAi);
+aiEnable.addEventListener('click', () => {
+  void chrome.permissions.request({ origins: [OPENAI_ORIGIN] }).then((granted) => {
+    aiMessage.textContent = granted ? 'OPENAI PERMISSION ENABLED.' : 'OPENAI PERMISSION WAS NOT GRANTED.';
+    send({ type: MESSAGE_AI.status });
+  }).catch(() => { aiMessage.textContent = 'OPENAI PERMISSION REQUEST FAILED.'; });
+});
+aiSave.addEventListener('click', () => {
+  const key = aiKey.value.trim();
+  if (!key) return;
+  void chrome.storage.session.set({ [OPENAI_API_KEY]: key }).then(() => {
+    aiKey.value = '';
+    send({ type: MESSAGE_AI.save, persist: aiPersist.checked });
+    renderAi();
+  }).catch(() => { aiMessage.textContent = 'SESSION STORAGE IS UNAVAILABLE.'; });
+});
+aiRemove.addEventListener('click', () => {
+  void chrome.storage.session.remove([OPENAI_API_KEY]).then(() => send({ type: MESSAGE_AI.clear })).catch(() => { aiMessage.textContent = 'SESSION STORAGE IS UNAVAILABLE.'; });
+});
+aiTest.addEventListener('click', () => send({ type: MESSAGE_AI.test }));
 window.addEventListener('beforeunload', () => pip?.close());
 renderDesign(coreState.settings);
 renderPlayer();
+renderAi();
 connect();

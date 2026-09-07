@@ -80,6 +80,12 @@ section + section { margin-top: 24px; }
 .playlist-play { flex: 1; min-width: 0; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .playlist-remove { min-width: 44px; padding: 8px; }
 .export-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.checkbox-label { display: flex; gap: 8px; align-items: center; margin: 12px 0; font-size: 11px; font-weight: 700; }
+#ai-key { width: 100%; min-height: 40px; margin: 8px 0; border: 2px solid var(--color-ink); padding: 8px; color: var(--color-ink); background: var(--color-surface); font: inherit; }
+#ai-help { color: var(--color-muted, #786d7d); font-size: 11px; }
+.ai-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ai-controls button { min-height: 40px; }
+#ai-message { min-height: 20px; }
 #playlist-empty { color: var(--color-muted, #786d7d); }
 @keyframes disc-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .disc { animation: none; } }

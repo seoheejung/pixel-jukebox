@@ -624,12 +624,12 @@ AI PICKS 사용자를 위한 선택적 OpenAI 연결 구성.
 
 ### 완료 기준
 
-- [ ] AI 미사용 시 OpenAI Permission 및 API 요청 없음
-- [ ] Session Key 저장·재시작 제거 확인
-- [ ] `storage.local.setAccessLevel(TRUSTED_CONTEXTS)` 실제 동작 확인
-- [ ] Service Worker 조회 성공 / Content Script 조회 차단 확인
-- [ ] 접근 제한 실패 시 Local 저장 차단
-- [ ] Console·로그·Runtime Message에 Key 노출 없음
+- [x] AI 미사용 시 OpenAI Permission 및 API 요청 없음
+- [x] Session Key 저장·재시작 제거 확인
+- [x] `storage.local.setAccessLevel(TRUSTED_CONTEXTS)` 실제 동작 확인
+- [x] Service Worker 조회 성공 / Content Script 조회 차단 확인
+- [x] 접근 제한 실패 시 Local 저장 차단
+- [x] Console·로그·Runtime Message에 Key 노출 없음
 
 ---
 

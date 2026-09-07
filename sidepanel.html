@@ -34,6 +34,16 @@
         <p id="export-status" role="status" aria-live="polite">Export the current player visual.</p>
         <div class="export-controls"><button id="export-png" type="button" disabled>PNG</button><button id="export-gif" type="button" disabled>GIF</button><button id="open-pip" type="button" disabled>OPEN PIP</button></div>
       </section>
+      <section class="pixel-panel" aria-labelledby="ai-title">
+        <h2 id="ai-title">OPENAI CONNECTION</h2>
+        <p id="ai-status" role="status" aria-live="polite">NOT CONFIGURED</p>
+        <label for="ai-key">API KEY</label>
+        <input id="ai-key" type="password" autocomplete="off" spellcheck="false" aria-describedby="ai-help" />
+        <label class="checkbox-label"><input id="ai-persist" type="checkbox" /> KEEP KEY AFTER BROWSER RESTART</label>
+        <p id="ai-help">The key stays in this browser only when you explicitly select persistence.</p>
+        <div class="ai-controls"><button id="ai-enable" type="button">ENABLE OPENAI</button><button id="ai-save" type="button" disabled>SAVE KEY</button><button id="ai-remove" type="button" disabled>REMOVE KEY</button><button id="ai-test" type="button" disabled>TEST CONNECTION</button></div>
+        <p id="ai-message" role="status" aria-live="polite"></p>
+      </section>
       <section class="pixel-panel" aria-labelledby="connection-title">
         <h2 id="connection-title">YOUTUBE CONNECTION</h2>
         <p id="connection-status" role="status" aria-live="polite">연결 확인 중…</p>

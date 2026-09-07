@@ -1,14 +1,16 @@
-import { hasType, isCoreEdit, isPlayerCommand, isPlaylistPlay, isTrackUpdate, isYouTubeSender, MESSAGE, PORT } from '../shared/messages';
+import { hasType, isAiMessage, isCoreEdit, isPlayerCommand, isPlaylistPlay, isTrackUpdate, isYouTubeSender, MESSAGE, MESSAGE_AI, PORT } from '../shared/messages';
 import type { CoreChange, CORE_ERRORS, PlayerCommand } from '../shared/messages';
 import { addTrack, adjacentTrack, moveTrack, playlistTrack, removeTrack } from '../shared/playlist';
 import type { CoreState } from '../shared/storage';
 import { emptySnapshot } from '../shared/track';
 import type { TabPlayer } from '../shared/track';
 import type { CoreStore } from './core-store';
+import type { AiService } from './ai';
 
 interface CoreServices {
   store: CoreStore;
   navigate(tabId: number | null, videoId: string): Promise<void>;
+  ai: AiService;
 }
 
 export function createConnections(panelUrl: string, core?: CoreServices) {
@@ -46,6 +48,28 @@ export function createConnections(panelUrl: string, core?: CoreServices) {
 
   function loadCore(port: chrome.runtime.Port) {
     if (core) void core.store.get().then((state) => sendCore(state, port)).catch(() => coreError('LOAD_FAILED', port));
+  }
+
+  function loadAi(port: chrome.runtime.Port) {
+    if (core) void core.ai.status().then((state) => send(port, { type: MESSAGE_AI.state, state })).catch(() => send(port, { type: MESSAGE_AI.result, result: 'failed' }));
+  }
+
+  async function handleAi(message: { type: string; persist?: boolean }, port: chrome.runtime.Port) {
+    if (!core) return;
+    if (message.type === MESSAGE_AI.status) {
+      send(port, { type: MESSAGE_AI.state, state: await core.ai.status() });
+    } else if (message.type === MESSAGE_AI.save) {
+      const saved = await core.ai.save(Boolean(message.persist));
+      send(port, { type: MESSAGE_AI.result, result: saved ? 'saved' : 'save-failed' });
+      send(port, { type: MESSAGE_AI.state, state: await core.ai.status() });
+    } else if (message.type === MESSAGE_AI.clear) {
+      const cleared = await core.ai.clear();
+      send(port, { type: MESSAGE_AI.result, result: cleared ? 'cleared' : 'clear-failed' });
+      send(port, { type: MESSAGE_AI.state, state: await core.ai.status() });
+    } else if (message.type === MESSAGE_AI.test) {
+      const result = await core.ai.testConnection();
+      send(port, { type: MESSAGE_AI.result, result: result === 'ok' ? 'test-ok' : result });
+    }
   }
 
   async function navigate(tabId: number | null, videoId: string) {
@@ -156,11 +180,14 @@ export function createConnections(panelUrl: string, core?: CoreServices) {
           void core.store.get().then(async ({ playlist }) => {
             if (playlist.some((track) => track.videoId === message.videoId)) await navigate(message.tabId, message.videoId);
           }).catch(() => coreError('LOAD_FAILED', port));
+        } else if (isAiMessage(message)) {
+          void handleAi(message, port).catch(() => send(port, { type: MESSAGE_AI.result, result: 'failed' }));
         }
       });
       port.onDisconnect.addListener(() => panels.delete(port));
       broadcast();
       loadCore(port);
+      loadAi(port);
       return;
     }
 

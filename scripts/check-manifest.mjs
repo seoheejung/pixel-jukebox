@@ -7,7 +7,7 @@ assert.equal(manifest.minimum_chrome_version, '140');
 assert.deepEqual(manifest.permissions, ['sidePanel', 'storage']);
 assert.deepEqual(manifest.content_scripts[0].matches, ['https://www.youtube.com/*']);
 assert.equal(manifest.host_permissions, undefined);
-assert.equal(manifest.optional_host_permissions, undefined);
+assert.deepEqual(manifest.optional_host_permissions, ['https://api.openai.com/*']);
 assert.equal(manifest.background.type, 'module');
 assert.equal(manifest.content_security_policy.extension_pages, "script-src 'self'; object-src 'self'");
 console.log('PASS: source manifest and minimum permissions');

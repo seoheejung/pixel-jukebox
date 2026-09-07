@@ -1,12 +1,33 @@
 import { createConnections } from './connections';
 import { createCoreStore } from './core-store';
+import { createAiService } from './ai';
+import { OPENAI_ORIGIN } from '../shared/ai';
 
 const store = createCoreStore({
   get: (keys) => chrome.storage.local.get(keys),
   set: (values) => chrome.storage.local.set(values),
 });
+const ai = createAiService({
+  session: {
+    get: (keys) => chrome.storage.session.get(keys),
+    set: (values) => chrome.storage.session.set(values),
+    remove: (keys) => chrome.storage.session.remove(keys),
+    setAccessLevel: (details) => chrome.storage.session.setAccessLevel(details),
+  },
+  local: {
+    get: (keys) => chrome.storage.local.get(keys),
+    set: (values) => chrome.storage.local.set(values),
+    remove: (keys) => chrome.storage.local.remove(keys),
+    setAccessLevel: (details) => chrome.storage.local.setAccessLevel(details),
+  },
+  containsPermission: () => chrome.permissions.contains({ origins: [OPENAI_ORIGIN] }),
+  requestPermission: () => chrome.permissions.request({ origins: [OPENAI_ORIGIN] }),
+  request: (input, init) => fetch(input, init),
+});
+void ai.initialize();
 const connections = createConnections(chrome.runtime.getURL('sidepanel.html'), {
   store,
+  ai,
   async navigate(tabId, videoId) {
     const url = `https://www.youtube.com/watch?v=${videoId}`;
     if (tabId === null) await chrome.tabs.create({ url });

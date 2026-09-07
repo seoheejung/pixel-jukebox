@@ -5,6 +5,7 @@
   "description": "Chrome Music Discovery Extension — YouTube Side Panel",
   "version": "0.0.0",
   "permissions": ["sidePanel", "storage"],
+  "optional_host_permissions": ["https://api.openai.com/*"],
   "background": { "service_worker": "background.js", "type": "module" },
   "action": { "default_title": "Pixel Jukebox 열기" },
   "side_panel": { "default_path": "sidepanel.html" },

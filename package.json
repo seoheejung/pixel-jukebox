@@ -16,6 +16,7 @@
     "test:chrome": "node scripts/test-chrome-phase1.mjs",
     "test:chrome:phase0": "node scripts/test-chrome-phase0.mjs",
     "test:chrome:phase2": "node scripts/test-chrome-phase2.mjs",
+    "test:chrome:phase3": "node scripts/test-chrome-phase3.mjs",
     "chrome:inspect-youtube": "node scripts/inspect-youtube.mjs",
     "chrome:inspect-export-pip": "node scripts/inspect-export-pip.mjs"
   },

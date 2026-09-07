@@ -1,5 +1,6 @@
 import { isDesignSettings } from './settings';
 import type { DesignSettings } from './settings';
+import { MESSAGE_AI } from './ai';
 import { isCoreState } from './storage';
 import type { CoreState } from './storage';
 import { isPlayerSnapshot, isRecord, isTabPlayer, isVideoId } from './track';
@@ -109,4 +110,12 @@ export function isCoreError(value: unknown): value is { type: typeof MESSAGE.cor
 
 export function isRestart(value: unknown): value is { type: typeof MESSAGE.restart; videoId: string } {
   return isRecord(value) && value.type === MESSAGE.restart && isVideoId(value.videoId);
+}
+
+export { MESSAGE_AI } from './ai';
+
+export function isAiMessage(value: unknown): value is { type: string; persist?: boolean } {
+  if (!isRecord(value) || Object.keys(value).some((key) => ['key', 'apiKey', 'token'].includes(key))) return false;
+  if ([MESSAGE_AI.status, MESSAGE_AI.clear, MESSAGE_AI.test].includes(value.type as typeof MESSAGE_AI.status)) return Object.keys(value).length === 1;
+  return value.type === MESSAGE_AI.save && Object.keys(value).length === 2 && typeof value.persist === 'boolean';
 }
