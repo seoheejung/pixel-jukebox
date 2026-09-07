@@ -51,5 +51,6 @@ try {
   }
   writeFileSync('.chrome-test/phase0.json', JSON.stringify({ browser: browser.version, extensionId: id, developerMode, youtubeTitle: page.title, sidePanel: true, messaging: true, permissions }, null, 2));
 } finally {
+  try { await browser.send('Browser.close'); } catch { }
   browser.close();
 }

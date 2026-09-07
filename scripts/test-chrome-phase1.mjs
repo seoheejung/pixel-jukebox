@@ -105,5 +105,6 @@ try {
   await evaluate(browser, panel, "document.querySelector('.disc').dataset.style = 'lp'");
   writeFileSync('.chrome-test/phase1.json', JSON.stringify({ browser: browser.version, initialTrack: firstId, nextTrack: nextId, metadata: true, artwork: true, playPause: true, rotation: true, spa: true, historyNavigation: true, nativeAutoplay: true, nativePrevious: previousAvailable, tabIsolation: true }, null, 2));
 } finally {
+  try { await browser.send('Browser.close'); } catch { }
   browser.close();
 }

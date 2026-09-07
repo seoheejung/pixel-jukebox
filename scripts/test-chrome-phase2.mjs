@@ -58,5 +58,6 @@ try {
   writeFileSync('.chrome-test/phase2.json', JSON.stringify({ browser: browser.version, playlist: true, reorder: true, repeatNavigation: true, storageRestore: true, designRestore: true, png: true, gif: true, pip: true }, null, 2));
   console.log(`PASS: Phase 2 Chrome verification (${browser.version})`);
 } finally {
+  try { await browser.send('Browser.close'); } catch { }
   browser.close();
 }
