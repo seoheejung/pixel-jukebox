@@ -86,6 +86,11 @@ section + section { margin-top: 24px; }
 .ai-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .ai-controls button { min-height: 40px; }
 #ai-message { min-height: 20px; }
+.ai-picks-list { display: grid; gap: 12px; margin-top: 12px; }
+.ai-pick-card { padding: 12px; border: 2px solid var(--color-violet); background: var(--color-surface); box-shadow: 2px 2px 0 var(--color-ink); }
+.ai-pick-card h3 { margin: 0 0 8px; font-size: 12px; }
+.ai-pick-card p { margin: 4px 0; font-size: 11px; }
+.ai-pick-card a { display: inline-block; margin-top: 8px; color: var(--color-ink); font-size: 11px; font-weight: 700; }
 #playlist-empty { color: var(--color-muted, #786d7d); }
 @keyframes disc-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .disc { animation: none; } }

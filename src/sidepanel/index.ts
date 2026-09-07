@@ -1,5 +1,7 @@
 import { CORE_ERRORS, isConnectionStatus, isCoreError, isCoreStateMessage, isPlayerState, MESSAGE, MESSAGE_AI, PORT } from '../shared/messages';
-import { isAiStateMessage, OPENAI_API_KEY, OPENAI_ORIGIN } from '../shared/ai';
+import { isAiRecommendationsMessage, isAiStateMessage, OPENAI_API_KEY, OPENAI_ORIGIN } from '../shared/ai';
+import type { Recommendation } from '../shared/recommendation';
+import { youtubeSearchUrl } from '../shared/recommendation';
 import type { AiState } from '../shared/ai';
 import { applyDesign, defaultSettings, isDesignSettings } from '../shared/settings';
 import type { DesignSettings } from '../shared/settings';
@@ -36,6 +38,9 @@ const aiSave = document.querySelector<HTMLButtonElement>('#ai-save')!;
 const aiRemove = document.querySelector<HTMLButtonElement>('#ai-remove')!;
 const aiTest = document.querySelector<HTMLButtonElement>('#ai-test')!;
 const aiMessage = document.querySelector<HTMLParagraphElement>('#ai-message')!;
+const aiPicks = document.querySelector<HTMLButtonElement>('#ai-picks')!;
+const aiPicksMessage = document.querySelector<HTMLParagraphElement>('#ai-picks-message')!;
+const aiPicksList = document.querySelector<HTMLDivElement>('#ai-picks-list')!;
 
 let currentPort: chrome.runtime.Port | undefined;
 let tabs: TabPlayer[] = [];
@@ -58,6 +63,29 @@ function renderAi() {
   aiSave.disabled = !aiState.permission || !aiKey.value.trim();
   aiRemove.disabled = !aiState.configured;
   aiTest.disabled = !aiState.configured || !aiState.permission;
+  aiPicks.disabled = !aiState.configured || !aiState.permission || !currentTab()?.snapshot.track;
+}
+
+function renderRecommendations(recommendations: Recommendation[]) {
+  aiPicksList.replaceChildren(...recommendations.map((recommendation, index) => {
+    const card = document.createElement('article');
+    card.className = 'ai-pick-card';
+    const title = document.createElement('h3');
+    title.textContent = `${String(index + 1).padStart(2, '0')} · ${recommendation.title}`;
+    const artist = document.createElement('p');
+    artist.textContent = recommendation.artist;
+    const reason = document.createElement('p');
+    reason.textContent = recommendation.reason;
+    const tags = document.createElement('p');
+    tags.textContent = recommendation.tags.map((tag) => `[${tag}]`).join(' ');
+    const search = document.createElement('a');
+    search.href = youtubeSearchUrl(recommendation);
+    search.target = '_blank';
+    search.rel = 'noreferrer';
+    search.textContent = 'SEARCH ON YOUTUBE';
+    card.append(title, artist, reason, tags, search);
+    return card;
+  }));
 }
 
 function renderPlaylist() {
@@ -127,6 +155,7 @@ function renderPlayer() {
   openPipButton.disabled = !hasTrack;
   renderPlaylist();
   pip?.update(snapshot, coreState.settings);
+  renderAi();
 }
 
 const player = createPlayer(document.querySelector<HTMLElement>('#player')!, (action) => {
@@ -177,6 +206,8 @@ function connect() {
       if (isPlayerState(message)) { tabs = message.tabs; renderPlayer(); return; }
       if (isCoreStateMessage(message)) { coreState = message.state; renderDesign(coreState.settings); renderPlayer(); return; }
       if (isAiStateMessage(message)) { aiState = message.state; renderAi(); return; }
+      if (isAiRecommendationsMessage(message)) { aiPicksMessage.textContent = 'RECOMMENDATIONS READY'; renderRecommendations(message.recommendations); return; }
+      if (message && typeof message === 'object' && 'type' in message && message.type === MESSAGE_AI.recommendationError) { aiPicksMessage.textContent = 'AI PICKS FAILED. CORE PLAYER IS STILL AVAILABLE.'; return; }
       if (message && typeof message === 'object' && 'type' in message && message.type === MESSAGE_AI.result) {
         const result = 'result' in message && typeof message.result === 'string' ? message.result : 'failed';
         aiMessage.textContent = ({ saved: 'KEY SAVED', 'save-failed': 'PERSISTENT STORAGE IS UNAVAILABLE; KEY REMAINS SESSION ONLY.', cleared: 'KEY REMOVED', 'clear-failed': 'KEY COULD NOT BE REMOVED.', 'test-ok': 'OPENAI CONNECTION OK', 'permission-denied': 'OPENAI PERMISSION WAS NOT GRANTED.', 'not-configured': 'SAVE AN API KEY FIRST.', failed: 'OPENAI CONNECTION FAILED.' } as Record<string, string>)[result] ?? 'OPENAI ACTION FAILED.';
@@ -225,6 +256,11 @@ aiRemove.addEventListener('click', () => {
   void chrome.storage.session.remove([OPENAI_API_KEY]).then(() => send({ type: MESSAGE_AI.clear })).catch(() => { aiMessage.textContent = 'SESSION STORAGE IS UNAVAILABLE.'; });
 });
 aiTest.addEventListener('click', () => send({ type: MESSAGE_AI.test }));
+aiPicks.addEventListener('click', () => {
+  if (selected === undefined) return;
+  aiPicksMessage.textContent = 'AI PICKS SEARCHING...';
+  send({ type: MESSAGE_AI.recommend, tabId: selected });
+});
 window.addEventListener('beforeunload', () => pip?.close());
 renderDesign(coreState.settings);
 renderPlayer();

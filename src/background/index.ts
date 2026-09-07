@@ -1,6 +1,7 @@
 import { createConnections } from './connections';
 import { createCoreStore } from './core-store';
 import { createAiService } from './ai';
+import { createRecommendationService } from './recommendation';
 import { OPENAI_ORIGIN } from '../shared/ai';
 
 const store = createCoreStore({
@@ -28,6 +29,7 @@ void ai.initialize();
 const connections = createConnections(chrome.runtime.getURL('sidepanel.html'), {
   store,
   ai,
+  recommendations: createRecommendationService(ai),
   async navigate(tabId, videoId) {
     const url = `https://www.youtube.com/watch?v=${videoId}`;
     if (tabId === null) await chrome.tabs.create({ url });

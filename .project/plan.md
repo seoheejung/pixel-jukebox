@@ -663,13 +663,13 @@ AI PICKS 사용자를 위한 선택적 OpenAI 연결 구성.
 
 ### 완료 기준
 
-- [ ] Discovery와 Selection 요청 분리 확인
-- [ ] Candidate Set 생성 및 Whitelist 검증
-- [ ] Structured Output Schema 검증
-- [ ] Candidate Set 외 결과 차단
-- [ ] 최대 5개 추천 및 YouTube 검색 연결
-- [ ] Selection Retry 시 Discovery 재실행 없음
-- [ ] AI 실패 시 Core Player 정상 유지
+- [x] Discovery와 Selection 요청 분리 확인
+- [x] Candidate Set 생성 및 Whitelist 검증
+- [x] Structured Output Schema 검증
+- [x] Candidate Set 외 결과 차단
+- [x] 최대 5개 추천 및 YouTube 검색 연결
+- [x] Selection Retry 시 Discovery 재실행 없음
+- [x] AI 실패 시 Core Player 정상 유지
 
 ---
 

@@ -102,6 +102,18 @@ export function createAiService(options: AiServicesOptions) {
         return response.ok ? 'ok' : 'failed';
       } catch { return 'failed'; }
     },
+    async response(body: Record<string, unknown>): Promise<unknown> {
+      if (!await options.containsPermission()) throw new Error('PERMISSION_DENIED');
+      const key = await sessionKey();
+      if (!key) throw new Error('NOT_CONFIGURED');
+      const response = await options.request('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new Error('OPENAI_REQUEST_FAILED');
+      return response.json();
+    },
   };
 }
 

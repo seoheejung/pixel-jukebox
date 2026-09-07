@@ -1,4 +1,5 @@
 import { hasType, isAiMessage, isCoreEdit, isPlayerCommand, isPlaylistPlay, isTrackUpdate, isYouTubeSender, MESSAGE, MESSAGE_AI, PORT } from '../shared/messages';
+import { isAiRecommendationMessage } from '../shared/ai';
 import type { CoreChange, CORE_ERRORS, PlayerCommand } from '../shared/messages';
 import { addTrack, adjacentTrack, moveTrack, playlistTrack, removeTrack } from '../shared/playlist';
 import type { CoreState } from '../shared/storage';
@@ -6,11 +7,13 @@ import { emptySnapshot } from '../shared/track';
 import type { TabPlayer } from '../shared/track';
 import type { CoreStore } from './core-store';
 import type { AiService } from './ai';
+import type { RecommendationResult } from './recommendation';
 
 interface CoreServices {
   store: CoreStore;
   navigate(tabId: number | null, videoId: string): Promise<void>;
   ai: AiService;
+  recommendations: { run(context: { current: import('../shared/track').Track | null; playlist: import('../shared/playlist').PlaylistTrack[]; recent: import('../shared/recommendation').Recommendation[] }): Promise<RecommendationResult> };
 }
 
 export function createConnections(panelUrl: string, core?: CoreServices) {
@@ -70,6 +73,15 @@ export function createConnections(panelUrl: string, core?: CoreServices) {
       const result = await core.ai.testConnection();
       send(port, { type: MESSAGE_AI.result, result: result === 'ok' ? 'test-ok' : result });
     }
+  }
+
+  async function recommend(tabId: number, port: chrome.runtime.Port) {
+    if (!core || !states.has(tabId)) { send(port, { type: MESSAGE_AI.recommendationError, code: 'NO_TRACK' }); return; }
+    const current = states.get(tabId)?.snapshot.track ?? null;
+    if (!current) { send(port, { type: MESSAGE_AI.recommendationError, code: 'NO_TRACK' }); return; }
+    const { playlist } = await core.store.get();
+    const result = await core.recommendations.run({ current, playlist, recent: [] });
+    send(port, { type: MESSAGE_AI.recommendations, recommendations: result.recommendations });
   }
 
   async function navigate(tabId: number | null, videoId: string) {
@@ -180,6 +192,8 @@ export function createConnections(panelUrl: string, core?: CoreServices) {
           void core.store.get().then(async ({ playlist }) => {
             if (playlist.some((track) => track.videoId === message.videoId)) await navigate(message.tabId, message.videoId);
           }).catch(() => coreError('LOAD_FAILED', port));
+        } else if (isAiRecommendationMessage(message)) {
+          void recommend(message.tabId, port).catch(() => send(port, { type: MESSAGE_AI.recommendationError, code: 'FAILED' }));
         } else if (isAiMessage(message)) {
           void handleAi(message, port).catch(() => send(port, { type: MESSAGE_AI.result, result: 'failed' }));
         }
