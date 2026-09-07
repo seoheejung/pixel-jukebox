@@ -96,6 +96,8 @@
       videoId,
       playerVars: {
         autoplay: autoplay ? 1 : 0,
+        controls: 0,
+        disablekb: 1,
         playsinline: 1,
         rel: 0,
         origin: location.origin,

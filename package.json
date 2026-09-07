@@ -13,7 +13,8 @@
     "check:bridge": "node --check player-bridge/player.js",
     "check:manifest": "node scripts/check-manifest.mjs",
     "chrome:start": "node scripts/start-chrome.mjs",
-    "chrome:stop": "node scripts/stop-chrome.mjs"
+    "chrome:stop": "node scripts/stop-chrome.mjs",
+    "test:chrome:bridge": "node scripts/test-chrome-player-bridge.mjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.1.0",
