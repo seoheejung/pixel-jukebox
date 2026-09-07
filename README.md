@@ -1,14 +1,40 @@
 # Pixel Jukebox
 
-> YouTube에서 재생 중인 음악을 LP/CD 형태로 시각화하고 Playlist를 관리하며, 선택적으로 OpenAI 기반 `AI PICKS`를 사용할 수 있는 Chrome Extension
+> YouTube 재생 음악의 LP/CD 시각화, Playlist 관리, 선택적 OpenAI 기반 `AI PICKS`를 제공하는 Chrome Extension
+> 
 
 ## 프로젝트 개요
 
-Pixel Jukebox는 Chrome Desktop 환경에서 YouTube 음악 감상 경험을 확장하는 Manifest V3 기반 Extension 프로젝트입니다.
+Chrome Desktop 환경의 YouTube 음악 감상 경험 확장
 
-기본 Player는 AI 없이 동작하며, 사용자가 `AI PICKS`를 활성화한 경우에만 자신의 OpenAI API Key를 이용해 현재 Track과 Playlist 문맥을 기준으로 비슷한 음악을 탐색합니다.
+### Core Player
 
-현재 저장소는 **Phase 1 YouTube Player와 자동·실제 Chrome 검증이 완료된 상태**이며, 실제 기능은 Phase 단위로 구현·검증합니다.
+- OpenAI 없이 독립 동작
+- 현재 YouTube 영상 및 재생 상태 연동
+- LP/CD 기반 음악 Player
+- Playlist 관리
+- 사용자 설정 저장 및 복구
+
+### AI PICKS
+
+- 사용자 선택 기반 활성화
+- 사용자 OpenAI API Key 사용
+- 현재 Track + Playlist 문맥 기반 음악 탐색
+- Web Search 기반 후보 탐색
+- Candidate Set 기반 최종 추천
+- AI 미사용 시 OpenAI API 요청 없음
+
+### 현재 상태
+
+- Phase 0 Extension 기반 구성 구현·자동/Chrome 검증 완료
+- Phase 1 YouTube Player 구현·자동/Chrome 검증 완료
+- Phase 2 Playlist · Design · Export · PiP 구현·자동/Chrome 검증 완료
+- Phase 3 OpenAI 연결 구현·자동/Chrome 검증 완료
+- Phase 4 AI Recommendation 구현·자동 검증 완료
+- Phase 5 Cache · 안정성 구현·자동 검증 완료
+- 실제 OpenAI 인증·Responses API·Web Search 외부 호출 검증 미완료
+
+---
 
 ## 주요 기능
 
@@ -35,7 +61,7 @@ Pixel Jukebox는 Chrome Desktop 환경에서 YouTube 음악 감상 경험을 확
 - Recommendation Cache
 - AI 오류와 Core Player 오류 격리
 
-> AI PICKS를 사용하지 않으면 OpenAI API 요청은 발생하지 않습니다.
+> AI PICKS 미사용 시 OpenAI API 요청 0건
 
 ---
 
@@ -74,7 +100,7 @@ flowchart LR
 ## 기술 구성
 
 | 영역 | 기술 |
-|---|---|
+| --- | --- |
 | Extension | Chrome Extension Manifest V3 |
 | 최소 Chrome | Chrome 140 |
 | Language | TypeScript |
@@ -90,18 +116,14 @@ flowchart LR
 | AI 출력 | Structured Outputs / JSON Schema |
 | Test | Vitest |
 
-UI Framework는 초기 범위에 포함하지 않습니다.
+초기 범위 기준 UI Framework 미사용
 
 ---
 
 ## AI PICKS 구조
 
-```text
-Current Track
-+
-Playlist
-+
-Recent Recommendations
+```
+Current Track + Playlist + Recent Recommendations
         ↓
 Discovery
 Responses API + Web Search
@@ -120,30 +142,38 @@ Application Validation
 AI PICKS
 ```
 
-Web Search와 Strict Structured Output은 동일 요청에서 사용하지 않습니다.
+### 핵심 기준
 
-Selection은 Candidate ID만 선택하며 Artist와 Track을 새로 생성하지 않습니다.
+- Web Search와 Strict Structured Output 요청 분리
+- Discovery 단계의 Web Search 사용
+- Selection 단계의 Tool 미사용
+- Selection의 Candidate ID 기반 선택
+- Artist / Track 신규 생성 차단
+- Candidate Set 외 결과 차단
+- Selection 실패 시 동일 Candidate Set 기반 1회 Retry
+- Retry 시 Discovery 재실행 없음
+- Partial JSON 자동 복구 없음
 
 ---
 
 ## 프로젝트 Phase
 
 | Phase | 범위 | 상태 |
-|---|---|---|
+| --- | --- | --- |
 | Phase 0 | Extension 기반 구성 | 구현·자동/Chrome 검증 완료 |
 | Phase 1 | YouTube Player | 구현·자동/Chrome 검증 완료 |
-| Phase 2 | Playlist · Design · Export · PiP | 예정 |
-| Phase 3 | OpenAI 연결 | 예정 |
-| Phase 4 | AI Recommendation | 예정 |
-| Phase 5 | Cache · 안정성 검증 | 예정 |
+| Phase 2 | Playlist · Design · Export · PiP | 구현·자동/Chrome 검증 완료 |
+| Phase 3 | OpenAI 연결 | 구현·자동/Chrome 검증 완료 · 실제 OpenAI 인증 미검증 |
+| Phase 4 | AI Recommendation | 구현·자동 검증 완료 · 실제 OpenAI API/Web Search 미검증 |
+| Phase 5 | Cache · 안정성 검증 | 구현·자동 검증 완료 · 실제 OpenAI 외부 환경 검증 필요 |
 
-구현 완료 여부는 실제 실행과 테스트 결과로만 변경합니다.
+구현 완료와 외부 API 검증 완료의 분리 관리
 
 ---
 
 ## 문서 구조
 
-```text
+```
 pixel-jukebox/
 ├── .project/
 │   └── plan.md
@@ -151,8 +181,15 @@ pixel-jukebox/
 ├── DESIGN.md
 ├── README.md
 └── docs/
-    └── instructions/
-        ├── phase0-extension-base.md
+    ├── instructions/
+    │   ├── phase0-extension-base.md
+    │   ├── phase1-youtube-player.md
+    │   ├── phase2-playlist-design-export-pip.md
+    │   ├── phase3-openai-connection.md
+    │   ├── phase4-ai-recommendation.md
+    │   └── phase5-cache-stability.md
+    └── results/
+        ├── phase0-extension-foundation.md
         ├── phase1-youtube-player.md
         ├── phase2-playlist-design-export-pip.md
         ├── phase3-openai-connection.md
@@ -163,48 +200,63 @@ pixel-jukebox/
 ### 문서 역할
 
 | 문서 | 역할 |
-|---|---|
-| `.project/plan.md` | 무엇을 만들 것인지와 전체 범위 |
-| `AGENT.md` | 작업 규칙, Phase 범위, 검증 기준 |
+| --- | --- |
+| `.project/plan.md` | 전체 기능 및 Phase 범위 기준 |
+| `AGENT.md` | 작업 규칙, 범위 제한, 검증 기준 |
 | `DESIGN.md` | Pixel UI, Layout, Color, Component 기준 |
-| `docs/instructions/phaseN-*.md` | 현재 Phase 구현·검증 지침 |
-| `README.md` | 프로젝트 개요와 현재 진행 상태 |
-
-### 우선순위
-
-```text
-사용자의 현재 명시적 지시
-        ↓
-.project/plan.md
-        ↓
-현재 Phase 지침서
-        ↓
-DESIGN.md
-        ↓
-AGENT.md
-        ↓
-README.md
-```
+| `docs/instructions/phaseN-*.md` | Phase별 구현·검증 지침 |
+| `docs/results/phaseN-*.md` | 실제 구현·실행·검증 결과 |
+| `README.md` | 프로젝트 개요, 실행 방법, 현재 상태 |
 
 ---
 
 ## OpenAI API Key 정책
 
-기본 API Key 저장소는 `chrome.storage.session`입니다.
+### 기본 저장
 
-사용자가 명시적으로 영속 저장을 선택한 경우에만 `chrome.storage.local` 저장을 시도하며, `TRUSTED_CONTEXTS` 접근 제한이 실제로 동작하는지는 Phase 3에서 직접 검증합니다.
+`chrome.storage.session` 기반 세션 저장
 
-OpenAI는 Client-side 환경에 API Key를 배포하는 방식을 권장하지 않으므로, 현재 BYOK 구조는 개인 개발·학습·포트폴리오 범위로 한정합니다.
+### 선택적 영속 저장
 
-일반 사용자 대상 공개 서비스로 전환할 경우 Backend Proxy, 인증, Secret 관리, Rate Limit, Abuse 방지, 비용 정책을 별도 기획합니다.
+- 사용자 명시적 선택
+- `chrome.storage.local` 사용
+- `TRUSTED_CONTEXTS` 접근 제한 적용
+- Service Worker Local Key 조회 성공 확인
+- Content Script Local·Session Key 조회 차단 확인
+- 접근 제한 설정 실패 시 Local 저장 차단
+- Session 저장 유지
+
+### 보안 기준
+
+- Source Code API Key 포함 금지
+- Git Commit 금지
+- `storage.sync` 저장 금지
+- Runtime Message Key 포함 금지
+- Content Script Key 전달 금지
+- Console·오류 로그 Key 출력 금지
+
+### 배포 범위
+
+현재 BYOK 구조의 개인 개발·학습·포트폴리오 범위 한정
+
+일반 사용자 대상 공개 서비스 전환 시 별도 검토 대상:
+
+- Backend Proxy
+- 사용자 인증
+- Server Secret 관리
+- Rate Limit
+- Abuse 방지
+- 사용량·비용 정책
 
 ---
 
 ## 실행
 
-Node 22.12 이상에서 다음 명령을 사용합니다.
+### 기본 검증
 
-```sh
+Node 22.12 이상 기준
+
+```
 npm install
 npm run build
 npm run typecheck
@@ -212,16 +264,75 @@ npm test
 npm run check:manifest
 ```
 
-Chrome 140 이상의 `chrome://extensions`에서 개발자 모드를 켜고 `dist/`를 압축 해제된 확장 프로그램으로 로드합니다. YouTube를 연 뒤 확장 프로그램 아이콘을 클릭하면 Side Panel이 열립니다.
+### Chrome 실행
 
-Windows에 설치된 Chrome의 전용 프로필을 사용하는 실제 브라우저 검증:
+```
+chrome://extensions
+→ 개발자 모드 활성화
+→ 압축해제된 확장 프로그램 로드
+→ dist/ 선택
+→ YouTube 실행
+→ Extension 아이콘 클릭
+→ Side Panel 실행
+```
 
-```sh
+### 실제 Chrome 자동 검증
+
+```
 npm run chrome:start
+
 # 별도 터미널
 npm run test:chrome
 ```
 
-`chrome:start`는 테스트 중 실행 상태를 유지합니다. 현재 실행 환경에서는 Chrome 시작 시 샌드박스 밖 실행이 필요했습니다. 테스트 프로필은 `.chrome-test/`에 저장됩니다. [Phase 0 실제 결과](docs/results/phase0-extension-foundation.md)를 참고하세요.
+- Windows 설치 Chrome 기반 전용 테스트 프로필 사용
+- `.chrome-test/` 테스트 프로필 저장
+- 현재 실행 환경의 Chrome 시작 시 샌드박스 외부 실행 필요
+- 실제 Chrome Extension API 기반 검증
+- Chrome API Mock 테스트와 실제 Chrome 검증 분리
 
-`npm run test:chrome`은 현재 Phase의 브라우저 검증을 실행합니다. [Phase 1 실제 결과와 YouTube DOM 관찰](docs/results/phase1-youtube-player.md)에 검증 범위를 기록했습니다.
+---
+
+## OpenAI AI PICKS 실제 검증
+
+Phase 3~5 OpenAI 연동 구현 및 자동 검증 완료
+
+유효한 OpenAI API Key 기반 실제 인증·Responses API·Web Search 호출 검증 미완료
+
+### 검증 준비
+
+- OpenAI API 사용 가능한 개인 API Key
+- OpenAI API 사용 가능 Project 및 결제·사용 한도
+- Chrome 140 이상
+- 빌드 완료 `dist/`
+
+### 검증 순서
+
+```
+YouTube 음악 재생
+        ↓
+AI 기능 활성화
+        ↓
+OpenAI Host Permission 승인
+        ↓
+API Key 입력
+        ↓
+연결 확인
+        ↓
+AI PICKS 실행
+```
+
+### 확인 대상
+
+- OpenAI 인증 성공
+- Discovery Responses API 호출
+- Web Search 실행
+- Candidate Set 생성
+- Selection Structured Output 성공
+- Candidate ID Whitelist 통과
+- 최대 5개 추천 표시
+- 한국어 추천 이유 및 Music Tag 표시
+- YouTube 검색 연결
+- API Key 로그·메시지 노출 없음
+
+> 실제 외부 API 호출 완료 전까지 OpenAI 연동의 실제 검증 완료 처리 금지
