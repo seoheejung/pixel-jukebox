@@ -213,8 +213,11 @@ export function createConnections(panelUrl: string, core?: CoreServices) {
         } else if (isCoreEdit(message)) {
           editCore(message.change, port);
         } else if (isOpenVideo(message) && core) {
+          const tabId = message.tabId !== null && states.has(message.tabId)
+            ? message.tabId
+            : [...states.values()].find((state) => state.active)?.tabId ?? [...states.keys()][0] ?? null;
           rememberLink(message.videoId);
-          void navigate(null, message.videoId).then((opened) => { if (!opened) consumeLink(message.videoId); });
+          void navigate(tabId, message.videoId).then((opened) => { if (!opened) consumeLink(message.videoId); });
         } else if (isPlaylistPlay(message) && core) {
           if (message.tabId !== null && !states.has(message.tabId)) { coreError('NAVIGATION_FAILED', port); return; }
           void core.store.get().then(async ({ playlist }) => {

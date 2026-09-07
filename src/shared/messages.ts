@@ -97,8 +97,9 @@ export function isPlaylistPlay(value: unknown): value is { type: typeof MESSAGE.
     (value.tabId === null || (typeof value.tabId === 'number' && Number.isSafeInteger(value.tabId) && value.tabId >= 0));
 }
 
-export function isOpenVideo(value: unknown): value is { type: typeof MESSAGE.openVideo; videoId: string } {
-  return isRecord(value) && value.type === MESSAGE.openVideo && Object.keys(value).length === 2 && isVideoId(value.videoId);
+export function isOpenVideo(value: unknown): value is { type: typeof MESSAGE.openVideo; videoId: string; tabId: number | null } {
+  return isRecord(value) && value.type === MESSAGE.openVideo && Object.keys(value).length === 3 && isVideoId(value.videoId) &&
+    (value.tabId === null || (typeof value.tabId === 'number' && Number.isSafeInteger(value.tabId) && value.tabId >= 0));
 }
 
 export const CORE_ERRORS = {

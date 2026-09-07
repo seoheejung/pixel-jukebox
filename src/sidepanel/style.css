@@ -71,7 +71,7 @@ summary { cursor: pointer; font-size: 12px; font-weight: 700; }
 .disc-label img { width: 100%; height: 100%; object-fit: cover; }
 .disc-hole { position: absolute; inset: 46%; background: var(--color-surface); border: 2px solid #28172f; border-radius: 50%; }
 .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1px; }
-.track-title { line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.track-title { min-width: 0; max-width: 100%; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .channel-title { font-size: 11px; }
 .playback-status { min-height: 40px; }
 .playback-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -85,10 +85,10 @@ summary { cursor: pointer; font-size: 12px; font-weight: 700; }
 .design-grid select, .design-grid input[type="color"] { width: 100%; min-height: 32px; margin: 0; }
 .design-grid input[type="checkbox"] { width: 20px; height: 20px; margin: 0; accent-color: var(--color-orange); }
 .playlist-list { display: grid; gap: 8px; margin: 12px 0; }
-.playlist-row { display: flex; gap: 8px; align-items: stretch; border: 2px solid transparent; }
+.playlist-row { display: flex; width: 100%; min-width: 0; gap: 8px; align-items: stretch; border: 2px solid transparent; }
 .playlist-row.current { border-color: var(--color-violet); }
 .playlist-row.dragging { opacity: 0.5; border-style: dashed; }
-.playlist-play { flex: 1; min-width: 0; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.playlist-play { flex: 1 1 auto; min-width: 0; max-width: calc(100% - 52px); overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .playlist-remove { min-width: 44px; padding: 8px; }
 .export-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .checkbox-label { display: flex; gap: 8px; align-items: center; margin: 12px 0; font-size: 11px; font-weight: 700; }

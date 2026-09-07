@@ -1,4 +1,4 @@
-import { CORE_ERRORS, isConnectionStatus, isCoreError, isCoreStateMessage, isPlayerState, MESSAGE, MESSAGE_AI, PORT } from '../shared/messages';
+import { isCoreError, isCoreStateMessage, isPlayerState, MESSAGE, MESSAGE_AI, PORT } from '../shared/messages';
 import { isAiRecommendationErrorMessage, isAiRecommendationsMessage, isAiStateMessage, OPENAI_API_KEY, OPENAI_ORIGIN } from '../shared/ai';
 import type { Recommendation } from '../shared/recommendation';
 import { youtubeSearchUrl } from '../shared/recommendation';
@@ -13,8 +13,6 @@ import { openPip } from './pip';
 import { createPlayer } from './player';
 import './style.css';
 
-const status = document.querySelector<HTMLParagraphElement>('#connection-status')!;
-const recheck = document.querySelector<HTMLButtonElement>('#recheck')!;
 const videoUrl = document.querySelector<HTMLInputElement>('#video-url')!;
 const addVideo = document.querySelector<HTMLButtonElement>('#add-video')!;
 const videoMessage = document.querySelector<HTMLParagraphElement>('#video-message')!;
@@ -43,6 +41,7 @@ const aiMessage = document.querySelector<HTMLParagraphElement>('#ai-message')!;
 const aiPicks = document.querySelector<HTMLButtonElement>('#ai-picks')!;
 const aiPicksMessage = document.querySelector<HTMLParagraphElement>('#ai-picks-message')!;
 const aiPicksList = document.querySelector<HTMLDivElement>('#ai-picks-list')!;
+const aiSettings = document.querySelector<HTMLDetailsElement>('.ai-settings')!;
 
 let currentPort: chrome.runtime.Port | undefined;
 let tabs: TabPlayer[] = [];
@@ -57,7 +56,7 @@ function currentTab() { return tabs.find((tab) => tab.tabId === selected); }
 
 function send(message: object) {
   try { currentPort?.postMessage(message); }
-  catch { status.textContent = 'Connection lost. Reconnect and try again.'; }
+  catch { videoMessage.textContent = 'CONNECTION LOST.'; }
 }
 
 function renderAi() {
@@ -68,7 +67,7 @@ function renderAi() {
   aiRemove.disabled = !aiState.configured;
   aiTest.disabled = !aiState.configured || !aiState.permission;
   aiPicks.textContent = hasRecommendations ? 'REFRESH PICKS' : 'AI PICKS';
-  aiPicks.disabled = !aiState.configured || !aiState.permission || !currentTab()?.snapshot.track;
+  aiPicks.disabled = false;
 }
 
 function renderRecommendations(recommendations: Recommendation[]) {
@@ -181,10 +180,10 @@ function withExportStatus(action: () => Promise<void>) {
 selector.addEventListener('change', () => { selected = Number(selector.value); renderPlayer(); });
 function openVideoFromInput() {
   const id = videoIdFromUrl(videoUrl.value.trim());
-  if (!id) { videoMessage.textContent = 'PASTE A VALID YOUTUBE LINK.'; return; }
-  videoMessage.textContent = 'OPENING VIDEO…';
+  if (!id) { videoMessage.textContent = 'INVALID LINK.'; return; }
+  videoMessage.textContent = 'OPENING…';
   pendingVideoId = id;
-  send({ type: MESSAGE.openVideo, videoId: id });
+  send({ type: MESSAGE.openVideo, videoId: id, tabId: selected ?? null });
   videoUrl.value = '';
 }
 addVideo.addEventListener('click', openVideoFromInput);
@@ -217,7 +216,7 @@ function connect() {
       if (isCoreStateMessage(message)) {
         coreState = message.state;
         if (pendingVideoId && coreState.playlist.some((track) => track.videoId === pendingVideoId)) {
-          videoMessage.textContent = 'ADDED TO PLAYLIST.';
+          videoMessage.textContent = 'ADDED';
           pendingVideoId = undefined;
         }
         renderDesign(coreState.settings); renderPlayer(); return;
@@ -233,29 +232,23 @@ function connect() {
         aiMessage.textContent = ({ saved: 'KEY SAVED', 'save-failed': 'PERSISTENT STORAGE IS UNAVAILABLE; KEY REMAINS SESSION ONLY.', cleared: 'KEY REMOVED', 'clear-failed': 'KEY COULD NOT BE REMOVED.', 'test-ok': 'OPENAI CONNECTION OK', 'permission-denied': 'OPENAI PERMISSION WAS NOT GRANTED.', 'not-configured': 'SAVE AN API KEY FIRST.', failed: 'OPENAI CONNECTION FAILED.' } as Record<string, string>)[result] ?? 'OPENAI ACTION FAILED.';
         return;
       }
-      if (isCoreError(message)) { status.textContent = CORE_ERRORS[message.code]; return; }
-      if (!isConnectionStatus(message)) return;
-      status.textContent = message.connectedTabs > 0 ? `CONNECTED · YouTube tabs: ${message.connectedTabs}` : 'Waiting for a YouTube connection.';
-      recheck.disabled = false;
+      if (isCoreError(message)) { videoMessage.textContent = message.code === 'NAVIGATION_FAILED' ? 'OPEN FAILED.' : 'PLAYER ERROR.'; return; }
     });
     port.onDisconnect.addListener(() => {
       void chrome.runtime.lastError;
       currentPort = undefined;
       tabs = [];
       renderPlayer();
-      recheck.disabled = true;
-      status.textContent = 'Connection recovering...';
+      videoMessage.textContent = 'RECONNECTING…';
       window.setTimeout(connect, 1000);
     });
     port.postMessage({ type: MESSAGE.probe });
     port.postMessage({ type: MESSAGE_AI.status });
   } catch {
-    recheck.disabled = true;
-    status.textContent = 'Reload the extension and try again.';
+    videoMessage.textContent = 'RELOAD EXTENSION.';
   }
 }
 
-recheck.addEventListener('click', () => send({ type: MESSAGE.probe }));
 aiKey.addEventListener('input', renderAi);
 aiEnable.addEventListener('click', () => {
   void chrome.permissions.request({ origins: [OPENAI_ORIGIN] }).then((granted) => {
@@ -277,7 +270,13 @@ aiRemove.addEventListener('click', () => {
 });
 aiTest.addEventListener('click', () => send({ type: MESSAGE_AI.test }));
 aiPicks.addEventListener('click', () => {
-  if (selected === undefined) return;
+  if (!aiState.permission || !aiState.configured) {
+    aiSettings.open = true;
+    aiMessage.textContent = !aiState.permission ? 'ENABLE OPENAI TO CONTINUE.' : 'ADD AN API KEY TO CONTINUE.';
+    (!aiState.permission ? aiEnable : aiKey).focus();
+    return;
+  }
+  if (!currentTab()?.snapshot.track) { aiPicksMessage.textContent = 'OPEN A VIDEO FIRST.'; return; }
   aiPicksMessage.textContent = 'AI PICKS SEARCHING...';
   send({ type: MESSAGE_AI.recommend, tabId: selected, refresh: hasRecommendations });
 });
