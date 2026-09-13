@@ -19,6 +19,7 @@ export type PlayerBridgeCommand =
       type: 'load';
       videoId: string;
       autoplay: boolean;
+      startSeconds?: number;
     }
   | {
       source: typeof PLAYER_BRIDGE_CLIENT;
@@ -38,6 +39,8 @@ export type PlayerBridgeEvent =
       version: typeof PLAYER_BRIDGE_VERSION;
       type: 'state';
       state: PlaybackState;
+      videoId?: string;
+      currentTime?: number;
     }
   | {
       source: typeof PLAYER_BRIDGE_SERVER;
@@ -52,28 +55,31 @@ export type PlayerBridgeEvent =
       version: typeof PLAYER_BRIDGE_VERSION;
       type: 'error';
       code: number;
+      videoId?: string;
     };
 
 export function isPlayerBridgeEvent(value: unknown): value is PlayerBridgeEvent {
   if (!isRecord(value) || value.source !== PLAYER_BRIDGE_SERVER || value.version !== PLAYER_BRIDGE_VERSION) return false;
   if (value.type === 'ready') return Object.keys(value).length === 3;
   if (value.type === 'state') {
-    return typeof value.state === 'string' && ['playing', 'paused', 'buffering', 'ended', 'error'].includes(value.state);
+    return typeof value.state === 'string' && ['playing', 'paused', 'buffering', 'ended', 'error'].includes(value.state) &&
+      (value.videoId === undefined || isVideoId(value.videoId)) &&
+      (value.currentTime === undefined || (typeof value.currentTime === 'number' && Number.isFinite(value.currentTime) && value.currentTime >= 0 && value.currentTime <= 86400));
   }
   if (value.type === 'metadata') {
     return isVideoId(value.videoId) && typeof value.videoTitle === 'string' && value.videoTitle.trim().length > 0 && value.videoTitle.length <= 500 &&
       typeof value.channelTitle === 'string' && value.channelTitle.length <= 200;
   }
-  return value.type === 'error' && typeof value.code === 'number';
+  return value.type === 'error' && typeof value.code === 'number' && (value.videoId === undefined || isVideoId(value.videoId));
 }
 
 export function playerBridgeInit(): PlayerBridgeCommand {
   return { source: PLAYER_BRIDGE_CLIENT, version: PLAYER_BRIDGE_VERSION, type: 'init' };
 }
 
-export function playerBridgeLoad(videoId: string, autoplay: boolean): PlayerBridgeCommand | null {
-  if (!isVideoId(videoId)) return null;
-  return { source: PLAYER_BRIDGE_CLIENT, version: PLAYER_BRIDGE_VERSION, type: 'load', videoId, autoplay };
+export function playerBridgeLoad(videoId: string, autoplay: boolean, startSeconds = 0): PlayerBridgeCommand | null {
+  if (!isVideoId(videoId) || !Number.isFinite(startSeconds) || startSeconds < 0 || startSeconds > 86400) return null;
+  return { source: PLAYER_BRIDGE_CLIENT, version: PLAYER_BRIDGE_VERSION, type: 'load', videoId, autoplay, ...(startSeconds > 0 ? { startSeconds } : {}) };
 }
 
 export function playerBridgeCommand(action: 'play' | 'pause'): PlayerBridgeCommand {

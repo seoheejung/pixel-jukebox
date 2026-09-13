@@ -13,7 +13,7 @@ export function createCoreStore(area: StorageArea) {
       loading = area.get([STORAGE.playlist, STORAGE.settings]).then((stored) => {
         const storedSettings = stored[STORAGE.settings];
         const settings = isDesignSettings(storedSettings)
-          ? { discStyle: storedSettings.discStyle, background: storedSettings.background, accent: storedSettings.accent }
+          ? { ...storedSettings }
           : defaultSettings;
         const next = { playlist: stored[STORAGE.playlist] ?? [], settings };
         if (!isCoreState(next)) throw new Error('INVALID_STORAGE');

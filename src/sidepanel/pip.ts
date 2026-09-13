@@ -1,5 +1,6 @@
+import { applyDesign } from '../shared/settings';
 import type { DesignSettings } from '../shared/settings';
-import type { PlayerAction, PlayerSnapshot } from '../shared/track';
+import type { PlayerSnapshot } from '../shared/track';
 
 interface PictureInPictureWindow extends Window {
   documentPictureInPicture?: {
@@ -10,69 +11,61 @@ interface PictureInPictureWindow extends Window {
 export interface PipController {
   update(snapshot: PlayerSnapshot, settings: DesignSettings): void;
   close(): void;
+  focus(): void;
+  readonly closed: boolean;
 }
 
-function copyStyles(source: Document, target: Document) {
-  for (const style of source.querySelectorAll('style, link[rel="stylesheet"]')) target.head.append(style.cloneNode(true));
-}
+interface MovablePlayer { moveTo(container: HTMLElement, before?: Node | null): void }
+let activeController: PipController | undefined;
+let pendingOpen: Promise<PipController> | undefined;
 
 export async function openPip(
   source: Document,
-  onCommand: (action: PlayerAction) => void,
-  snapshot: PlayerSnapshot,
+  player: MovablePlayer,
+  _snapshot: PlayerSnapshot,
   settings: DesignSettings,
 ): Promise<PipController> {
+  if (activeController && !activeController.closed) { activeController.focus(); return activeController; }
+  if (pendingOpen) return pendingOpen;
   const api = (window as PictureInPictureWindow).documentPictureInPicture;
   if (!api) throw new Error('PIP_UNSUPPORTED');
-  const pipWindow = await api.requestWindow({ width: 320, height: 420 });
-  copyStyles(source, pipWindow.document);
-  const root = pipWindow.document.createElement('main');
-  root.className = 'pip-player';
-  root.innerHTML = `
-    <div class="pip-disc" data-playing="false" data-style="lp"><div class="pip-hole"></div></div>
-    <p class="pip-title"></p><p class="pip-channel"></p>
-    <div class="pip-controls">
-      <button type="button" data-action="previous" aria-label="Previous">◀</button>
-      <button type="button" data-action="toggle" aria-label="Play or pause">▶</button>
-      <button type="button" data-action="next" aria-label="Next">▶</button>
-    </div>`;
-  pipWindow.document.body.replaceChildren(root);
-  const style = pipWindow.document.createElement('style');
-  style.textContent = `
-    :root { color-scheme: light; font: 12px monospace; }
-    body { margin: 0; background: var(--pip-bg, #fff4d8); color: var(--pip-text, #28172f); }
-    .pip-player { padding: 16px; text-align: center; }
-    .pip-disc { width: 180px; height: 180px; margin: 8px auto 20px; border: 4px solid #28172f; border-radius: 50%; background: #28172f; box-shadow: inset 0 0 0 12px #4b3b50, inset 0 0 0 20px #28172f; animation: spin 12s linear infinite; animation-play-state: paused; }
-    .pip-disc[data-style="cd"] { background: #d8d6e5; }
-    .pip-disc[data-playing="true"] { animation-play-state: running; }
-    .pip-hole { width: 12px; height: 12px; margin: 80px auto; border: 2px solid #28172f; border-radius: 50%; background: var(--pip-panel, #fff9ea); }
-    .pip-title { min-height: 36px; font-weight: 700; }
-    .pip-channel { min-height: 20px; }
-    .pip-controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    button { min-height: 44px; border: 2px solid #28172f; background: var(--pip-panel, #fff9ea); color: #28172f; font: inherit; box-shadow: 2px 2px 0 #28172f; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  `;
-  pipWindow.document.head.append(style);
-  const disc = root.querySelector<HTMLElement>('.pip-disc')!;
-  const title = root.querySelector<HTMLElement>('.pip-title')!;
-  const channel = root.querySelector<HTMLElement>('.pip-channel')!;
-  const toggle = root.querySelector<HTMLButtonElement>('[data-action="toggle"]')!;
-  for (const button of root.querySelectorAll<HTMLButtonElement>('[data-action]')) {
-    button.addEventListener('click', () => onCommand(button.dataset.action as PlayerAction));
-  }
-  const update = (next: PlayerSnapshot, nextSettings: DesignSettings) => {
-    const track = next.track;
-    const playing = track?.playbackState === 'playing';
-    disc.dataset.playing = String(playing);
-    disc.dataset.style = nextSettings.discStyle;
-    title.textContent = track?.videoTitle ?? 'No YouTube track';
-    channel.textContent = track?.channelTitle ?? '';
-    toggle.textContent = playing ? 'Ⅱ' : '▶';
-    root.style.setProperty('--pip-bg', nextSettings.background);
-    root.style.setProperty('--pip-panel', '#fff9ea');
-    root.style.setProperty('--pip-text', '#28172f');
-  };
-  pipWindow.addEventListener('pagehide', () => root.remove());
-  update(snapshot, settings);
-  return { update, close: () => { if (!pipWindow.closed) pipWindow.close(); } };
+  pendingOpen = (async () => {
+    const pipWindow = await api.requestWindow({ width: 380, height: 520 });
+    for (const style of source.querySelectorAll('style, link[rel="stylesheet"]')) pipWindow.document.head.append(style.cloneNode(true));
+    pipWindow.document.title = 'Pixel Jukebox';
+    applyDesign(pipWindow.document, settings);
+    pipWindow.document.documentElement.classList.add('standalone-window');
+    pipWindow.document.body.className = 'pip-window';
+    const root = pipWindow.document.createElement('main');
+    root.className = 'pip-player';
+    pipWindow.document.body.replaceChildren(root);
+    const originalRoot = source.querySelector<HTMLElement>('#player');
+    const originalParent = originalRoot?.parentElement;
+    const marker = source.createElement('div');
+    marker.className = 'pip-placeholder';
+    marker.innerHTML = '<strong>PiP에서 재생 중</strong><button type="button">플레이어 돌아오기</button>';
+    if (!originalRoot || !originalParent) throw new Error('PIP_PLAYER_MISSING');
+    originalParent.insertBefore(marker, originalRoot);
+    player.moveTo(root);
+    let restored = false;
+    const restore = () => {
+      if (restored) return;
+      restored = true;
+      player.moveTo(originalParent, marker);
+      marker.remove();
+      activeController = undefined;
+    };
+    marker.querySelector('button')?.addEventListener('click', () => { pipWindow.close(); restore(); });
+    pipWindow.addEventListener('pagehide', restore, { once: true });
+    const controller: PipController = {
+      update(_next, nextSettings) { applyDesign(pipWindow.document, nextSettings); },
+      close: () => { if (!pipWindow.closed) pipWindow.close(); restore(); },
+      focus: () => pipWindow.focus(),
+      get closed() { return pipWindow.closed; },
+    };
+    activeController = controller;
+    return controller;
+  })();
+  try { return await pendingOpen; }
+  finally { pendingOpen = undefined; }
 }

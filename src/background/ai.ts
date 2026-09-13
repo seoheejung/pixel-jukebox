@@ -1,5 +1,34 @@
 import { OPENAI_API_KEY, OPENAI_ORIGIN } from '../shared/ai';
-import type { AiState } from '../shared/ai';
+import type { AiErrorDetails, AiState, RecommendationErrorCode, RecommendationStage } from '../shared/ai';
+
+export class AiDiagnosticError extends Error {
+  constructor(public readonly code: RecommendationErrorCode, public readonly details: AiErrorDetails) {
+    super(code);
+    this.name = 'AiDiagnosticError';
+  }
+}
+
+function safeText(value: unknown, key: string): string | undefined {
+  if (typeof value !== 'string' || !value.trim()) return undefined;
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return value.replace(new RegExp(escaped, 'g'), '[REDACTED]').replace(/Bearer\s+\S+/gi, 'Bearer [REDACTED]').replace(/sk-[A-Za-z0-9_-]+/g, '[REDACTED]').replace(/[\r\n\t]+/g, ' ').slice(0, 300);
+}
+
+async function failure(response: Response, key: string, stage: RecommendationStage): Promise<AiDiagnosticError> {
+  let payload: unknown;
+  try { payload = await response.json(); } catch { payload = undefined; }
+  const error = payload && typeof payload === 'object' && 'error' in payload && payload.error && typeof payload.error === 'object' ? payload.error as Record<string, unknown> : {};
+  const apiCode = safeText(error.code, key);
+  const apiType = safeText(error.type, key);
+  const usageCodes = ['insufficient_quota', 'credit_balance_exhausted', 'organization_spend_limit_exceeded', 'project_spend_limit_exceeded', 'organization_usage_limit_exceeded'];
+  const code: RecommendationErrorCode = response.status === 401 || response.status === 403 ? 'AUTH_ERROR'
+    : response.status === 429 && (usageCodes.includes(apiCode ?? '') || usageCodes.includes(apiType ?? '')) ? 'USAGE_ERROR'
+    : response.status === 429 ? 'RATE_LIMIT' : response.status === 402 ? 'USAGE_ERROR'
+    : response.status === 400 ? 'BAD_REQUEST' : response.status === 404 ? 'NOT_FOUND'
+    : response.status >= 500 ? 'SERVER_ERROR' : 'OPENAI_REQUEST_FAILED';
+  const optional = { apiCode, apiType, param: safeText(error.param, key), message: safeText(error.message, key), requestId: safeText(response.headers.get('x-request-id'), key) };
+  return new AiDiagnosticError(code, { stage, status: response.status, ...Object.fromEntries(Object.entries(optional).filter((entry): entry is [string, string] => entry[1] !== undefined)) });
+}
 
 interface KeyArea {
   get(keys: string[]): Promise<Record<string, unknown>>;
@@ -93,31 +122,50 @@ export function createAiService(options: AiServicesOptions) {
       return localTrusted;
     },
     status,
-    async testConnection(): Promise<'ok' | 'not-configured' | 'permission-denied' | 'failed'> {
-      if (!await options.containsPermission()) return 'permission-denied';
+    async testConnection(): Promise<{ result: 'ok' | 'not-configured' | 'permission-denied' | 'failed'; error?: AiDiagnosticError }> {
+      if (!await options.containsPermission()) return { result: 'permission-denied' };
       const key = await sessionKey();
-      if (!key) return 'not-configured';
+      if (!key) return { result: 'not-configured' };
       try {
-        const response = await options.request('https://api.openai.com/v1/models', { headers: { Authorization: `Bearer ${key}` } });
-        return response.ok ? 'ok' : 'failed';
-      } catch { return 'failed'; }
-    },
-    async response(body: Record<string, unknown>): Promise<unknown> {
-      if (!await options.containsPermission()) throw new Error('PERMISSION_DENIED');
-      const key = await sessionKey();
-      if (!key) throw new Error('NOT_CONFIGURED');
-      const response = await options.request('https://api.openai.com/v1/responses', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) throw new Error('AUTH_ERROR');
-        if (response.status === 429) throw new Error('RATE_LIMIT');
-        if (response.status === 402) throw new Error('USAGE_ERROR');
-        throw new Error('OPENAI_REQUEST_FAILED');
+        const response = await options.request('https://api.openai.com/v1/models', { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(15000) });
+        return response.ok ? { result: 'ok' } : { result: 'failed', error: await failure(response, key, 'connection') };
+      } catch (cause) {
+        const message = cause instanceof Error && cause.name === 'TimeoutError' ? '요청 시간이 초과되었습니다.' : '네트워크 연결을 확인하세요.';
+        return { result: 'failed', error: new AiDiagnosticError('NETWORK_ERROR', { stage: 'connection', message }) };
       }
-      return response.json();
+    },
+    async response(body: Record<string, unknown>, stage: RecommendationStage = 'discovery'): Promise<unknown> {
+      if (!await options.containsPermission()) throw new AiDiagnosticError('PERMISSION_DENIED', { stage });
+      const key = await sessionKey();
+      if (!key) throw new AiDiagnosticError('NOT_CONFIGURED', { stage });
+      let response: Response;
+      try {
+        response = await options.request('https://api.openai.com/v1/responses', {
+          method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(120000),
+        });
+      } catch (cause) {
+        const message = cause instanceof Error && cause.name === 'TimeoutError' ? '요청 시간이 초과되었습니다.' : '네트워크 연결을 확인하세요.';
+        throw new AiDiagnosticError('NETWORK_ERROR', { stage, message });
+      }
+      if (!response.ok) throw await failure(response, key, stage);
+      try {
+        const payload: unknown = await response.json();
+        if (payload && typeof payload === 'object' && 'status' in payload && (payload.status === 'failed' || payload.status === 'incomplete')) {
+          const record = payload as Record<string, unknown>;
+          const embedded = record.error && typeof record.error === 'object' ? record.error as Record<string, unknown> : {};
+          const incomplete = record.incomplete_details && typeof record.incomplete_details === 'object' ? record.incomplete_details as Record<string, unknown> : {};
+          const optional = {
+            apiCode: safeText(embedded.code, key), apiType: safeText(embedded.type, key), param: safeText(embedded.param, key),
+            message: safeText(payload.status === 'failed' ? embedded.message : incomplete.reason, key), requestId: safeText(response.headers.get('x-request-id'), key),
+          };
+          throw new AiDiagnosticError('INVALID_RESPONSE', { stage, status: response.status, ...Object.fromEntries(Object.entries(optional).filter((entry): entry is [string, string] => entry[1] !== undefined)) });
+        }
+        return payload;
+      } catch (cause) {
+        if (cause instanceof AiDiagnosticError) throw cause;
+        const requestId = safeText(response.headers.get('x-request-id'), key);
+        throw new AiDiagnosticError('INVALID_RESPONSE', { stage, status: response.status, message: '응답 JSON을 읽을 수 없습니다.', ...(requestId ? { requestId } : {}) });
+      }
     },
   };
 }

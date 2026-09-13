@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addTrack, adjacentTrack, moveTrack, removeTrack, updateTrack } from '../src/shared/playlist';
+import { addTrack, adjacentTrack, moveTrack, removeTrack, trackAfterEnded, updateTrack } from '../src/shared/playlist';
 import { contrast, defaultSettings, isDesignSettings, readableSettings } from '../src/shared/settings';
 import { createCoreStore } from '../src/background/core-store';
 import { STORAGE } from '../src/shared/storage';
@@ -27,6 +27,14 @@ describe('Phase 2 playlist operations', () => {
     expect(adjacentTrack(playlist, '4Ygvv_Ae3dg', 1)?.videoId).toBe('dQw4w9WgXcQ');
   });
 
+  it('replays the current track only in repeat-one mode after playback ends', () => {
+    const first = track('dQw4w9WgXcQ');
+    const second = track('4Ygvv_Ae3dg');
+    expect(trackAfterEnded([first, second], first, true)).toBe(first);
+    expect(trackAfterEnded([first, second], first, false)).toBe(second);
+    expect(trackAfterEnded([first], first, false)).toBeNull();
+  });
+
   it('updates metadata without changing playlist order', () => {
     const first = track('dQw4w9WgXcQ');
     const second = track('4Ygvv_Ae3dg');
@@ -39,8 +47,8 @@ describe('Phase 2 design and storage', () => {
   it('accepts readable settings and rejects insufficient text contrast', () => {
     expect(isDesignSettings(defaultSettings)).toBe(true);
     expect(readableSettings(defaultSettings)).toBe(true);
-    const unreadable = { ...defaultSettings, background: '#28172f' };
-    expect(contrast('#28172f', unreadable.background)).toBeLessThan(4.5);
+    const unreadable = { ...defaultSettings, shell: '#2e2230' };
+    expect(contrast('#2e2230', unreadable.shell)).toBeLessThan(4.5);
     expect(readableSettings(unreadable)).toBe(false);
   });
 
@@ -54,5 +62,13 @@ describe('Phase 2 design and storage', () => {
     expect(next.playlist).toHaveLength(1);
     expect(values[STORAGE.playlist]).toEqual(next.playlist);
     expect((await store.get()).playlist[0]?.videoId).toBe('dQw4w9WgXcQ');
+  });
+
+  it('preserves the playlist while replacing legacy disc settings', async () => {
+    const values = { playlist: [track('dQw4w9WgXcQ')], settings: { discStyle: 'lp', background: '#fff4d8', accent: '#ff6a3d' } };
+    let writes = 0;
+    const store = createCoreStore({ get: async () => values, set: async () => { writes++; } });
+    expect(await store.get()).toEqual({ playlist: values.playlist, settings: defaultSettings });
+    expect(writes).toBe(0);
   });
 });

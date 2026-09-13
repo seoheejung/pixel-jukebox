@@ -16,7 +16,7 @@ export interface PlayerSnapshot {
   error: boolean;
 }
 
-export type PlayerAction = 'previous' | 'toggle' | 'next';
+export type PlayerAction = 'previous' | 'toggle' | 'repeat-one' | 'next';
 
 export const emptySnapshot = (): PlayerSnapshot => ({ track: null, previous: false, next: false, error: false });
 

@@ -4,48 +4,59 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Pixel Jukebox</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png" />
   </head>
   <body>
     <main>
-      <header><h1>PIXEL JUKEBOX</h1><p>YOUTUBE MUSIC PLAYER</p></header>
-      <section class="pixel-panel link-panel" aria-labelledby="link-title">
-        <h2 id="link-title">ADD YOUTUBE VIDEO</h2>
-        <label for="video-url">YOUTUBE LINK</label>
-        <div class="video-link-row"><input id="video-url" type="url" autocomplete="off" spellcheck="false" placeholder="Paste a YouTube link" /><button id="add-video" type="button">ADD &amp; PLAY</button></div>
-        <p id="video-message" role="status" aria-live="polite"></p>
+      <section class="game-boy" aria-label="Pixel Jukebox Game Boy player">
+        <header><div><h1>PIXEL JUKEBOX</h1></div><div class="power-light" aria-label="Playback stopped"><span></span>POWER</div></header>
+        <section id="player" aria-label="YouTube Player Bridge"></section>
+        <div class="lcd-menu" id="menu-view" data-screen="home" hidden>
+      <section class="lcd-page home-screen" data-view="home" aria-label="Main menu">
+        <div class="lcd-header"><span>HOME</span><span>MENU</span></div>
+        <div class="lcd-content menu-list">
+          <button data-open="now-playing" type="button">Now Playing <small>player</small></button>
+          <button data-open="playlist" type="button">Playlist <small id="playlist-count">0 tracks</small></button>
+          <button data-open="ai-picks" type="button">Similar Vibes</button>
+          <button data-open="settings" type="button">Settings <small>device</small></button>
+        </div><div class="lcd-footer">▲▼ MOVE · A OPEN</div>
       </section>
-      <section id="player" class="pixel-panel" aria-label="YouTube Player Bridge"></section>
-      <section class="pixel-panel" aria-labelledby="playlist-title">
-        <h2 id="playlist-title">PLAYLIST</h2>
-        <p id="playlist-empty">Playlist is empty. Paste a YouTube link above.</p>
-        <div id="playlist-list" class="playlist-list" role="list"></div>
+      <section class="lcd-page playlist-panel" data-view="playlist" aria-labelledby="playlist-title" hidden>
+        <div class="lcd-header"><span>HOME / PLAYLIST</span><span id="playlist-title">QUEUE</span></div><div class="lcd-content">
+        <div class="playlist-add"><label for="video-url" class="sr-only">YouTube 링크</label>
+          <div class="video-link-row"><input id="video-url" type="url" autocomplete="off" spellcheck="false" placeholder="YouTube link" /><button id="add-video" type="button">ADD &amp; PLAY</button></div>
+          <p id="video-message" role="status" aria-live="polite"></p>
+        </div>
+        <p id="playlist-empty">Your next track starts with a link.</p>
+        <div id="playlist-list" class="playlist-list menu-list" role="list"></div></div><div class="lcd-footer">A PLAY · × REMOVE · B BACK</div>
       </section>
-      <details class="secondary-tools">
-        <summary>PLAYER TOOLS</summary>
-        <section class="pixel-panel" aria-labelledby="design-title">
-          <h2 id="design-title">DESIGN</h2>
-          <div class="design-grid">
-            <label>DISC <select id="disc-style"><option value="lp">LP</option><option value="cd">CD</option></select></label>
-            <label>BACKGROUND <input id="background" type="color" value="#fff4d8" /></label>
-            <label>ACCENT <input id="accent" type="color" value="#ff6a3d" /></label>
-          </div>
-          <p class="design-preview">PREVIEW UPDATES IMMEDIATELY</p>
-          <button id="save-design" type="button">SAVE</button>
-        </section>
-        <button id="open-pip" type="button" disabled>OPEN PIP</button>
-      </details>
-      <section class="pixel-panel" aria-labelledby="ai-title">
-        <h2 id="ai-title">AI PICKS</h2>
-        <button id="ai-picks" type="button" disabled>AI PICKS</button>
-        <p id="ai-picks-message" role="status" aria-live="polite"></p>
-        <div id="ai-picks-list" class="ai-picks-list"></div>
-        <details class="ai-settings">
-          <summary>OPENAI SETTINGS</summary>
-          <label for="ai-key">API KEY</label>
-          <input id="ai-key" type="password" autocomplete="off" spellcheck="false" />
-          <button id="ai-connect" type="button">CONNECT</button>
-          <p id="ai-message" role="status" aria-live="polite"></p>
-        </details>
+      <section class="lcd-page ai-panel" data-view="ai-picks" aria-labelledby="ai-title" hidden>
+        <div class="lcd-header"><span>SIMILAR VIBES</span><button id="continue-close" type="button" aria-label="Close Similar Vibes" hidden>CLOSE ↓</button></div><div class="lcd-content">
+        <h2 id="ai-title" class="sr-only">Similar Vibes</h2>
+        <div id="similar-vibes-connect" class="similar-vibes-connect"><label for="similar-vibes-key">OPENAI API KEY</label><div class="ai-key-row"><input id="similar-vibes-key" type="password" autocomplete="off" spellcheck="false" /><button id="similar-vibes-connect-button" type="button">CONNECT</button></div><p id="similar-vibes-connect-message" role="status" aria-live="polite"></p></div>
+        <div class="similar-vibes-source"><span id="similar-vibes-source-label">REFERENCE TRACK</span><button id="similar-vibes-source-trigger" type="button" aria-haspopup="listbox" aria-controls="similar-vibes-source-list" aria-expanded="false"></button><div id="similar-vibes-source-list" class="similar-vibes-source-list" role="listbox" aria-labelledby="similar-vibes-source-label" hidden></div><p id="similar-vibes-empty" hidden>No Playlist tracks yet.</p><button id="similar-vibes-open-playlist" type="button" hidden>OPEN PLAYLIST</button></div>
+        <button id="ai-picks" class="vibe-action" type="button" hidden>GET PICKS</button><p id="ai-picks-source" class="ai-picks-source" hidden></p>
+        <div id="ai-picks-loading" class="ai-picks-loading" role="status" aria-live="polite" hidden><span class="pixel-loader" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span id="ai-picks-progress">Finding tracks…</span></div>
+        <p id="ai-picks-message" role="status" aria-live="polite"></p><button id="ai-picks-retry" class="ai-picks-retry" type="button" hidden>RETRY</button>
+        <div id="ai-picks-list" class="ai-picks-list menu-list"></div></div><div class="lcd-footer">A ADD TO PLAYLIST · B CLOSE/BACK</div>
+      </section>
+      <section class="lcd-page settings-screen" data-view="settings" hidden><div class="lcd-header"><span>HOME / SETTINGS</span></div><div class="lcd-content menu-list">
+        <button data-open="appearance" type="button">Appearance <small>colors</small></button><button data-open="openai" type="button">OpenAI <small id="openai-state">not connected</small></button><button id="auto-skip-ads" type="button" aria-pressed="true" title="Automatically click Skip Ad when available in this player">Auto Skip Ads <small>ON</small></button><button id="open-window" type="button">Open Window <small>starts at Home</small></button>
+      </div><div class="lcd-footer">▲▼ MOVE · A OPEN · B BACK</div></section>
+      <section class="lcd-page design-settings" data-view="appearance" hidden><div class="lcd-header"><span>SETTINGS / APPEARANCE</span></div><div class="lcd-content">
+        <div class="design-grid">
+          <label>SHELL <input id="shell-tone" type="color" value="#d9d7cc" /></label>
+          <label>SCREEN <input id="screen-tone" type="color" value="#9bbc0f" /></label>
+          <label>BUTTON <input id="button-tone" type="color" value="#a13b6d" /></label>
+        </div>
+        <button id="save-design" class="compact-action" type="button">SAVE</button>
+      </div><div class="lcd-footer">SAVE · B CANCEL</div></section>
+      <section class="lcd-page ai-settings" data-view="openai" hidden><div class="lcd-header"><span>SETTINGS / OPENAI</span></div><div class="lcd-content">
+        <label for="ai-key">API KEY</label>
+        <div class="ai-key-row"><input id="ai-key" type="password" autocomplete="off" spellcheck="false" /><button id="ai-connect" class="compact-action" type="button">CONNECT</button></div>
+        <p id="ai-message" role="status" aria-live="polite"></p>
+      </div><div class="lcd-footer">KEY STAYS IN SESSION · B BACK</div></section>
+        </div>
       </section>
     </main>
     <script type="module" src="/src/sidepanel/index.ts"></script>

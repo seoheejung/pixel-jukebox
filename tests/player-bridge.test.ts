@@ -8,6 +8,7 @@ import {
   playerBridgeInit,
   playerBridgeLoad,
 } from '../src/shared/player-bridge';
+import { playerErrorMessage } from '../src/sidepanel/player';
 
 describe('player bridge protocol', () => {
   it('creates a versioned handshake', () => {
@@ -27,6 +28,8 @@ describe('player bridge protocol', () => {
       autoplay: true,
     });
     expect(playerBridgeLoad('invalid', true)).toBeNull();
+    expect(playerBridgeLoad('dQw4w9WgXcQ', false, 42.5)).toMatchObject({ autoplay: false, startSeconds: 42.5 });
+    expect(playerBridgeLoad('dQw4w9WgXcQ', true, -1)).toBeNull();
   });
 
   it('creates allowlisted player commands', () => {
@@ -40,7 +43,9 @@ describe('player bridge protocol', () => {
 
   it('accepts bridge events and rejects forged messages', () => {
     expect(isPlayerBridgeEvent({ source: PLAYER_BRIDGE_SERVER, version: 1, type: 'ready' })).toBe(true);
-    expect(isPlayerBridgeEvent({ source: PLAYER_BRIDGE_SERVER, version: 1, type: 'state', state: 'playing' })).toBe(true);
+    expect(isPlayerBridgeEvent({ source: PLAYER_BRIDGE_SERVER, version: 1, type: 'state', state: 'playing', videoId: 'dQw4w9WgXcQ' })).toBe(true);
+    expect(isPlayerBridgeEvent({ source: PLAYER_BRIDGE_SERVER, version: 1, type: 'state', state: 'playing', videoId: 'dQw4w9WgXcQ', currentTime: 42.5 })).toBe(true);
+    expect(isPlayerBridgeEvent({ source: PLAYER_BRIDGE_SERVER, version: 1, type: 'state', state: 'playing', currentTime: -1 })).toBe(false);
     expect(isPlayerBridgeEvent({
       source: PLAYER_BRIDGE_SERVER,
       version: 1,
@@ -51,5 +56,13 @@ describe('player bridge protocol', () => {
     })).toBe(true);
     expect(isPlayerBridgeEvent({ source: 'other', version: 1, type: 'state', state: 'playing' })).toBe(false);
     expect(isPlayerBridgeEvent({ source: PLAYER_BRIDGE_SERVER, version: 1, type: 'state', state: 'unknown' })).toBe(false);
+    expect(isPlayerBridgeEvent({ source: PLAYER_BRIDGE_SERVER, version: 1, type: 'error', code: 150, videoId: 'dQw4w9WgXcQ' })).toBe(true);
+    expect(isPlayerBridgeEvent({ source: PLAYER_BRIDGE_SERVER, version: 1, type: 'error', code: 150, videoId: 'invalid' })).toBe(false);
+  });
+
+  it('explains unavailable and embed-disabled videos', () => {
+    expect(playerErrorMessage(100)).toBe('This video is unavailable or private.');
+    expect(playerErrorMessage(101)).toBe('This video does not allow embedded playback.');
+    expect(playerErrorMessage(150)).toBe('This video does not allow embedded playback.');
   });
 });

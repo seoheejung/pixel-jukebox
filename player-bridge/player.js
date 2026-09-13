@@ -11,6 +11,8 @@
   let youtubePlayer = null;
   let activeVideoId = '';
   let autoplayAfterReady = false;
+  let startSecondsAfterReady = 0;
+  let lastPlaybackState = 'paused';
 
   function validExtensionOrigin(value) {
     if (typeof value !== 'string') return false;
@@ -71,25 +73,38 @@
     const iframe = event.target.getIframe();
     iframe.referrerPolicy = 'strict-origin-when-cross-origin';
     iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
+    if (startSecondsAfterReady > 0 && typeof event.target.seekTo === 'function') event.target.seekTo(startSecondsAfterReady, true);
+    startSecondsAfterReady = 0;
     if (autoplayAfterReady) {
       autoplayAfterReady = false;
       event.target.playVideo();
-    }
+    } else sendToParent('state', { state: 'paused', videoId: activeVideoId });
     sendMetadata();
+  }
+
+  function sendPlaybackProgress() {
+    if (!playerReady || !youtubePlayer || !activeVideoId || typeof youtubePlayer.getCurrentTime !== 'function') return;
+    const currentTime = youtubePlayer.getCurrentTime();
+    if (Number.isFinite(currentTime) && currentTime >= 0) sendToParent('state', { state: lastPlaybackState, videoId: activeVideoId, currentTime });
   }
 
   function onPlayerStateChange(event) {
     const state = ({ 0: 'ended', 1: 'playing', 2: 'paused', 3: 'buffering', 5: 'paused' })[event.data];
-    if (state) sendToParent('state', { state });
+    const currentTime = typeof youtubePlayer?.getCurrentTime === 'function' ? youtubePlayer.getCurrentTime() : 0;
+    if (state) {
+      lastPlaybackState = state;
+      sendToParent('state', { state, videoId: activeVideoId, ...(Number.isFinite(currentTime) && currentTime >= 0 ? { currentTime } : {}) });
+    }
     sendMetadata();
   }
 
   function onPlayerError(event) {
-    sendToParent('error', { code: typeof event.data === 'number' ? event.data : 0 });
+    sendToParent('error', { code: typeof event.data === 'number' ? event.data : 0, videoId: activeVideoId });
   }
 
-  function createPlayer(videoId, autoplay) {
+  function createPlayer(videoId, autoplay, startSeconds) {
     autoplayAfterReady = autoplay;
+    startSecondsAfterReady = startSeconds;
     youtubePlayer = new window.YT.Player('youtube-player', {
       width: '100%',
       height: '100%',
@@ -107,21 +122,22 @@
         onReady: onPlayerReady,
         onStateChange: onPlayerStateChange,
         onError: onPlayerError,
-        onAutoplayBlocked: () => sendToParent('state', { state: 'paused' }),
+        onAutoplayBlocked: () => sendToParent('state', { state: 'paused', videoId: activeVideoId }),
       },
     });
   }
 
-  function loadVideo(videoId, autoplay) {
+  function loadVideo(videoId, autoplay, startSeconds = 0) {
     activeVideoId = videoId;
     void fetchMetadata(videoId);
     if (!youtubePlayer) {
-      createPlayer(videoId, autoplay);
+      createPlayer(videoId, autoplay, startSeconds);
       return;
     }
     if (!playerReady) return;
-    if (autoplay) youtubePlayer.loadVideoById(videoId);
-    else youtubePlayer.cueVideoById(videoId);
+    const load = { videoId, startSeconds };
+    if (autoplay) youtubePlayer.loadVideoById(load);
+    else youtubePlayer.cueVideoById(load);
     sendMetadata();
   }
 
@@ -129,6 +145,7 @@
     apiReady = true;
     announceReady();
   };
+  window.setInterval(sendPlaybackProgress, 1000);
 
   window.addEventListener('message', (event) => {
     if (event.source !== window.parent) return;
@@ -142,7 +159,8 @@
     }
     if (!parentOrigin || event.origin !== parentOrigin || !apiReady) return;
     if (message.type === 'load' && typeof message.videoId === 'string' && videoIdPattern.test(message.videoId) && typeof message.autoplay === 'boolean') {
-      loadVideo(message.videoId, message.autoplay);
+      const startSeconds = typeof message.startSeconds === 'number' && Number.isFinite(message.startSeconds) && message.startSeconds >= 0 && message.startSeconds <= 86400 ? message.startSeconds : 0;
+      loadVideo(message.videoId, message.autoplay, startSeconds);
       return;
     }
     if (message.type === 'command' && playerReady && (message.action === 'play' || message.action === 'pause')) {

@@ -2,9 +2,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 export const endpoint = 'http://127.0.0.1:9223';
 
-export async function connectBrowser() {
-  const version = await fetch(`${endpoint}/json/version`, { signal: AbortSignal.timeout(3000) }).then((response) => response.json());
-  const socket = new WebSocket(version.webSocketDebuggerUrl);
+async function connectSocket(webSocketDebuggerUrl, browserVersion) {
+  const socket = new WebSocket(webSocketDebuggerUrl);
   await new Promise((resolve, reject) => {
     socket.addEventListener('open', resolve, { once: true });
     socket.addEventListener('error', reject, { once: true });
@@ -26,7 +25,7 @@ export async function connectBrowser() {
     }
   });
   return {
-    version: version.Browser,
+    version: browserVersion,
     onEvent(listener) { listeners.add(listener); return () => listeners.delete(listener); },
     send(method, params = {}, sessionId) {
       return new Promise((resolve, reject) => {
@@ -42,6 +41,15 @@ export async function connectBrowser() {
       socket.close();
     },
   };
+}
+
+export async function connectBrowser(browserEndpoint = endpoint) {
+  const version = await fetch(`${browserEndpoint}/json/version`, { signal: AbortSignal.timeout(3000) }).then((response) => response.json());
+  return connectSocket(version.webSocketDebuggerUrl, version.Browser);
+}
+
+export async function connectTarget(webSocketDebuggerUrl) {
+  return connectSocket(webSocketDebuggerUrl);
 }
 
 export async function until(check, label, timeout = 20000) {

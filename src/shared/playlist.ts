@@ -43,3 +43,9 @@ export function adjacentTrack(playlist: PlaylistTrack[], currentId: string, dire
   if (index < 0) return playlist[direction === 1 ? 0 : playlist.length - 1]!;
   return playlist[(index + direction + playlist.length) % playlist.length]!;
 }
+
+export function trackAfterEnded(playlist: PlaylistTrack[], current: PlaylistTrack, repeatOne: boolean): PlaylistTrack | null {
+  if (repeatOne) return current;
+  if (playlist.length <= 1) return null;
+  return adjacentTrack(playlist, current.videoId, 1);
+}

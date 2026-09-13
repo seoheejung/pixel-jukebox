@@ -1,18 +1,17 @@
 import { isRecord } from './track';
 
 export interface DesignSettings {
-  discStyle: 'lp' | 'cd';
-  background: string;
-  accent: string;
+  shell: string;
+  screen: string;
+  button: string;
 }
 
 export const defaultSettings: DesignSettings = {
-  discStyle: 'lp', background: '#fff4d8', accent: '#ff6a3d',
+  shell: '#d9d7cc', screen: '#9bbc0f', button: '#a13b6d',
 };
 
 export function isDesignSettings(value: unknown): value is DesignSettings {
-  return isRecord(value) && (value.discStyle === 'lp' || value.discStyle === 'cd') &&
-    ['background', 'accent'].every((key) => typeof value[key] === 'string' && /^#[0-9a-f]{6}$/i.test(value[key]));
+  return isRecord(value) && ['shell', 'screen', 'button'].every((key) => typeof value[key] === 'string' && /^#[0-9a-f]{6}$/i.test(value[key]));
 }
 
 function luminance(hex: string): number {
@@ -29,14 +28,13 @@ export function contrast(first: string, second: string): number {
 }
 
 export function readableSettings(settings: DesignSettings): boolean {
-  return contrast('#28172f', settings.background) >= 4.5;
+  return contrast('#2e2230', settings.shell) >= 4.5 && contrast('#0f380f', settings.screen) >= 4.5;
 }
 
 export function applyDesign(document: Document, settings: DesignSettings) {
   const style = document.documentElement.style;
-  style.setProperty('--color-bg', settings.background);
-  style.setProperty('--color-surface', '#fff9ea');
-  style.setProperty('--color-ink', '#28172f');
-  style.setProperty('--color-orange', settings.accent);
-  style.setProperty('--color-accent-text', contrast(settings.accent, '#28172f') >= 3 ? '#28172f' : '#ffffff');
+  style.setProperty('--color-shell', settings.shell);
+  style.setProperty('--color-screen', settings.screen);
+  style.setProperty('--color-ab', settings.button);
+  style.setProperty('--color-accent-text', contrast(settings.button, '#2e2230') >= 4.5 ? '#2e2230' : '#ffffff');
 }
