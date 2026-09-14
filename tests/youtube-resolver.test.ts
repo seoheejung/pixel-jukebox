@@ -205,10 +205,14 @@ describe('YouTube recommendation resolution', () => {
     expect(response).toHaveBeenCalledTimes(5);
     const batchPrompt = response.mock.calls[3]?.[0] as { input?: Array<{ content: string }> };
     const focusedPrompt = response.mock.calls[4]?.[0] as { input?: Array<{ content: string }> };
-    expect(batchPrompt.input?.[0]?.content).toContain('official full-length music video (MV) for every supplied song');
+    expect(batchPrompt.input?.[0]?.content).toContain('official full-song video for every supplied song');
     expect(batchPrompt.input?.[0]?.content).toContain('(1) the official artist channel, then (2) the verified label or distributor channel');
     expect(focusedPrompt.input?.[0]?.content).toContain('focused exact-match search');
     expect(focusedPrompt.input?.[0]?.content).toContain('Do not substitute live stages');
+    for (const prompt of [batchPrompt, focusedPrompt]) {
+      for (const format of ['Music Video (MV)', 'Concept Video', 'Performance Video', 'Lyric Video']) expect(prompt.input?.[0]?.content).toContain(format);
+      expect(prompt.input?.[0]?.content).toContain('fan-made lyric videos');
+    }
     expect(focusedPrompt.input?.[0]?.content).not.toBe(batchPrompt.input?.[0]?.content);
   });
 

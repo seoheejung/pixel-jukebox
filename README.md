@@ -58,6 +58,8 @@ Chrome Desktop 환경의 YouTube 음악 감상 경험 확장
 
 확장 아이콘은 360px 폭의 popup을 연다. popup을 닫으면 재생도 종료된다. Open Window는 380×650px 별도 창을 Home에서 열며, 현재 곡과 재생 위치는 이전하지 않는다.
 
+Auto Skip Ads는 `debugger` 권한으로 자체 내장 YouTube 프레임의 활성 건너뛰기 버튼에 브라우저 입력을 전달한다. ON 상태이며 Now Playing이 표시될 때만 요청하고 입력 후 디버거를 해제한다. 연결 실패 시 Settings에 `ON · ERROR`가 표시된다. 이 변경을 적용하려면 확장을 새로고침하고 플레이어를 다시 열어야 한다. 실제 action popup의 Chrome fixture를 통과했으며, 2026-09-13 사용자가 실제 광고에서 자동 건너뛰기를 확인했다. [검증 결과](docs/results/volume-auto-skip.md) 참조.
+
 별도 창은 기본 레이아웃을 최소 크기로 유지하면서 창 크기에 맞춰 본체와 LCD를 확장한다. Now Playing의 LP 버튼은 재생을 유지하면서 `이어 듣기` 패널을 아래에서 연다. 같은 기준 곡의 기존 결과는 다시 사용하고 새 검색은 ‘다시 추천’으로 실행한다. Playlist 슬라이드와 추천 슬라이드는 하나씩 열리며, B나 닫기로 내릴 수 있다. Mini Player는 Document PiP API를 지원하는 환경에서만 메뉴에 표시한다.
 
 ### 이어 듣기

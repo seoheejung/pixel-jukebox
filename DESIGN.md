@@ -114,7 +114,6 @@ PiP:
 - NOW PLAYING 옆 작은 Disc 관성 회전
 - 약한 금속 하이라이트와 화면 외곽 유리 반사
 - AI 카드 Hover의 낮은 강도 Hologram
-- Compact Card Flip
 
 금지:
 - 대형 Disc
@@ -143,7 +142,8 @@ Motion은 `transform` / `opacity` 중심. 외부 애니메이션 라이브러리
 
 ## Done
 
-- Game Boy 본체와 Video Screen 중심 구조
+- Game Boy 본체와 Home 시작 구조
+- Now Playing에서 Video Screen 중심 구조
 - NOW PLAYING과 물리 조작부 배치
 - Playlist / AI PICKS Compact UI
 - OpenAI 단일 Connect 흐름

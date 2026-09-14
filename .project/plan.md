@@ -159,7 +159,7 @@ Document PiP 유지. 영상과 재생 버튼을 표시하고, 중복 클릭 시 
 
 | 영역 | 기능 |
 |---|---|
-| Extension | Manifest V3, Side Panel, Service Worker |
+| Extension | Manifest V3, action popup·별도 창, Service Worker |
 | Player Bridge | HTTPS 정적 페이지, YouTube IFrame Player |
 | Input | YouTube URL 입력·검증·로드 |
 | Player | YouTube 영상 재생, Play/Pause, Previous/Next |
@@ -199,7 +199,7 @@ Document PiP 유지. 영상과 재생 버튼을 표시하고, 중복 클릭 시 
 ```mermaid
 flowchart LR
     Input["YouTube URL Input"]
-    Panel["Chrome Side Panel"]
+    Panel["Game Boy LCD UI<br/>action popup·별도 창"]
     Bridge["HTTPS Player Bridge"]
     YT["YouTube IFrame Player"]
     Worker["Service Worker"]
@@ -247,7 +247,7 @@ OpenAI API Key와 Playlist 전체 데이터는 Bridge로 전달하지 않는다.
 | Language | TypeScript |
 | UI | HTML / CSS / TypeScript |
 | Build | Vite |
-| Main UI | Chrome Side Panel |
+| Main UI | Game Boy LCD · Chrome action popup·별도 창 |
 | Background | Extension Service Worker |
 | Player Bridge | GitHub Pages HTTPS |
 | Video Player | YouTube IFrame Player API |
@@ -276,7 +276,7 @@ UI Framework 선반영 금지.
 구조:
 
 ```text
-Side Panel
+Extension UI (action popup·별도 창)
 → HTTPS Player Bridge
 → YouTube IFrame Player
 ```
@@ -530,9 +530,9 @@ Compact AI PICKS
 
 Web Search 미사용.
 
-Candidate Set 내부 ID에서 가능한 경우 5–8개 선택한다. 첫 곡은 현재 곡에, 이후 곡은 앞선 추천곡에 자연스럽게 이어지는 순서로 선택한다. 검증 결과가 부족하면 남은 후보를 최대 5개씩 보충 검색하며, 추가 검색 후에도 선택한 순서를 유지한다. 후보 소진 후에는 검증된 부분 결과만 반환하고 부족한 개수를 안내한다.
+Candidate Set 내부 ID에서 가능한 경우 5–8개 선택한다. 첫 곡은 사용자가 선택한 기준 곡에, 이후 곡은 앞선 추천곡에 자연스럽게 이어지는 순서로 선택한다. 검증 결과가 부족하면 남은 후보를 최대 5개씩 보충 검색하며, 추가 검색 후에도 선택한 순서를 유지한다. 후보 소진 후에는 검증된 부분 결과만 반환하고 부족한 개수를 안내한다.
 
-현재 Track·Playlist·Recent Recommendations 문맥을 Selection에도 전달한다. 현재 곡과의 음악적 유사성을 가장 우선하고 발매 시기 근접성 및 아티스트 다양성을 함께 고려해 순위를 정한다. 불확실한 음악적 사실은 추측으로 채우지 않는다.
+선택한 기준 곡·Playlist·Recent Recommendations 문맥을 Selection에도 전달한다. 원래 발매 연도·시대, 장르, 언어를 우선하고 분위기·보컬을 다음으로 고려한다. 기준 곡과 다른 아티스트를 우선하며 후보·최종 목록에는 아티스트당 최대 1곡을 지시한다. 불확실한 음악적 사실은 추측으로 채우지 않는다.
 
 최종 UI에서 Reason / Tag 미사용.
 
@@ -546,9 +546,11 @@ Candidate Set 내부 ID에서 가능한 경우 5–8개 선택한다. 첫 곡은
 }
 ```
 
-Candidate Set 외 ID 차단.
+Candidate ID는 실제 후보 ID의 enum으로 제한하고, 로컬 검증에서도 목록 밖 ID와 중복 ID를 차단한다.
 
 ### YouTube Resolver
+
+허용 영상 형식: 공식 Music Video(MV), Concept Video, Performance Video, Lyric Video. 아티스트 공식 채널을 우선하고 공식 레이블·배급사 채널을 다음으로 선택한다. 곡 전체가 포함된 영상만 대상으로 하며 짧은 콘셉트 티저, 팬 제작 가사 영상 등 기존 제외 조건은 유지한다. 일괄 검색과 누락 곡 개별 검색 모두 같은 기준을 적용한다.
 
 AI Candidate를 실제 YouTube Track으로 Resolve.
 
@@ -590,7 +592,7 @@ Selection 실패:
 
 ```text
 동일 Candidate Set
-→ Selection 1회 Retry
+→ 검증 실패 이유를 포함해 Selection 1회 Retry
 ```
 
 후보가 비었을 때만 제외 조건을 완화한 Discovery를 1회 재실행한다. 형식 오류를 임의 복구하거나 무제한 재검색하지 않는다.
@@ -615,7 +617,7 @@ Cache Hit 시 OpenAI 요청 0건.
 
 ---
 
-## 10. Side Panel 화면 기준
+## 10. Extension UI 화면 기준
 
 > 2026-09-09 LCD 메뉴 개편이 이 절의 이전 본체 밖 보조 도구 구성을 대체한다. YouTube Link, Playlist, AI Picks, Appearance, OpenAI, PiP는 모두 고정 크기 LCD 안의 화면으로 제공하며 본체 밖 카드나 toolbox를 두지 않는다.
 
@@ -637,21 +639,18 @@ Game Boy 스타일 단일 기기 화면. 2026-09-09 LCD 메뉴 기준으로 영�
 ┌──────────────────────────────┐
 │ PIXEL JUKEBOX          POWER │
 │ ┌──────────────────────────┐ │
-│ │      VIDEO SCREEN        │ │
+│ │ HOME / NOW PLAYING 등    │ │
+│ │ LCD 내부 화면 전환       │ │
+│ │ NOW PLAYING:             │ │
+│ │ VIDEO + 곡명·채널        │ │
 │ └──────────────────────────┘ │
-│                              │
-│ NOW PLAYING                  │
-│ Track Title                  │
-│ Channel                      │
 │                              │
 │                        [A]   │
 │    [十]           [B]        │
 │                              │
 │       SELECT   START    //// │
 └─────────────────────────────╯
-  YOUTUBE LINK / ADD & PLAY
-  보조 도구: Playlist / AI PICKS
-  접힌 설정: Design / OpenAI
+  URL 입력·Playlist·AI PICKS·Settings는 LCD 안에서 전환
 ```
 
 제거:
@@ -889,11 +888,17 @@ UX 로컬 구현 완료 (2026-09-08, 실제 연결 미검증):
 
 ## 18. 문서 운영 기준
 
+2026-09-13 사용자 승인: DOM 합성 클릭이 실패하고 실제 마우스 클릭만 성공한 광고에 대응하기 위해 `debugger` 권한을 추가한다. Auto Skip Ads ON 상태의 자체 중첩 YouTube 프레임만 대상으로, 콘텐츠 스크립트가 표시된 활성 버튼을 요청하고 Service Worker가 origin·ancestry·요청 버튼을 재검증한 뒤 CDP 마우스 입력을 전달한다. 작업 후 디버거를 해제하며, 일반 YouTube 페이지나 다른 탭에는 입력하지 않는다. 실제 광고 성공 여부는 fixture 검증과 구분한다.
+
 2026-09-12 추가 요청: 추천 후보·최종 목록에 아티스트당 1곡을 지시하고 기준 곡과 다른 가수를 우선한다. 재생 화면에 음량/음소거와 저장 기능을 추가하며, Settings의 Auto Skip Ads 설정은 이 확장의 중첩 YouTube 플레이어에 표시된 활성 Skip 버튼만 자동 클릭한다. 이를 위해 `https://www.youtube.com/embed/*`에만 콘텐츠 스크립트를 등록하고 확장 origin·부모 bridge ancestry를 확인한다. 일반 YouTube 페이지에는 적용하지 않는다. [음량·광고 후속 결과](../docs/results/volume-auto-skip.md) 참조.
 
 2026-09-12 사용자 후속 요구사항: SIMILAR VIBES에서 Playlist 기준 곡을 재생 없이 선택한다. 선택 목록은 LCD 내부에 제한하며, 기준 곡 ID를 저장된 Playlist에서 검증한다. 추천은 원래 발매 연도·장르·언어를 우선하고 분위기·보컬을 다음으로 고려한다. LP는 자동 검색 없이 하단 패널을 열고, 재생 화면의 Playlist는 곡 선택 후 닫힌다. 중복 정보 버튼과 미검증 Mini Player 메뉴를 제거한다. Home 간격 확대, LCD 중복 로고 제거, 물리 버튼 입체감을 적용한다. 구현·검증은 [후속 결과](../docs/results/similar-vibes-source-controls.md)를 따른다.
 
-최신 후속 검증(2026-09-12): 테스트 7개 파일·55개, 타입 검사·빌드·Bridge·manifest·PNG 아이콘 검사, 제한 밖 로컬 Chrome fixture가 통과했다. LCD 테마·스크롤바·슬라이딩 목록·연결 후 이동·창 크기 확대를 확인했다. 이전 Phase의 Chrome 실패는 당시 기록으로 보존한다. 실제 OpenAI·YouTube 요청과 Document PiP 창 생성은 미검증이며 [최신 결과](../docs/results/menu-playlist-search-followup.md)를 따른다.
+후속 검증(2026-09-12): 테스트 7개 파일·55개, 타입 검사·빌드·Bridge·manifest·PNG 아이콘 검사, 제한 밖 로컬 Chrome fixture가 통과했다. LCD 테마·스크롤바·슬라이딩 목록·연결 후 이동·창 크기 확대를 확인했다. 이전 Phase의 Chrome 실패는 당시 기록으로 보존한다. 실제 OpenAI·YouTube 요청과 Document PiP 창 생성은 미검증이며 [당시 결과](../docs/results/menu-playlist-search-followup.md)를 따른다.
+
+후속 검증(2026-09-13): 테스트 7개 파일·62개, 타입 검사·빌드·Bridge 문법·manifest 검사가 통과했다. Chrome 광고 fixture에서 음량·광고 버튼 제어와 연결 안내 숨김·한 줄 배치를 검증했다. 이 시점의 실제 광고 건너뛰기와 사용자 환경의 AI selection 오류 해결 여부는 미확인이었다. [연결 안내·선곡 검증 후속 결과](../docs/results/controls-selection-followup.md) 참조.
+
+최신 사용자 확인(2026-09-13): 실제 action popup의 sender에 frameId·documentId가 없어 정상 광고 클릭 요청이 거절되던 문제를 수정했다. 팝업 fixture에서 수정 전 실패·수정 후 통과를 확인한 뒤, 사용자가 실제 광고 자동 건너뛰기를 확인했다. debugger-v3 진단은 버튼 크기 0 대기 → 입력 1회(input-sent) → 버튼 소멸(no-button) 순서였다. [최종 확인 결과](../docs/results/volume-auto-skip.md) 참조. 실제 AI selection 오류 해결 및 Document PiP의 자동 건너뛰기까지 확인한 것은 아니다.
 
 프로젝트 범위 최종 기준:
 

@@ -4,8 +4,8 @@ import { existsSync, readFileSync } from 'node:fs';
 const manifest = JSON.parse(readFileSync('public/manifest.json', 'utf8'));
 assert.equal(manifest.manifest_version, 3);
 assert.equal(manifest.minimum_chrome_version, '140');
-assert.deepEqual(manifest.permissions, ['storage']);
-assert.deepEqual(manifest.content_scripts, [{ matches: ['https://www.youtube.com/embed/*'], js: ['youtube-controls.js'], all_frames: true, run_at: 'document_idle' }]);
+assert.deepEqual(manifest.permissions, ['storage', 'debugger']);
+assert.deepEqual(manifest.content_scripts, [{ matches: ['https://www.youtube.com/embed/*'], js: ['youtube-controls-v3.js'], all_frames: true, run_at: 'document_idle' }]);
 assert.equal(manifest.host_permissions, undefined);
 assert.deepEqual(manifest.optional_host_permissions, ['https://api.openai.com/*', 'https://www.youtube.com/*']);
 assert.equal(manifest.background.type, 'module');
@@ -30,7 +30,7 @@ console.log('PASS: source manifest and minimum permissions');
 
 if (existsSync('dist/manifest.json')) {
   assert.deepEqual(JSON.parse(readFileSync('dist/manifest.json', 'utf8')), manifest);
-  for (const entry of [manifest.background.service_worker, manifest.action.default_popup, 'youtube-controls.js', ...Object.values(manifest.icons)]) {
+  for (const entry of [manifest.background.service_worker, manifest.action.default_popup, 'youtube-controls-v3.js', ...Object.values(manifest.icons)]) {
     assert.ok(existsSync(`dist/${entry}`), `Missing built entry: ${entry}`);
   }
   console.log('PASS: Built manifest and entry files');

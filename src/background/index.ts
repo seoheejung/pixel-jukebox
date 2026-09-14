@@ -3,6 +3,9 @@ import { createCoreStore } from './core-store';
 import { createAiService } from './ai';
 import { createRecommendationService } from './recommendation';
 import { OPENAI_ORIGIN } from '../shared/ai';
+import { registerAdSkip } from './ad-skip';
+
+registerAdSkip();
 
 const store = createCoreStore({
   get: (keys) => chrome.storage.local.get(keys),
