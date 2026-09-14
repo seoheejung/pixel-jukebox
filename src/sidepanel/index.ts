@@ -49,6 +49,19 @@ const playerRoot = document.querySelector<HTMLElement>('#player')!;
 const openWindowButton = document.querySelector<HTMLButtonElement>('#open-window');
 const standaloneWindow = new URLSearchParams(location.search).get('window') === '1';
 document.documentElement.classList.toggle('standalone-window', standaloneWindow);
+function resizeStandaloneWindow() {
+  if (!document.documentElement.classList.contains('standalone-window')) return;
+  const shell = document.querySelector<HTMLElement>('.game-boy');
+  if (!shell) return;
+  const scale = Math.max(1, Math.min(window.innerWidth / 640, window.innerHeight / (shell.offsetHeight + 16)));
+  document.documentElement.style.setProperty('--window-scale', String(scale));
+}
+window.addEventListener('resize', resizeStandaloneWindow);
+const windowShell = document.querySelector<HTMLElement>('.game-boy');
+if (windowShell) {
+  new ResizeObserver(() => requestAnimationFrame(resizeStandaloneWindow)).observe(windowShell);
+}
+resizeStandaloneWindow();
 if (standaloneWindow) {
   openWindowButton?.remove();
   const lifecycleCopy = document.querySelector<HTMLElement>('.game-boy header p');

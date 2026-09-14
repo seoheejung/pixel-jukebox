@@ -522,10 +522,12 @@ try {
   await click('#button-select');
   await click('[data-open="now-playing"]');
   const standaloneSize = () => evaluate(browser, panel, `(() => {
+    window.dispatchEvent(new Event('resize'));
+    const scale = Number(getComputedStyle(document.documentElement).getPropertyValue('--window-scale')) || 1;
     const gameBoy = document.querySelector('.game-boy').getBoundingClientRect();
     const lcd = document.querySelector('.screen-bezel').getBoundingClientRect();
     const video = document.querySelector('.embedded-video').getBoundingClientRect();
-    return { gameBoy: { width: gameBoy.width, bottom: gameBoy.bottom }, lcd: { width: lcd.width, height: lcd.height }, video: { width: video.width, height: video.height } };
+    return { gameBoy: { width: gameBoy.width / scale, bottom: gameBoy.bottom }, lcd: { width: lcd.width, height: lcd.height }, video: { width: video.width, height: video.height } };
   })()`);
   await browser.send('Emulation.setDeviceMetricsOverride', { width: 380, height: 650, deviceScaleFactor: 1, mobile: false }, panel);
   const standaloneMinimum = await standaloneSize();
@@ -542,24 +544,46 @@ try {
     await browser.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false }, panel);
     await evaluate(browser, panel, 'window.scrollTo(0, 0)');
     const layout = await evaluate(browser, panel, `(() => {
+      window.dispatchEvent(new Event('resize'));
+      const scale = Number(getComputedStyle(document.documentElement).getPropertyValue('--window-scale')) || 1;
       const rect = selector => document.querySelector(selector).getBoundingClientRect();
       const lcd = rect('.screen-bezel');
       const video = rect('.embedded-video iframe');
       const info = rect('.now-playing');
       return {
         overflow: document.documentElement.scrollWidth > innerWidth,
-        deckWidth: rect('.control-deck').width,
+        scale,
+        deckWidth: rect('.control-deck').width / scale,
+        lcdWidth: lcd.width / scale,
+        hardwareFits: rect('.dpad').left >= lcd.left && rect('.dpad').right < rect('.action-buttons').left && rect('.action-buttons').right <= lcd.right && rect('.system-controls').right < rect('.speaker').left,
+        buttonWidth: rect('#button-a').width,
+        shellBottom: rect('.game-boy').bottom,
         ratio: video.width / video.height,
-        fillsWidth: Math.abs(video.width - (rect('.embedded-video').width - 6)) < 1,
+        fillsWidth: Math.abs(video.width - (rect('.embedded-video').width - 6 * scale)) < 1,
         infoVisible: info.top >= video.bottom && info.bottom <= lcd.bottom,
         bottom: rect('.lower-deck').bottom,
         scrollHeight: document.documentElement.scrollHeight,
       };
     })()`);
-    assert.ok(!layout.overflow && layout.deckWidth <= 360, `Bounded layout at ${width}x${height}: ${JSON.stringify(layout)}`);
+    assert.ok(!layout.overflow && Math.abs(layout.deckWidth - layout.lcdWidth) < 1 && layout.hardwareFits, `Hardware must use the LCD width without overlap at ${width}x${height}: ${JSON.stringify(layout)}`);
     assert.ok(Math.abs(layout.ratio - 16 / 9) < 0.02 && layout.fillsWidth && layout.infoVisible, `Video and metadata at ${width}x${height}: ${JSON.stringify(layout)}`);
     assert.ok(layout.bottom <= layout.scrollHeight, `Controls must be reachable at ${width}x${height}`);
     if (height >= 600) assert.ok(layout.bottom <= height, `Controls must fit at ${width}x${height}`);
+    if (width === 1920) assert.ok(layout.scale > 1 && layout.buttonWidth > 60, 'Large windows must enlarge hardware controls with the video');
+    if (width === 1920) assert.ok(layout.shellBottom <= height && height - layout.shellBottom < 24, 'Large windows must fill the available height with a small bottom margin');
+    const screenGeometry = () => evaluate(browser, panel, `(() => {
+      const shell = document.querySelector('.game-boy').getBoundingClientRect();
+      const lcd = document.querySelector('#lcd-screen').getBoundingClientRect();
+      const controls = document.querySelector('.control-deck').getBoundingClientRect();
+      return [shell.width, shell.height, lcd.height, controls.top - shell.top].map(value => Math.round(value));
+    })()`);
+    const playingGeometry = await screenGeometry();
+    for (const view of ['home', 'playlist', 'ai-picks', 'settings', 'now-playing']) {
+      await click('#button-select');
+      if (view !== 'home') await click(`[data-open="${view}"]`);
+      assert.equal(await screen(), view);
+      assert.deepEqual(await screenGeometry(), playingGeometry, `${width}x${height}: ${view} must preserve the shell, LCD and control positions`);
+    }
   }
   console.log('PASS responsive: bounded controls, 16:9 video and visible metadata at 360x600, 720x480, 1280x720, 1920x1080');
   await browser.send('Emulation.setDeviceMetricsOverride', { width: 640, height: 560, deviceScaleFactor: 1, mobile: false }, panel);

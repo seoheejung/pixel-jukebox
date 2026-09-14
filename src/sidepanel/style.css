@@ -210,13 +210,15 @@ html, body { width: 360px; min-width: 360px; }
 body { max-height: 600px; overflow: auto; }
 .standalone-window, .standalone-window body { width: 100%; min-width: 360px; }
 .standalone-window body { max-height: none; }
-.standalone-window main { max-width: 640px; min-height: 100dvh; }
+.standalone-window main { max-width: 640px; min-height: calc(100dvh / var(--window-scale, 1)); zoom: var(--window-scale, 1); }
 .standalone-window .game-boy { width: 100%; min-height: 0; }
-.standalone-window #player { display: grid; grid-template-rows: auto auto auto; min-height: 0; }
-.standalone-window .screen-bezel { width: 100%; height: clamp(300px, calc(100dvh - 280px), 560px); min-height: 0; }
-.standalone-window .control-deck, .standalone-window .lower-deck { width: 100%; max-width: 360px; margin-inline: auto; }
-.standalone-window .screen-bezel:has(#video-view:not([hidden])) { height: auto; }
-.standalone-window #video-view { height: auto; grid-template-rows: auto auto; }
+.standalone-window #player { display: grid; grid-template-rows: auto auto auto; min-height: 0; container-type: inline-size; }
+.standalone-window .screen-bezel { width: 100%; height: calc((100cqw - 26px) * 9 / 16 + 152px); min-height: 0; }
+.standalone-window .control-deck, .standalone-window .lower-deck { width: 100%; margin-inline: auto; }
+.standalone-window .control-deck { padding-inline: clamp(15px, 5cqw, 32px); }
+.standalone-window .lower-deck .system-controls { left: calc(50% - 100px); }
+.standalone-window .lower-deck .speaker { right: clamp(8px, calc((100cqw - 324px) * .1 + 8px), 36px); }
+.standalone-window #video-view { height: 100%; grid-template-rows: auto minmax(0, 1fr); }
 .standalone-window .embedded-video { height: auto; overflow: hidden; }
 .standalone-window .embedded-video iframe { width: 100%; height: auto; aspect-ratio: 16 / 9; }
 .standalone-window .home-screen .lcd-content { grid-template-rows: repeat(4, minmax(42px, auto)); align-content: start; }
