@@ -1,340 +1,218 @@
-# Pixel Jukebox
+# Pixel Jukebox 기획서
 
-> YouTube 링크를 입력해 Game Boy 감성의 Player에서 음악을 감상·관리하고, 필요할 때만 OpenAI 기반 `AI PICKS`로 비슷한 음악을 발견하는 Chrome Extension
+> YouTube 링크를 Game Boy 감성의 Player에서 재생·관리하고, 필요할 때만 OpenAI 기반 `KEEP THIS VIBE`로 현재 곡의 흐름을 이어갈 Playlist를 큐레이션하는 Chrome Extension
 
-## 1. 프로젝트 개요
+## 1. 프로젝트 목적
 
-Pixel Jukebox는 Chrome Desktop 환경에서 YouTube 음악 감상과 Playlist·AI 추천 기능을 제공하는 Manifest V3 기반 Chrome Extension이다.
+Pixel Jukebox는 Chrome Desktop 환경에서 YouTube 음악 감상, Playlist 관리, AI 기반 음악 큐레이션을 제공하는 Manifest V3 Chrome Extension이다.
 
-YouTube 재생은 HTTPS Player Bridge를 통해 처리한다.
+### 해결하려는 문제
 
-기본 흐름:
+- 현재 듣는 곡과 자연스럽게 이어지는 음악을 찾기 위해 YouTube 검색·추천·댓글·Playlist를 반복 탐색하는 과정
+- 추천 결과가 실제 재생 가능한 YouTube 영상인지 다시 확인해야 하는 과정
+- 음악 감상과 추천 탐색이 분리되어 생기는 사용성 저하
+
+### 제공 가치
 
 ```text
 YouTube URL 입력
         ↓
-HTTPS Player Bridge
+Game Boy Player
         ↓
-YouTube IFrame Player
+Playlist 관리
         ↓
-NOW PLAYING
+KEEP THIS VIBE
         ↓
-Playlist
+AI Playlist 큐레이션
         ↓
-선택적 AI PICKS
+실제 YouTube 영상 검증
 ```
 
 Core Player는 OpenAI 없이 독립 동작한다.
 
-- YouTube URL 입력
-- 새 Browser Tab 없는 재생
-- YouTube 영상 직접 재생
-- Game Boy 스타일 Player UI
-- Playlist 자동 추가·삭제·순서 변경
-- Previous / Play-Pause / Next
-- 마지막 Track 이후 Track 1 반복
-- Design 설정 및 저장
-- Document Picture-in-Picture
-- Playlist 및 설정 복구
-
-`AI PICKS`는 OpenAI API Key 연결 완료 후 사용 가능하다.
-
-구체적인 UI 기준은 `DESIGN.md`, 작업 규칙은 `AGENTS.md`를 따른다.
+AI 기능은 사용자가 자신의 OpenAI API Key를 연결한 경우에만 활성화한다.
 
 ---
 
-## 2. UX 기준
-
-### YouTube URL 입력
-
-Core Player의 기본 진입점:
-
-```text
-YOUTUBE LINK
-[ https://www.youtube.com/watch?v=... ] [ ADD & PLAY ]
-```
-
-처리:
-
-```text
-URL 검증
-→ videoId 확인
-→ Player Bridge Load
-→ Track 정보 확인
-→ Playlist 자동 추가
-→ NOW PLAYING 갱신
-```
-
-새 YouTube Tab 자동 생성 금지.
-
-지원 링크:
-
-- `youtube.com/watch?v=...`
-- `youtu.be/...`
-- `youtube.com/shorts/...`
-
-### Playlist
-
-`ADD & PLAY` 성공 시 Playlist 자동 추가.
-
-별도 `ADD CURRENT TRACK`, `ADD TO PLAYLIST` 미사용.
-
-중복 Track만 추가 차단.
-
-AI 연결 여부와 Playlist 기능 완전 분리.
-
-### Design
-
-Game Boy 스타일 사용자화:
-
-- Shell Tone
-- Screen Tone
-- Button Tone
-
-변경값은 Preview 가능.
-
-`SAVE` 선택 시에만 영속 저장.
-
-### OpenAI Settings
-
-최소 구성:
-
-```text
-OPENAI SETTINGS
-[ API KEY                         ] [ CONNECT ]
-```
-
-`CONNECT`:
-
-```text
-Permission 요청
-→ Session 저장
-→ 인증 확인
-→ 성공
-→ AI PICKS 즉시 활성화
-```
-
-별도 Enable / Save / Test / Verify 버튼 미사용.
-
-### AI PICKS
-
-Compact Row:
-
-```text
-[Thumbnail] Track Title     [+]
-```
-
-표시:
-
-- Thumbnail
-- Track Title
-- Playlist 추가 Action
-
-기본 미표시:
-
-- Reason
-- Tag
-- Candidate ID
-- 내부 상태 문구
-- Cache 상태
-- Web Search 상태
-
-추천곡은 실제 YouTube Track으로 Resolve된 경우에만 표시한다.
-
-`SEARCH ON YOUTUBE` 미사용.
-
-### Export
-
-PNG / GIF 기능 제외.
-
-### PiP
-
-Document PiP 유지. 영상과 재생 버튼을 표시하고, 중복 클릭 시 기존 창을 재사용한다. 닫을 때 원래 플레이어로 복원하며 재생 상태와 현재 곡을 유지한다. 창 이동으로 iframe이 다시 로드될 때 재생 위치 복원에는 Bridge 시간 정보와 시작 위치 전달을 사용한다.
-
----
-
-## 3. 범위
+## 2. 범위
 
 ### 포함
 
-| 영역 | 기능 |
-|---|---|
-| Extension | Manifest V3, action popup·별도 창, Service Worker |
-| Player Bridge | HTTPS 정적 페이지, YouTube IFrame Player |
-| Input | YouTube URL 입력·검증·로드 |
-| Player | YouTube 영상 재생, Play/Pause, Previous/Next |
-| Playlist | 자동 추가·삭제·순서 변경·반복·상태 복구 |
-| Design | Game Boy Shell / Screen / Button Tone, Save |
+| 영역 | 범위 |
+| --- | --- |
+| Extension | Manifest V3, Action Popup, 별도 Extension Window |
+| Player | HTTPS Player Bridge, YouTube IFrame Player |
+| Input | YouTube URL 입력·검증·재생 |
+| Playlist | 자동 추가·삭제·순서 변경·반복·복구 |
+| Design | Game Boy Shell / Screen / Button Tone |
+| Controls | D-pad, A/B, SELECT/START, Volume / Mute |
 | PiP | Document Picture-in-Picture |
-| Storage | Playlist, 설정, Cache |
-| AI | 사용자 OpenAI API Key 연결 |
-| AI PICKS | Research Discovery, Candidate Extraction / Validation, Selection, YouTube Resolver |
-| AI PICKS | Compact Row, Playlist 직접 추가 |
+| Ads | Extension Player 내부 Auto Skip Ads |
+| Storage | Playlist, Design, Cache, AI 설정 |
+| AI | OpenAI Responses API 기반 `KEEP THIS VIBE` |
+| Resolver | YouTube 출처·oEmbed Metadata 검증 |
 | 안정성 | AI 오류와 Core Player 오류 격리 |
 
 ### 제외
 
-| 영역 | 기능 |
-|---|---|
-| Export | PNG / GIF |
-| UI | 독립 YouTube Connection 화면 |
-| UI | 상시 OpenAI 상세 상태 화면 |
-| UI | 내부 Cache / Permission 상태 노출 |
-| Design | 고급 Theme Editor |
-| Account | 자체 회원가입·로그인 |
-| Backend | OpenAI Proxy Server |
-| AI | Multi-Agent |
-| AI | Vector DB |
-| AI | 자체 Recommendation Model |
-| AI | Playlist 자동 재생 변경 |
-| Media | 음악 파일 다운로드·자체 스트리밍 |
-| Browser | 새 YouTube Tab 기반 기본 재생 |
-| Browser | Firefox·Safari·모바일 지원 |
-| Distribution | 일반 사용자 대상 Chrome Web Store 운영 |
+- PNG / GIF Export
+- 자체 회원가입·로그인
+- OpenAI Proxy Backend
+- Multi-Agent
+- Vector DB
+- 자체 Recommendation Model
+- AI의 자동 Playlist 재생 변경
+- AI 생성 YouTube URL / Video ID 신뢰
+- 음악 파일 다운로드·자체 스트리밍
+- Firefox / Safari / 모바일 Extension
+- 일반 사용자 대상 Chrome Web Store 운영
+- Card Flip
 
 ---
 
-## 4. 전체 구조
+## 3. 사용자 흐름
+
+### 기본 사용
+
+```text
+Extension 실행
+    ↓
+Home
+    ↓
+Playlist
+    ↓
+YouTube URL 입력
+    ↓
+HTTPS Player Bridge
+    ↓
+YouTube IFrame Player
+    ↓
+Now Playing
+    ↓
+Playlist
+```
+
+새 YouTube Tab을 기본 재생 흐름으로 사용하지 않는다.
+
+### LCD 메뉴
+
+```text
+HOME
+├─ NOW PLAYING
+├─ PLAYLIST
+├─ KEEP THIS VIBE
+└─ SETTINGS
+```
+
+모든 주요 기능은 Game Boy 본체의 LCD 안에서 전환한다.
+
+본체 밖 별도 기능 Card나 Toolbox를 두지 않는다.
+
+### 물리 버튼
+
+| 버튼 | 역할 |
+| --- | --- |
+| D-pad ↑ / ↓ | 메뉴·목록 이동 |
+| D-pad ← / → | Now Playing Previous / Next 등 화면별 이동 |
+| A | 확인·선택 / Play-Pause |
+| B | 뒤로·취소 |
+| SELECT | Home |
+| START | Settings |
+
+클릭과 키보드 방향키 / Enter / Escape도 동일한 Navigation State를 사용한다.
+
+---
+
+## 4. 시스템 구조
 
 ```mermaid
-flowchart LR
-    Input["YouTube URL Input"]
-    Panel["Game Boy LCD UI<br/>action popup·별도 창"]
+flowchart TD
+    Input["YouTube URL"]
+    UI["Game Boy LCD UI<br/>Action Popup · 별도 창"]
     Bridge["HTTPS Player Bridge"]
     YT["YouTube IFrame Player"]
     Worker["Service Worker"]
     Storage["Chrome Storage"]
     PiP["Document PiP"]
 
-    Discovery["Research Discovery<br/>Responses API + Web Search"]
-    Extraction["Structured Candidate Extraction"]
-    Parser["Candidate Validation"]
-    Selection["Selection<br/>Structured Output"]
+    Discovery["Research Discovery"]
+    Extraction["Candidate Extraction"]
+    Candidate["Candidate Validation"]
+    Selection["Selection"]
     Resolver["YouTube Resolver"]
     Validation["Application Validation"]
 
-    Input --> Panel
-    Panel <--> Bridge
+    Input --> UI
+    UI <--> Bridge
     Bridge <--> YT
-    Panel <--> Worker
+    UI <--> Worker
     Worker <--> Storage
-    Panel --> PiP
+    UI --> PiP
 
-    Panel -->|"AI PICKS"| Worker
+    UI -->|"KEEP THIS VIBE"| Worker
     Worker --> Discovery
     Discovery --> Extraction
-    Extraction --> Parser
-    Parser --> Selection
+    Extraction --> Candidate
+    Candidate --> Selection
     Selection --> Resolver
     Resolver --> Validation
-    Validation --> Panel
+    Validation --> UI
 ```
 
-Bridge는 Extension API와 분리된 HTTPS 재생 영역으로만 사용한다.
+### 실행 경계
 
-Bridge 전달 데이터는 `videoId`와 재생 제어 명령으로 제한한다.
+**Extension UI**
 
-OpenAI API Key와 Playlist 전체 데이터는 Bridge로 전달하지 않는다.
+- Home / Now Playing / Playlist / KEEP THIS VIBE / Settings
+- 사용자 입력
+- Player·Playlist·Design·PiP 조작
+
+**Player Bridge**
+
+- HTTPS 기반 YouTube 재생 전용
+- `videoId`와 재생 제어 명령만 교환
+- API Key·Playlist 전체 데이터·Chrome Storage 정보 전달 금지
+
+**Service Worker**
+
+- Storage 접근
+- OpenAI API 호출
+- Recommendation Workflow
+- Extension 내부 메시지 처리
+
+OpenAI 요청은 Service Worker에서만 수행한다.
 
 ---
 
-## 5. 기술 구성
+## 5. Player Bridge
 
-| 영역 | 기술 |
-|---|---|
-| Extension | Chrome Extension Manifest V3 |
-| 최소 Chrome | Chrome 140 |
-| Language | TypeScript |
-| UI | HTML / CSS / TypeScript |
-| Build | Vite |
-| Main UI | Game Boy LCD · Chrome action popup·별도 창 |
-| Background | Extension Service Worker |
-| Player Bridge | GitHub Pages HTTPS |
-| Video Player | YouTube IFrame Player API |
-| Track Metadata | YouTube oEmbed |
-| Messaging | `chrome.runtime`, `postMessage` |
-| 영속 저장 | `chrome.storage.local` |
-| Session 저장 | `chrome.storage.session` |
-| PiP | Document Picture-in-Picture |
-| AI | OpenAI Responses API |
-| AI 탐색 | OpenAI Web Search |
-| AI 출력 | Candidate Extraction / Selection Structured Outputs |
-| Test | Vitest |
+`chrome-extension://` 문맥에서 YouTube iframe 재생 시 발생한 Error 153 문제를 피하기 위해 HTTPS Player Bridge를 사용한다.
 
-Vanilla TypeScript 기준.
+```text
+Extension UI
+    ↓
+사용자별 HTTPS Player Bridge
+    ↓
+YouTube IFrame Player
+```
 
-UI Framework 선반영 금지.
+개인 Bridge 주소를 Source Code에 고정하지 않는다.
+
+각 사용자는:
+
+```text
+bridge.config.local.json
+```
+
+에 자신의 Bridge 주소를 설정한 뒤 빌드한다.
+
+Fork 사용자를 위한 Bridge 배포 절차는 `README.md`에서 관리한다.
+
+Bridge Protocol·GitHub Pages 배포 Workflow 같은 구현 세부는 코드와 README에서 관리한다.
 
 ---
 
-## 6. Player Bridge
-
-### 목적
-
-`chrome-extension://`에서 YouTube iframe을 직접 재생할 때 발생한 Error 153 회피.
-
-구조:
-
-```text
-Extension UI (action popup·별도 창)
-→ HTTPS Player Bridge
-→ YouTube IFrame Player
-```
-
-### 기본 Bridge URL
-
-```text
-https://seoheejung.github.io/pixel-jukebox/player.html
-```
-
-실제 배포 완료 후 Chrome에서 검증한다.
-
-### Bridge Protocol
-
-교환 허용:
-
-```text
-init
-load
-play
-pause
-state
-error
-```
-
-검증:
-
-- `event.origin`
-- `event.source`
-- `videoId`
-- 허용 명령
-
-Bridge로 전달 금지:
-
-- OpenAI API Key
-- Playlist 전체 데이터
-- Chrome Storage 데이터
-- Extension API 권한 정보
-
-### 배포
-
-GitHub Pages Source:
-
-```text
-GitHub Actions
-```
-
-배포 Workflow:
-
-```text
-.github/workflows/deploy-player-bridge.yml
-```
-
-실제 Pages 배포 전 Bridge 기능 완료 처리 금지.
-
----
-
-## 7. Core Player
+## 6. Core Player
 
 ### URL Load
 
@@ -345,12 +223,18 @@ URL 검증
 → oEmbed Metadata 조회
 → Playlist 중복 확인
 → Playlist 자동 추가
-→ NOW PLAYING 갱신
+→ Now Playing 갱신
 ```
 
-잘못된 URL은 기존 Player 상태 유지 + 한 줄 오류 표시.
+지원:
 
-### Track 정보
+- `youtube.com/watch?v=...`
+- `youtu.be/...`
+- `youtube.com/shorts/...`
+
+잘못된 URL은 기존 Player 상태를 유지하고 오류만 표시한다.
+
+### Track
 
 ```text
 videoId
@@ -366,813 +250,337 @@ playbackState
 ### Playlist
 
 - URL 입력 Track 자동 추가
-- AI PICKS Track 직접 추가
+- KEEP THIS VIBE Track 직접 추가
 - Track 삭제
 - Drag & Drop 순서 변경
+- 순서 변경 대안 제공
 - Previous / Next
 - Play / Pause
 - 마지막 Track 이후 Track 1 반복
-- Chrome 재실행 후 Playlist 복구
-- Playlist Track 선택 시 Bridge에 직접 Load
+- Chrome 재실행 후 복구
+- 재생 없이 KEEP THIS VIBE 기준곡 선택 가능
 
-### Design
+### Player UX
 
-Game Boy Style:
+- Playlist와 KEEP THIS VIBE Panel을 열어도 재생 유지
+- 일반 메뉴 이동 시 재생 일시정지
+- Now Playing에서 재생 재개
+- Volume / Mute 상태 복구
+- PiP 실행·복원
+- Reduced Motion 대응
 
-```text
-Shell Tone
-Screen Tone
-Button Tone
-```
+### Auto Skip Ads
 
-처리:
+Auto Skip Ads는 Extension의 중첩 YouTube Player에서 표시된 활성 Skip 버튼만 처리한다.
 
-```text
-변경
-→ Preview
-→ SAVE
-→ chrome.storage.local
-```
+일반 YouTube 페이지나 다른 Tab에는 적용하지 않는다.
 
-### PiP
-
-- NOW PLAYING
-- Track Title
-- Channel
-- Previous / Play-Pause / Next
-
-PiP 실패와 Main Player 오류 분리.
+실제 광고에서 Auto Skip 동작을 확인했다.
 
 ---
 
-## 8. OpenAI Key
+## 7. Design
 
-### 기본 저장
+상세 UI 기준은 `DESIGN.md`를 SSOT로 사용한다.
 
-`chrome.storage.session`:
+핵심 기준:
 
-```text
-openaiApiKey
-```
+- Game Boy DMG 스타일
+- Home 시작
+- 단일 LCD 화면 전환
+- Video Screen과 Now Playing 중심
+- D-pad / A·B / SELECT / START 물리 조작감
+- Shell / Screen / Button Tone
+- Soft UI / Glassmorphism / 과도한 3D 금지
+- 기술 상태·Cache·Permission 내부 정보 상시 노출 금지
+- Card Flip 미사용
 
-### 선택적 영속 저장
+### 반응형 검증 기준
 
-```text
-사용자 선택
-→ setAccessLevel(TRUSTED_CONTEXTS)
-→ 성공: storage.local
-→ 실패: Local 저장 금지 + session 유지
-```
+검증 완료:
 
-### OpenAI Settings
+- 360px
+- 390px
+- 480px
+- 720×480
+- 1280×720
+- 1920×1080
+
+독립 창 확대 시 본체·영상·텍스트·조작부도 함께 확장한다.
+
+높이가 부족한 창에서는 세로 Scroll로 조작부 접근을 유지한다.
+
+---
+
+## 8. OpenAI 연결
+
+### 기본 정책
+
+- AI 완전 Opt-in
+- AI 미사용 시 OpenAI 요청 0건
+- API Key 기본 저장: `chrome.storage.session`
+- 영속 저장: 사용자 선택 시에만 `chrome.storage.local`
+- Local 저장 전 `TRUSTED_CONTEXTS` 적용
+- 접근 제한 실패 시 Local 저장 금지
+- 저장된 Key 원문 재표시 금지
+
+### 금지
+
+- Source Code 포함
+- Git Commit
+- `storage.sync` 저장
+- Console·오류 로그 출력
+- DOM 삽입
+- Runtime Message Payload 포함
+- Authorization Header 로그
+
+OpenAI 연결 UI:
 
 ```text
 API KEY
 [........................] [ CONNECT ]
 ```
 
-`CONNECT` 성공:
-
-- OpenAI Permission 승인
-- Session Key 저장
-- 인증 확인
-- AI PICKS 활성화
-- Settings 자동 축소
-
-실패:
-
-- AI PICKS 비활성 유지
-- 한 줄 오류 표시
-- Key 재입력 가능
-
-### Key 취급 기준
-
-- Source Code 포함 금지
-- Git Commit 금지
-- `storage.sync` 저장 금지
-- Console 출력 금지
-- 오류 로그 출력 금지
-- DOM 삽입 금지
-- Runtime Message Payload 포함 금지
-- Authorization Header 로그 금지
-- 연결 해제 시 저장 Key 제거
-
-OpenAI 요청은 Service Worker에서만 수행.
+별도 Enable / Save / Test / Verify 버튼을 만들지 않는다.
 
 ---
 
-## 9. AI PICKS 추천 기준
+## 9. KEEP THIS VIBE
 
-목표는 단순 장르 유사곡 추천이 아니라, 현재 곡에서 자연스럽게 이어 들을 수 있는 Playlist 생성이다.
+`KEEP THIS VIBE`는 단순 유사곡 검색이 아니라 현재 곡에서 자연스럽게 이어지는 Playlist 큐레이션 기능이다.
 
-### 흐름
+### 핵심 기준
+
+- 현재 Track을 가장 강한 시작점으로 사용
+- Playlist와 Recent Recommendations를 보조 문맥으로 사용
+- 분위기·시대감·질감·감정선·에너지·보컬·Scene 고려
+- “이 곡이 다음에 재생되면 흐름이 깨지는가?”를 핵심 판단 기준으로 사용
+- 가까운 곡 / 같은 Scene / 탐색적인 곡을 혼합
+- 같은 Artist 허용
+- 동일 Artist 연속 배치·편중 방지
+- 확인하지 못한 음악적 사실 생성 금지
+
+### Workflow
 
 ```text
 Current Track
-+
-Playlist
-+
-Recent Recommendations
++ Playlist
++ Recent Recommendations
         ↓
-Discovery
+Research Discovery
+20–30 Candidates
         ↓
-Candidate Set
+Candidate Extraction
+        ↓
+Candidate Validation
         ↓
 Selection
+12–20 Tracks
         ↓
 YouTube Resolver
         ↓
-Validation
+oEmbed Metadata Validation
         ↓
-AI PICKS
-        ↓
-Playlist 직접 추가
+KEEP THIS VIBE
 ```
+
+실제 Prompt는 Source Code에서 관리한다.
+
+`.project/plan.md`에는 Prompt 전문을 중복 저장하지 않는다.
 
 ### Discovery
 
-현재 곡을 가장 강한 추천 기준으로 사용하고 Playlist는 보조 문맥으로 사용한다.
+- Web Search 사용
+- Candidate 목표 20–30곡
+- 현재 Track·Playlist·최근 추천 중복 제외
+- 같은 곡의 재업로드·Cover·변형보다 새로운 곡 우선
+- 충분한 후보가 없으면 검증된 결과만 유지
 
-판단 기준:
+### Candidate Validation
 
-- 감정과 분위기
-- 사운드 질감
-- Energy / Tempo / Groove
-- Vocal 특성
-- Melody / Harmony
-- 시대와 음악 Scene
-- Artist 관계
-
-추천 구성:
-
-- 현재 곡과 매우 가까운 Track
-- 같은 Scene 또는 인접 장르 Track
-- 조금 의외지만 청취 흐름이 자연스럽게 이어지는 Track
-
-같은 Artist의 곡도 허용하되 특정 Artist 편중은 방지한다.
-
-제외 기준:
-
-- 현재 Track
-- Playlist에 이미 존재하는 Track
-- Recent Recommendations
-- Remix / Sped Up / Slowed / Karaoke / Cover 등 원곡과 다른 Version
-- 존재 여부가 불확실한 Track
-
-실재하는 공개 Track만 Candidate로 생성한다.
-
-Discovery 단계에서는 YouTube URL과 `videoId`를 생성하지 않는다.
-
-출력:
-
-```text
-CANDIDATE|C01|Artist|Track
-CANDIDATE|C02|Artist|Track
-```
-
-초기 Candidate 수:
-
-```text
-20–30 (기본 목표 24)
-```
+- Research 근거에 없는 Track 생성 금지
+- Artist / Track 필수
+- Artist + Track 중복 제거
+- Current Track 중복 제거
+- Playlist 중복 제거
+- Recent Recommendations 중복 제거
+- Candidate ID 형식·중복 검증
 
 ### Selection
 
-Discovery에서 생성된 Candidate Set 내부에서만 최종 Track을 선택한다.
+- Web Search 미사용
+- Candidate Set 내부 ID만 선택
+- 목표 12–20곡
+- 후보가 충분한데 12곡 미만이면 1회 Retry
+- 각 Track의 독립 유사도보다 전체 재생 흐름 우선
+- 목록 밖 Candidate ID 차단
+- 중복 Candidate ID 차단
 
-우선순위:
+Reason / Tag는 최종 UI에서 사용하지 않는다.
 
-1. 현재 곡과의 자연스러운 연결
-2. 분위기와 감정선
-3. Production / Instrumentation
-4. Energy / Tempo / Groove
-5. Playlist 전체 Cohesion
-6. Artist 다양성
-7. Discovery 가치
+---
 
-초반은 Seed Track과 가까운 곡을 우선하고, 후반으로 갈수록 인접 Scene과 조금 더 탐색적인 Track을 허용한다.
+## 10. YouTube Resolver
 
-같은 Artist Track은 허용하지만 연속 배치를 피하고 전체 Playlist를 특정 Artist가 지배하지 않도록 한다.
+AI Candidate를 실제 YouTube Track으로 검증한다.
 
-Selection은 Candidate ID만 반환한다.
+### 기준
 
-출력 순서를 Playlist 추천 순서로 사용한다.
+- AI가 임의 작성한 URL / Video ID 신뢰 금지
+- `YOUTUBE|...` 형식 우선
+- 형식 누락 시 Web Search가 반환한 실제 YouTube 출처 사용
+- 모델 본문의 임의 URL 사용 금지
+- 첫 출처 실패 시 다음 검색 출처 검증
+- 실제 oEmbed Metadata로 곡명·Artist 재검증
+- 동일 `videoId` 중복 제거
+- 검증 실패 Candidate 제외
+- 남은 검증 Candidate로 결과 보충
 
-```json
-{
-  "recommendations": [
-    { "candidateId": "C03" },
-    { "candidateId": "C07" },
-    { "candidateId": "C01" }
-  ]
-}
-```
+### URL 정규화
 
-초기 Recommendation 수:
+다음 형태를 표준 Watch URL로 변환한다.
 
-```text
-12–20
-```
+- `watch`
+- `youtu.be`
+- `live`
+- `embed`
 
-실제 OpenAI 비용, 응답 시간, 추천 품질을 함께 검증한다.
+### 허용 영상 유형
 
-### YouTube Resolver
+- MV
+- Performance
+- Live
+- Lyric
+- Visualizer
+- Audio
+- Topic
+- Official Other
 
-Selection에서 선택된 Track마다 실제 YouTube 영상을 검색한다.
+### 제외
 
-영상 선택 우선순위:
-
-1. Official MV
-2. Official Performance / Live Clip
-3. Official Lyric Video
-4. Official Visualizer
-5. Official Audio
-6. Artist Topic
-7. Official Label / Distributor Upload
-
-공식 영상 판단 대상:
-
-- Artist 공식 Channel
-- Artist 공식 YouTube Channel
-- Label 공식 Channel
-- Distributor 공식 Channel
-- Artist Topic Channel
-
-제외:
-
-- Fan Upload
 - Cover
 - Reaction
 - Karaoke
 - Instrumental Cover
-- Sped Up / Slowed
+- Sped Up
+- Slowed
 - Nightcore
 - Mashup
 - Compilation
 - Playlist
 - 관련 없는 Shorts
-- 다른 Artist의 Cover
+- Metadata 불일치
 
-`Artist + Track + Recording`이 정확히 일치해야 한다.
+검증 실패 영상을 목표 개수 충족을 위해 억지로 포함하지 않는다.
 
-AI가 URL이나 `videoId`를 추측해서 생성하는 것을 금지한다.
+---
 
-정확한 공식 영상 확인에 실패한 Candidate는 결과에서 제외한다.
-
-출력:
-
-```text
-YOUTUBE|C03|MV|Artist|Track|https://www.youtube.com/watch?v=...
-```
-
-지원 `videoType`:
-
-```text
-MV
-PERFORMANCE
-LIVE
-LYRIC
-VISUALIZER
-AUDIO
-TOPIC
-OFFICIAL_OTHER
-```
-
-### Validation
-
-Resolver 결과를 애플리케이션에서 다시 검증한다.
-
-검증 기준:
-
-- Selection 결과에 존재하는 Candidate ID
-- Candidate ID 중복 없음
-- Artist / Track 일치
-- YouTube `watch?v=` URL 형식
-- `videoId` 추출 성공
-- 동일 `videoId` 중복 없음
-- 허용된 `videoType`
-- Thumbnail 생성 가능
-- Resolve 실패 Candidate 제외
-
-검증을 통과한 Track만 AI PICKS에 표시한다.
-
-### 최종 데이터
-
-```ts
-interface ResolvedRecommendation {
-  candidateId: string;
-  artist: string;
-  title: string;
-  videoId: string;
-  videoUrl: string;
-  videoType:
-    | "MV"
-    | "PERFORMANCE"
-    | "LIVE"
-    | "LYRIC"
-    | "VISUALIZER"
-    | "AUDIO"
-    | "TOPIC"
-    | "OFFICIAL_OTHER";
-  thumbnail: string;
-  channelTitle: string;
-}
-```
-
-### AI PICKS UI
-
-추천 결과는 Compact Card로 표시한다.
-
-```text
-[Thumbnail]  Track Title
-             Artist / Channel
-             Video Type       [+]
-```
-
-기본 표시 정보:
-
-- Thumbnail
-- Track Title
-- Artist / Channel
-- Video Type
-- Playlist 추가 Action
-
-기본 미표시:
-
-- Candidate ID
-- 추천 점수
-- Web Search 상태
-- Cache 상태
-- Discovery / Selection 내부 상태
-
-`SEARCH ON YOUTUBE` 버튼은 사용하지 않는다.
-
-`+ PLAYLIST` 선택:
-
-```text
-Playlist 직접 추가
-→ 새 YouTube Tab 생성 없음
-→ Playlist Track 선택
-→ Player Bridge에 videoId 전달
-→ 바로 재생
-```
-
-### 실패 처리
-
-```text
-Discovery 결과 없음
-→ AI PICKS 실패
-
-Selection 실패
-→ 동일 Candidate Set으로 1회 Retry
-
-Selection Retry 실패
-→ AI PICKS 실패
-
-Resolver 일부 실패
-→ 실패 Candidate만 제외
-
-Resolver 전체 실패
-→ AI PICKS 실패
-
-Partial JSON
-→ 복구하지 않고 폐기
-```
-
-Selection Retry에서는 Discovery를 다시 실행하지 않는다.
+## 11. Cache · 오류 처리
 
 ### Cache
 
-Cache Key:
-
 ```text
+cacheKey
+=
 currentTrack.videoId
 +
 playlistFingerprint
 ```
 
-Cache Hit:
+- Cache Hit 시 OpenAI 요청 0건
+- `MORE LIKE THIS`는 Cache 우회
+- 이전 추천은 Recent Recommendations에 반영
+
+### 오류
+
+구분:
+
+- 인증
+- Rate Limit
+- 사용량·결제
+- Network / Timeout
+- Discovery 실패
+- Candidate Extraction 실패
+- Selection 실패
+- YouTube Source 없음
+- Resolver / Metadata 검증 실패
+
+Selection 실패 시 동일 Candidate Set으로 1회 Retry한다.
+
+Partial JSON을 임의 복구하지 않는다.
+
+AI 오류는 Core Player와 격리한다.
+
+API Key·Authorization·원본 API Response Body를 UI나 일반 로그에 노출하지 않는다.
+
+---
+
+## 12. 현재 구현 상태
+
+완료:
+
+- Manifest V3 Extension
+- Action Popup · 별도 Window
+- Game Boy 단일 LCD UI
+- 반응형 UI
+- HTTPS Player Bridge
+- 사용자별 Bridge 설정
+- Playlist 관리·복구
+- Volume / Mute
+- Auto Skip Ads 실제 광고 검증
+- PiP 구조
+- Design 설정
+- OpenAI Key 연결 구조
+- Research Discovery
+- Candidate Extraction
+- Candidate Validation
+- Selection
+- YouTube Resolver
+- Recommendation Cache
+- AI / Core Player 오류 격리
+
+자동 검증:
 
 ```text
-기존 AI PICKS 반환
-→ OpenAI 요청 0건
+TypeScript Type Check
+Vitest 66 tests
+Production Build
+Bridge Syntax Check
+Manifest Check
+Chrome UI Fixture
 ```
 
-`REFRESH PICKS`:
-
-```text
-Cache 우회
-→ 기존 추천을 Recent Recommendations에 반영
-→ Discovery 재실행
-```
-
-### 구현 기준
-
-실제 Prompt 전문은 문서에 넣지 않고 코드에서 관리한다.
-
-```text
-src/ai/prompts/discovery.ts
-src/ai/prompts/selection.ts
-src/ai/prompts/youtube-resolver.ts
-```
-
-문서에는 추천 목적, 단계별 책임, 출력 형식, 검증 기준, 실패 처리만 유지한다.
+상세 구현·검증 이력은 `docs/results/*`에서 관리한다.
 
 ---
 
-## 10. Extension UI 화면 기준
+## 13. 제출 전 남은 범위
 
-> 2026-09-09 LCD 메뉴 개편이 이 절의 이전 본체 밖 보조 도구 구성을 대체한다. YouTube Link, Playlist, AI Picks, Appearance, OpenAI, PiP는 모두 고정 크기 LCD 안의 화면으로 제공하며 본체 밖 카드나 toolbox를 두지 않는다.
+현재 기능 범위는 동결한다.
 
-- Home: Now Playing / Playlist(count) / Add Music / 이어 듣기 / Settings
+신규 기능보다 실제 동작·추천 품질·배포 완성도를 우선한다.
 
-2026-09-12 조작 기준: API Key 연결 성공은 AI Picks로 이동한다. Playlist 방향키는 제목만 순회하고 삭제 버튼은 클릭·Tab으로 접근한다. Now Playing 안에서 하단 슬라이딩 목록을 열고 닫으며 재생을 유지한다. 베젤 문구와 예전 카드 여백을 제거하고 A/B 라벨 굵기를 일정하게 유지한다.
-- SELECT: 항상 Home, START: Settings, A: 확인·재생/일시정지, B: 뒤로·취소
-- D-pad: 메뉴 상하 이동, Now Playing 좌우 곡 이동
-- 클릭과 키보드 방향키/Enter/Escape도 같은 내비게이션 상태를 사용
-- 메뉴로 이동할 때 재생 중인 영상은 일시정지하고, Now Playing에서 A로 재개
-- Settings: Appearance / OpenAI / 지원 환경의 Mini player(PiP) / Open Window
+### 남은 검증
 
-2026-09-11 스크린샷 후속 기준: popup의 기본 크기를 유지하고 별도 창은 최소 레이아웃보다 작게 축소하지 않으며 창 확대에 맞춰 본체와 LCD를 확장한다. Now Playing 글자를 줄여 영상 공간을 확보하고 하단 배경색 단절을 제거한다. LP 버튼은 AI Picks 이동과 현재 곡 검색을 실행하며 기존 연결 조건·중복 요청 방지를 유지한다. Document PiP API가 없는 환경에서는 Mini Player 메뉴와 화면을 노출하지 않는다. 완료·실패 시 로딩 표시를 숨긴다.
-- LCD 내부 목록은 스크롤하며 320/390/480px 폭과 짧은 높이에서 가로 넘침이 없어야 한다.
-
-Game Boy 스타일 단일 기기 화면. 2026-09-09 LCD 메뉴 기준으로 영상과 현재 곡, Home, Playlist, AI PICKS, Add Music, Settings를 같은 고정 크기 LCD 안에서 전환한다. 왼쪽 십자키·오른쪽 대각선 A/B·하단 SELECT/START·스피커 홈은 본체 조작부로 유지하며, 본체 밖 기능 카드나 toolbox를 두지 않는다.
-
-```text
-┌──────────────────────────────┐
-│ PIXEL JUKEBOX          POWER │
-│ ┌──────────────────────────┐ │
-│ │ HOME / NOW PLAYING 등    │ │
-│ │ LCD 내부 화면 전환       │ │
-│ │ NOW PLAYING:             │ │
-│ │ VIDEO + 곡명·채널        │ │
-│ └──────────────────────────┘ │
-│                              │
-│                        [A]   │
-│    [十]           [B]        │
-│                              │
-│       SELECT   START    //// │
-└─────────────────────────────╯
-  URL 입력·Playlist·AI PICKS·Settings는 LCD 안에서 전환
-```
-
-제거:
-
-```text
-YOUTUBE CONNECTION
-EXPORT
-PNG / GIF
-ADD CURRENT TRACK
-SEARCH ON YOUTUBE
-RECOMMENDATIONS READY
-CONFIGURED · SESSION ONLY
-대형 LP
-대형 AI 상태 Card
-```
-
----
-
-## 11. Phase 0 — Extension 기반 구성
-
-검증 완료:
-
-- [x] Manifest V3
-- [x] Chrome 140 이상
-- [x] Vite / TypeScript Build
-- [x] Service Worker
-- [x] Side Panel
-- [x] Runtime Messaging
-- [x] 최소 Permission
-
----
-
-## 12. Phase 1 — URL Input · Player
-
-기존 검증 완료:
-
-- [x] URL 입력
-- [x] Video ID / Title / Channel / Thumbnail
-- [x] LP/CD Rotation
-- [x] Play/Pause
-- [x] Previous / Next
-- [x] Playlist 자동 추가
-
-Bridge 전환 구현:
-
-- [x] 직접 `chrome-extension:// → YouTube iframe` 제거
-- [x] HTTPS Player Bridge 연동
-- [x] `postMessage` Protocol
-- [x] origin / source / videoId 검증
-- [x] YouTube oEmbed Metadata 조회
-- [x] Manifest CSP 변경
-- [x] GitHub Pages Workflow 작성
-
-외부 검증:
-
-- [ ] GitHub Pages 실제 배포
-- [ ] Bridge URL 200 응답
-- [ ] Chrome에서 Error 153 해소
-- [ ] 실제 영상 재생
-- [ ] Play / Pause / Previous / Next
-- [ ] Autoplay 동작 확인
-
----
-
-## 13. Phase 2 — Playlist · Design · PiP
-
-기존 검증 완료:
-
-- [x] Playlist 관리
-- [x] Drag & Drop
-- [x] 반복 재생
-- [x] 저장·복구
-- [x] Document PiP
-- [x] PiP Controller
-
-로컬 구현 완료 (2026-09-08, 실제 Chrome 동작 미검증):
-
-- [x] Export 구현·UI·Test 제거
-- [x] Game Boy Design 적용
-- [x] Shell / Screen / Button Tone 설정
-- [x] Design `SAVE` 버튼
-- [x] Design 자동 영속 저장 제거
-
-Design / Interaction 로컬 구현 완료 (2026-09-09, 실제 Chrome 검증 결과는 별도 기록):
-
-- [x] Button Press Motion
-- [x] Playlist Drag Motion
-- [x] Disc Inertia Rotation
-- [x] AI Card Hover / Flip
-- [x] Shell / Screen Material Highlight
-- [x] 단일 LCD 화면 전환과 물리 버튼·키보드 공통 내비게이션
-
-구현 우선순위는 Press / Drag / Rotate → 약한 금속·유리 재질 → AI 카드 Flip → 홀로그램 Hover이다. Game Boy 기본 톤과 Shell / Screen / Button 구조, Compact AI PICKS, OpenAI CONNECT 및 Export 제거를 유지한다. Disc는 NOW PLAYING의 작은 보조 요소로 한정하고 대형 LP 영역을 복원하지 않는다.
-
-본체 가장자리의 약한 금속 하이라이트, 화면 보호판 가장자리의 약한 유리 반사만 허용한다. 전체 유리 카드 UI, 크롬 메탈 본체, 상시 홀로그램, 대형 3D 추천 카드와 Player보다 눈에 띄는 효과는 금지한다. 카드 상세는 기존 검증된 Track 정보만 사용하며 추가 AI 호출을 만들지 않는다. 키보드 조작과 Motion 감소 환경, PiP 이동·복원 시 정리를 포함한다.
-
-구현·검증 기록: [Game Boy Material / Motion / PiP](../docs/results/gameboy-material-motion-pip.md).
-
----
-
-## 14. Phase 3 — OpenAI 연결
-
-구현·검증 완료:
-
-- [x] Optional Host Permission
-- [x] Session Key
-- [x] 선택적 Local 저장
-- [x] `TRUSTED_CONTEXTS`
-- [x] Key 노출 차단
-
-UX 로컬 구현 완료 (2026-09-08, 실제 연결 미검증):
-
-- [x] API Key + `CONNECT` 단일 Action
-- [x] 별도 Enable / Save / Test 제거
-- [x] 연결 성공 시 AI PICKS 즉시 활성화
-- [x] 연결 성공 후 Settings 자동 축소
-- [x] 내부 상태 Badge 제거
-
-외부 검증:
-
-- [ ] 실제 OpenAI API Key 인증
-- [ ] 실제 OpenAI 네트워크 요청
-
----
-
-## 15. Phase 4 — AI Recommendation
-
-기존 구현·자동 검증 완료:
-
-- [x] Discovery / Selection 분리
-- [x] Candidate Extraction / Validation
-- [x] Candidate Set
-- [x] Structured Output
-- [x] Candidate Whitelist
-- [x] Selection 1회 Retry
-- [x] Core Player 오류 격리
-
-로컬 구현 완료 (2026-09-08, Resolver는 Mock 단위 검증):
-
-- [x] Selection Schema에서 Reason / Tag 제거
-- [x] YouTube Resolver 구현·검증
-- [x] Compact Recommendation Row
-- [x] `SEARCH ON YOUTUBE` 제거
-- [x] Playlist 직접 추가
-- [x] 추천 선택 시 새 Tab 미사용
-- [x] 내부 기술 상태 문구 제거
-- [x] Web Research와 Structured Candidate Extraction 분리
-- [x] 빈 후보 시 완화된 Discovery 1회 재실행
-- [x] 기준 곡·단계별 진행·오류 후 Retry 표시
-- [x] 보충 검색 실패 시 검증된 부분 결과 유지
-
-검증 명령 및 잔여 항목: [Game Boy UI 후속 작업 결과](../docs/results/gameboy-ui-followup.md).
-
-외부 검증:
-
-- [ ] 실제 Responses API
-- [ ] 실제 Web Search
-- [ ] 실제 YouTube Resolve
-- [ ] 실제 Recommendation Playlist 추가
-
----
-
-## 16. Phase 5 — Cache · 안정성
-
-구현·자동 검증 완료:
-
-- [x] Cache Hit 시 OpenAI 요청 0건
-- [x] MORE LIKE THIS Cache 우회
-- [x] Recent Recommendations
-- [x] Selection Retry
-- [x] Partial JSON 폐기
-- [x] Panel별 동시 중복 추천 요청 차단
-- [x] 인증 / Rate Limit / 사용량 오류 분류
-- [x] AI 비활성 상태 OpenAI 요청 0건
-- [x] Permission / Key 노출 검토
-- [x] Remote Hosted Code 검토
-
-재검증:
-
-- [ ] Player Bridge 기준 Cache Context
-- [ ] Resolver 실패 격리
-- [ ] Playlist 직접 추가 후 Fingerprint
-- [ ] 실제 OpenAI Usage
-- [ ] 실제 비용
-- [ ] 실제 Rate Limit 응답
-
----
-
-## 17. 전체 완료 기준
-
-### Core UX
-
-- [ ] YouTube URL 직접 입력
-- [ ] 새 Browser Tab 없는 재생
-- [ ] HTTPS Player Bridge 실제 배포
-- [ ] Error 153 해소
-- [ ] Playlist 자동 추가
-- [ ] NOW PLAYING 즉시 반영
-- [x] Game Boy 단일 LCD UI 로컬 구현
-
-### Player
-
-- [ ] YouTube 영상 정상 재생
-- [ ] Play/Pause
-- [ ] Previous/Next
-- [ ] Playlist 관리 및 반복
-- [ ] Design `SAVE`
-- [ ] Document PiP
-- [ ] Export 기능 없음
-
-### OpenAI
-
-- [x] Session Key 구조
-- [x] 선택적 Local Key 구조
-- [x] Local 접근 제한
-- [x] API Key 노출 방지
-- [ ] Key + `CONNECT` 단일 UX
-- [ ] 연결 즉시 AI PICKS 활성화
-- [ ] 실제 OpenAI 인증
-
-### AI PICKS
-
-- [x] Discovery / Selection 구조
-- [x] Candidate Extraction / Validation / Whitelist
-- [x] Selection Retry
-- [x] Cache
-- [x] YouTube Resolver Mock 검증
-- [x] Compact Thumbnail + Title Row
-- [x] Playlist 직접 추가 로컬 구현
-- [ ] 실제 Discovery / Selection / Resolve
-
-2026-09-11 자동 검증은 Vitest 7 files / 52 tests, TypeScript, Vite build, Bridge 문법, Manifest 검사까지 통과했다. 실제 OpenAI·YouTube 호출은 수행하지 않았다. Chrome fixture에는 기준 곡·진행·Retry·pixel loader·Reduced Motion assertion이 포함되어 있으나, 현재 환경에서 DevTools WebSocket 연결 오류로 assertion 실행 전에 종료되어 실제 브라우저 UI는 미검증이다.
-
----
-
-## 18. 문서 운영 기준
-
-2026-09-13 사용자 승인: DOM 합성 클릭이 실패하고 실제 마우스 클릭만 성공한 광고에 대응하기 위해 `debugger` 권한을 추가한다. Auto Skip Ads ON 상태의 자체 중첩 YouTube 프레임만 대상으로, 콘텐츠 스크립트가 표시된 활성 버튼을 요청하고 Service Worker가 origin·ancestry·요청 버튼을 재검증한 뒤 CDP 마우스 입력을 전달한다. 작업 후 디버거를 해제하며, 일반 YouTube 페이지나 다른 탭에는 입력하지 않는다. 실제 광고 성공 여부는 fixture 검증과 구분한다.
-
-2026-09-12 추가 요청: 추천 후보·최종 목록에 아티스트당 1곡을 지시하고 기준 곡과 다른 가수를 우선한다. 재생 화면에 음량/음소거와 저장 기능을 추가하며, Settings의 Auto Skip Ads 설정은 이 확장의 중첩 YouTube 플레이어에 표시된 활성 Skip 버튼만 자동 클릭한다. 이를 위해 `https://www.youtube.com/embed/*`에만 콘텐츠 스크립트를 등록하고 확장 origin·부모 bridge ancestry를 확인한다. 일반 YouTube 페이지에는 적용하지 않는다. [음량·광고 후속 결과](../docs/results/volume-auto-skip.md) 참조.
-
-2026-09-12 사용자 후속 요구사항: SIMILAR VIBES에서 Playlist 기준 곡을 재생 없이 선택한다. 선택 목록은 LCD 내부에 제한하며, 기준 곡 ID를 저장된 Playlist에서 검증한다. 추천은 원래 발매 연도·장르·언어를 우선하고 분위기·보컬을 다음으로 고려한다. LP는 자동 검색 없이 하단 패널을 열고, 재생 화면의 Playlist는 곡 선택 후 닫힌다. 중복 정보 버튼과 미검증 Mini Player 메뉴를 제거한다. Home 간격 확대, LCD 중복 로고 제거, 물리 버튼 입체감을 적용한다. 구현·검증은 [후속 결과](../docs/results/similar-vibes-source-controls.md)를 따른다.
-
-후속 검증(2026-09-12): 테스트 7개 파일·55개, 타입 검사·빌드·Bridge·manifest·PNG 아이콘 검사, 제한 밖 로컬 Chrome fixture가 통과했다. LCD 테마·스크롤바·슬라이딩 목록·연결 후 이동·창 크기 확대를 확인했다. 이전 Phase의 Chrome 실패는 당시 기록으로 보존한다. 실제 OpenAI·YouTube 요청과 Document PiP 창 생성은 미검증이며 [당시 결과](../docs/results/menu-playlist-search-followup.md)를 따른다.
-
-후속 검증(2026-09-13): 테스트 7개 파일·62개, 타입 검사·빌드·Bridge 문법·manifest 검사가 통과했다. Chrome 광고 fixture에서 음량·광고 버튼 제어와 연결 안내 숨김·한 줄 배치를 검증했다. 이 시점의 실제 광고 건너뛰기와 사용자 환경의 AI selection 오류 해결 여부는 미확인이었다. [연결 안내·선곡 검증 후속 결과](../docs/results/controls-selection-followup.md) 참조.
-
-최신 사용자 확인(2026-09-13): 실제 action popup의 sender에 frameId·documentId가 없어 정상 광고 클릭 요청이 거절되던 문제를 수정했다. 팝업 fixture에서 수정 전 실패·수정 후 통과를 확인한 뒤, 사용자가 실제 광고 자동 건너뛰기를 확인했다. debugger-v3 진단은 버튼 크기 0 대기 → 입력 1회(input-sent) → 버튼 소멸(no-button) 순서였다. [최종 확인 결과](../docs/results/volume-auto-skip.md) 참조. 실제 AI selection 오류 해결 및 Document PiP의 자동 건너뛰기까지 확인한 것은 아니다.
-
-프로젝트 범위 최종 기준:
-
-```text
-사용자의 현재 명시적 지시
-        ↓
-.project/plan.md
-        ↓
-현재 Phase 지침서
-        ↓
-DESIGN.md
-        ↓
-AGENTS.md
-        ↓
-README.md
-```
-
-- URL 입력 중심 UX 유지
-- 새 Browser Tab 없는 재생 유지
-- Player Bridge는 재생 전용으로 제한
-- Game Boy 스타일 디자인 유지
-- AI와 Core Player 기능 의존 금지
-- 버튼 수 최소화
-- 기술 상태의 불필요한 UI 노출 금지
-- AI Recommendation Card Compact 구성
-- Export 기능 제외
-- Design `SAVE` 기반 저장
-- 구현하지 않은 결과 완료 처리 금지
-- 기획 변경 시 `.project/plan.md` 우선 수정
-- 실제 구현·검증 결과는 Phase 결과 문서에 기록
-
----
-
-## 19. 제출 전 실제 E2E와 비용 실측
-
-가장 먼저 Extension을 새로고침하고 실제 OpenAI API Key로 서로 다른 기준 곡에서 `KEEP THIS VIBE`를 실행한다.
-
-확인:
-
+- 실제 OpenAI End-to-End
+- 서로 다른 기준 곡의 KEEP THIS VIBE 품질
 - Discovery Candidate 수
+- Candidate Extraction 통과 수
 - Selection 결과 수
-- YouTube Resolver 통과 수
-- 최종 추천 수와 추천 품질
-- Discovery 요청 수
-- Selection 요청 수
-- YouTube 검색 요청 수
-- Candidate 보충 검색 수
-- 전체 OpenAI 요청 수
+- YouTube 출처 발견 수
+- Resolver / Metadata 검증 통과 수
+- 최종 추천 수
+- 실제 OpenAI Usage
 - 전체 응답 시간
-- OpenAI Usage
-- `KEEP THIS VIBE` 1회 실제 비용
+- KEEP THIS VIBE 1회 비용
+- 최종 Regression
+- 제출 가능한 실행·설치 경로
 
-실측 후에만 Candidate 수, Batch 크기, Retry 횟수를 조정한다.
+실제 측정값과 검증 결과는 `docs/results/*`에 기록한다.
 
-## 20. 제출용 배포 경로 확정
+실측 후에만 Candidate 수·Batch 크기·Retry 정책을 조정한다.
 
-최종 제출 전에 심사자가 실제 프로젝트를 실행할 수 있는 경로를 확정한다.
-
-필요:
-
-- Extension 설치 또는 배포 링크
-- Player Bridge 구성 방법
-- 실행 방법
-- OpenAI API Key 연결 방법
-- 필요 시 GitHub Repository 또는 Release
-
-현재 Bridge는 사용자별 주소를 설정하는 구조이므로 심사 환경에서 실행 절차가 지나치게 복잡하지 않은지 확인한다.
-
-완료 기준:
-
-> 심사자가 제공된 링크와 안내만으로 Pixel Jukebox를 실행하고 주요 기능을 확인할 수 있음.
-
-## 21. 제출 자료
-
-최종 제출:
-
-- 한 줄 프로젝트 설명
-- 해결하려는 문제
-- AI 활용 방식
-- 사용한 AI Tool
-- 서비스·설치 링크
-- 대표 Screenshot
-- 필요한 최소 실행 안내
-
-Pixel Jukebox를 단순한 `AI 음악 추천 서비스`로 설명하지 않는다.
-
-핵심 메시지:
-
-> **현재 듣는 곡의 분위기를 유지하면서 다음에 이어질 Playlist를 AI가 큐레이션하고, 실제 YouTube 영상까지 검증해 재생 가능한 결과로 연결하는 Game Boy 스타일 음악 플레이어**
-
-## 22. 기능 동결과 제출 우선순위
-
-현재 제출 범위:
-
-```text
-Game Boy LCD UI
-YouTube Player Bridge
-Playlist
-Volume / Mute
-Auto Skip Ads
-PiP
-Design
-OpenAI BYOK
-KEEP THIS VIBE
-YouTube Resolver
-Recommendation Cache
-```
-
-신규 기능은 추가하지 않는다.
-
-허용되는 변경:
+### 허용되는 변경
 
 - 실제 E2E 실패 수정
 - 추천 품질 문제 수정
@@ -1181,26 +589,63 @@ Recommendation Cache
 - 배포·설치 문제 수정
 - 제출을 막는 UX 오류 수정
 
-기능 추가보다 안정화와 제출 완성도를 우선한다.
+신규 기능 추가는 기본적으로 진행하지 않는다.
 
-작업 순서:
+---
 
-```text
-신규 기능 중단
-    ↓
-실제 OpenAI E2E
-    ↓
-추천 품질
-    ↓
-Resolver 정확도
-    ↓
-비용·응답 시간
-    ↓
-최종 Regression
-    ↓
-배포·설치 경로
-    ↓
-Screenshot
-    ↓
-제출 문구
-```
+## 14. 완료 기준
+
+### Core Service
+
+- [x] Chrome Extension 실행
+- [x] Game Boy LCD UI
+- [x] HTTPS Player Bridge 구조
+- [x] 사용자별 Bridge 설정
+- [x] Playlist
+- [x] 반응형 UI
+- [x] Volume / Mute
+- [x] Auto Skip Ads 실제 검증
+- [x] Design
+- [x] 자동 테스트·빌드
+- [ ] 최종 제출 버전 Regression 확인
+
+### AI
+
+- [x] Research Discovery
+- [x] Candidate Extraction / Validation
+- [x] Selection
+- [x] YouTube Resolver
+- [x] Cache
+- [x] AI / Player 오류 격리
+- [ ] 실제 OpenAI E2E
+- [ ] 여러 기준 곡 추천 품질 검증
+- [ ] 최종 결과 수 안정성 확인
+- [ ] 실제 Usage·비용 확인
+
+### 제출
+
+- [x] Fork용 Bridge 구성·배포 문서
+- [ ] 제출용 Extension 실행·설치 경로
+- [ ] 심사자 실행 확인
+- [ ] 서비스·설치 링크
+- [ ] 제출 문구
+- [ ] 최종 대표 Screenshot
+
+---
+
+## 15. 문서 기준
+
+| 문서 | 역할 |
+| --- | --- |
+| `.project/plan.md` | 현재 프로젝트 범위·핵심 설계·완료 기준 |
+| `AGENTS.md` | 저장소 공통 작업 규칙 |
+| `DESIGN.md` | UI·Interaction 기준 |
+| `README.md` | 실행·설치·Bridge 배포 안내 |
+| `docs/results/*` | 실제 구현·검증 기록 |
+| Source Code | Prompt·Protocol·구현 세부 |
+
+기획 변경 시 `.project/plan.md`를 우선 수정한다.
+
+완료된 기능의 과거 변경 이력이나 날짜별 작업 기록을 기획서에 누적하지 않는다.
+
+실제 구현·검증 결과는 `docs/results/*`에 기록한다.
