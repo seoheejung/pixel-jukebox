@@ -210,16 +210,22 @@ html, body { width: 360px; min-width: 360px; }
 body { max-height: 600px; overflow: auto; }
 .standalone-window, .standalone-window body { width: 100%; min-width: 360px; }
 .standalone-window body { max-height: none; }
-.standalone-window main { max-width: none; min-height: 100vh; }
-.standalone-window .game-boy { display: grid; grid-template-rows: auto minmax(0, 1fr); width: 100%; min-height: calc(100vh - 12px); }
-.standalone-window #player { display: grid; grid-template-rows: minmax(300px, 1fr) auto auto; min-height: 0; }
-.standalone-window .screen-bezel { width: 100%; height: auto; min-height: 300px; }
+.standalone-window main { max-width: 640px; min-height: 100dvh; }
+.standalone-window .game-boy { width: 100%; min-height: 0; }
+.standalone-window #player { display: grid; grid-template-rows: auto auto auto; min-height: 0; }
+.standalone-window .screen-bezel { width: 100%; height: clamp(300px, calc(100dvh - 280px), 560px); min-height: 0; }
+.standalone-window .control-deck, .standalone-window .lower-deck { width: 100%; max-width: 360px; margin-inline: auto; }
+.standalone-window .screen-bezel:has(#video-view:not([hidden])) { height: auto; }
+.standalone-window #video-view { height: auto; grid-template-rows: auto auto; }
+.standalone-window .embedded-video { height: auto; overflow: hidden; }
+.standalone-window .embedded-video iframe { width: 100%; height: auto; aspect-ratio: 16 / 9; }
+.standalone-window .home-screen .lcd-content { grid-template-rows: repeat(4, minmax(42px, auto)); align-content: start; }
 main { width: 100%; max-width: 360px; padding: 6px; }
-.game-boy { min-height: 570px; padding: 12px 12px 16px; overflow: hidden; border-radius: 18px 18px 38px 18px; background: var(--color-shell); box-shadow: inset 2px 2px #ffffff85, inset -2px -3px #77746f35, 0 5px 14px #34322e35; }
+.game-boy { min-height: 570px; padding: 12px 12px 16px; overflow: clip; border-radius: 18px 18px 38px 18px; background: var(--color-shell); box-shadow: inset 2px 2px #ffffff85, inset -2px -3px #77746f35, 0 5px 14px #34322e35; }
 .game-boy header { margin: 1px 3px 9px; }
-.screen-bezel { position: relative; height: 300px; padding: 10px; overflow: hidden; border-radius: 12px 12px 25px 12px; background: #494b50; }
+.screen-bezel { position: relative; height: 300px; padding: 10px; overflow: clip; border-radius: 12px 12px 25px 12px; background: #494b50; }
 #video-view, .lcd-menu { height: 100%; min-width: 0; }
-#video-view { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; }
+#video-view { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: clip; }
 #video-view[hidden], .lcd-menu[hidden], .lcd-page[hidden] { display: none !important; }
 .embedded-video, .embedded-video iframe { min-width: 0; min-height: 0; height: 100%; }
 .embedded-video { border: 3px solid #292b2f; }

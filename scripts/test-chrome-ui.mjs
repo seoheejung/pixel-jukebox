@@ -536,8 +536,57 @@ try {
   const { data: standaloneExpandedShot } = await browser.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }, panel);
   await writeFile(resolve(output, 'gameboy-now-playing-standalone-720x940.png'), standaloneExpandedShot, 'base64');
   assert.ok(standaloneExpanded.gameBoy.width > standaloneMinimum.gameBoy.width, `Standalone player must grow beyond its 360px minimum: ${JSON.stringify({ standaloneMinimum, standaloneExpanded })}`);
-  assert.ok(standaloneExpanded.gameBoy.bottom >= 920, `Standalone player must fill the window height: ${JSON.stringify(standaloneExpanded)}`);
+  assert.ok(standaloneExpanded.gameBoy.width <= 640 && standaloneExpanded.gameBoy.bottom <= 940, `Standalone player must stay bounded: ${JSON.stringify(standaloneExpanded)}`);
   assert.ok(standaloneExpanded.lcd.height > standaloneMinimum.lcd.height && standaloneExpanded.video.height > standaloneMinimum.video.height, `Standalone LCD and video must consume added height: ${JSON.stringify({ standaloneMinimum, standaloneExpanded })}`);
+  for (const [width, height] of [[360, 600], [720, 480], [1280, 720], [1920, 1080]]) {
+    await browser.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false }, panel);
+    await evaluate(browser, panel, 'window.scrollTo(0, 0)');
+    const layout = await evaluate(browser, panel, `(() => {
+      const rect = selector => document.querySelector(selector).getBoundingClientRect();
+      const lcd = rect('.screen-bezel');
+      const video = rect('.embedded-video iframe');
+      const info = rect('.now-playing');
+      return {
+        overflow: document.documentElement.scrollWidth > innerWidth,
+        deckWidth: rect('.control-deck').width,
+        ratio: video.width / video.height,
+        fillsWidth: Math.abs(video.width - (rect('.embedded-video').width - 6)) < 1,
+        infoVisible: info.top >= video.bottom && info.bottom <= lcd.bottom,
+        bottom: rect('.lower-deck').bottom,
+        scrollHeight: document.documentElement.scrollHeight,
+      };
+    })()`);
+    assert.ok(!layout.overflow && layout.deckWidth <= 360, `Bounded layout at ${width}x${height}: ${JSON.stringify(layout)}`);
+    assert.ok(Math.abs(layout.ratio - 16 / 9) < 0.02 && layout.fillsWidth && layout.infoVisible, `Video and metadata at ${width}x${height}: ${JSON.stringify(layout)}`);
+    assert.ok(layout.bottom <= layout.scrollHeight, `Controls must be reachable at ${width}x${height}`);
+    if (height >= 600) assert.ok(layout.bottom <= height, `Controls must fit at ${width}x${height}`);
+  }
+  console.log('PASS responsive: bounded controls, 16:9 video and visible metadata at 360x600, 720x480, 1280x720, 1920x1080');
+  await browser.send('Emulation.setDeviceMetricsOverride', { width: 640, height: 560, deviceScaleFactor: 1, mobile: false }, panel);
+  for (const view of ['playlist', 'ai-picks']) {
+    await click('#button-select');
+    await click(`[data-open="${view}"]`);
+    await evaluate(browser, panel, `(() => {
+      const page = document.querySelector('[data-view="${view}"]');
+      const items = page.querySelectorAll('button, input');
+      items[items.length - 1].scrollIntoView({ block: 'end' });
+      for (const frame of document.querySelectorAll('.game-boy, #lcd-screen, #video-view')) frame.scrollTop = 180;
+    })()`);
+    assert.equal(await evaluate(browser, panel, `(() => {
+      const lcd = document.querySelector('#lcd-screen');
+      const menu = document.querySelector('#menu-view').getBoundingClientRect();
+      const bounds = lcd.getBoundingClientRect();
+      return lcd.scrollTop === 0 && Math.abs(menu.top - bounds.top - 10) < 1 && Math.abs(menu.bottom - bounds.bottom + 10) < 1;
+    })()`), true, `${view} must fill the LCD without scrolling its frame`);
+    await click('#button-select');
+    await click('[data-open="now-playing"]');
+    assert.equal(await evaluate(browser, panel, `(() => {
+      const lcd = document.querySelector('#lcd-screen');
+      const video = document.querySelector('#video-view');
+      return lcd.scrollTop === 0 && video.scrollTop === 0 && Math.abs(video.getBoundingClientRect().top - lcd.getBoundingClientRect().top - 10) < 1;
+    })()`), true, `Returning from ${view} must restore the full video`);
+  }
+  console.log('PASS LCD frame: Playlist and AI PICKS scrolling cannot displace the screen or returning video');
   await click('#button-select');
   await click('[data-open="ai-picks"]');
   await evaluate(browser, panel, "window.__emitUiMessage({ type: 'CORE_STATE', state: { playlist: [], settings: { shell: '#e0dfd0', screen: '#9bbc0f', button: '#a13b6d' } } })");
