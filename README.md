@@ -1,6 +1,6 @@
 # Pixel Jukebox
 
-> Game Boy LCD 메뉴로 YouTube 재생, Playlist 관리, 현재 분위기를 잇는 음악 추천을 제공하는 Chrome Extension
+> 현재 곡의 분위기를 이어갈 Playlist를 AI가 큐레이션하고, 실제 YouTube 영상까지 검증해 재생하는 Game Boy 스타일 Chrome Extension
 
 <p align="center">
   <img src="docs/images/Screenshot%202026-09-14%20202201.png" alt="Home 메뉴" width="30%" />
@@ -10,7 +10,7 @@
 
 ## 프로젝트 개요
 
-Pixel Jukebox는 Chrome Desktop에서 동작하는 Manifest V3 확장 프로그램이다. Core Player는 OpenAI 없이 사용할 수 있으며, `이어 듣기`를 활성화한 경우에만 사용자의 OpenAI API Key로 다음 곡을 탐색한다.
+Pixel Jukebox는 Chrome Desktop에서 동작하는 Manifest V3 확장 프로그램이다. Core Player는 OpenAI 없이 사용할 수 있으며, `KEEP THIS VIBE`를 실행할 때만 사용자의 OpenAI API Key로 현재 곡의 흐름을 이어갈 Playlist를 탐색한다.
 
 ## 주요 기능
 
@@ -23,13 +23,14 @@ Pixel Jukebox는 Chrome Desktop에서 동작하는 Manifest V3 확장 프로그�
 - Popup, 반응형 독립 창, Document Picture-in-Picture
 - 본체·LCD·버튼 색상 설정
 
-### 이어 듣기
+### KEEP THIS VIBE
 
-- 현재 곡과 Playlist 흐름을 기준으로 후보 탐색
-- OpenAI Web Search와 Structured Outputs 기반 추천
-- YouTube 영상과 곡 일치 여부 검증
-- 12–20곡을 목표로 검증된 결과를 추천 순서대로 표시하고 Playlist에 추가
-- Cache, 중복 요청 병합, 실패 시 부분 결과 유지
+- 현재 곡을 중심으로 분위기·시대감·질감·감정선이 이어지는 후보 탐색
+- Discovery 20–30곡에서 Selection 12–20곡을 구성
+- OpenAI Web Search와 Structured Outputs 기반 큐레이션
+- 실제 YouTube 출처와 oEmbed Metadata로 곡·Artist 일치 여부 검증
+- 검증된 결과만 추천 순서대로 표시하고 Playlist에 바로 추가
+- Cache와 중복 요청 병합, `MORE LIKE THIS` 재탐색, 실패 시 부분 결과 유지
 
 ## 전체 구조
 
@@ -38,7 +39,7 @@ flowchart TD
     Icon["확장 아이콘"] --> Popup["Popup LCD"]
     Popup -->|닫기| Stop["재생 종료"]
     Popup -->|Settings · Open Window| Window["반응형 독립 창 LCD"]
-    Popup --> UI["Player · Playlist · 이어 듣기 · Settings"]
+    Popup --> UI["Player · Playlist · KEEP THIS VIBE · Settings"]
     Window --> UI
     UI <--> Bridge["HTTPS Player Bridge"]
     Bridge <--> YouTube["YouTube IFrame Player"]
@@ -86,7 +87,7 @@ Node.js 22.12 이상이 필요하다.
 ### 2. Extension 빌드
 
 ```sh
-npm install
+npm ci
 npm run build
 ```
 
@@ -97,9 +98,9 @@ npm run build
 
 코드를 변경한 뒤에는 다시 빌드하고 확장을 새로고침한다.
 
-### 3. 이어 듣기 설정
+### 3. KEEP THIS VIBE 설정
 
-Settings에서 AI 기능을 활성화하고 OpenAI host 권한과 API Key를 등록한다. Key는 기본적으로 `chrome.storage.session`에 저장하며, 사용자가 선택한 경우에만 제한된 `chrome.storage.local` 저장을 사용한다.
+Settings의 OpenAI 화면에서 `CONNECT`를 눌러 필요한 host 권한을 승인하고 API Key를 등록한다. 현재 UI에서 Key는 `chrome.storage.session`에만 저장되며 Chrome 세션이 끝나면 제거된다.
 
 API Key 조회와 OpenAI 호출은 Service Worker에서만 처리한다. Key를 소스, Git, 로그, Runtime 메시지 또는 Player 프레임에 포함하지 않는다.
 
@@ -121,4 +122,4 @@ npm run test:chrome:audio
 npm run test:chrome:audio:popup
 ```
 
-실제 Bridge 재생은 `npm run chrome:start`로 연 테스트 프로필에서 확인하고, 검증 후 `npm run chrome:stop`으로 종료한다. 실제 OpenAI 요청, Document PiP 창 생성과 광고 자동 건너뛰기는 각 외부 환경에서 별도로 확인한다.
+실제 Bridge 재생은 `npm run chrome:start`로 연 테스트 프로필에서 확인하고, 검증 후 `npm run chrome:stop`으로 종료한다. Auto Skip Ads는 실제 광고에서 동작을 확인했다. 실제 OpenAI E2E와 Document PiP 창 생성은 최종 제출 환경에서 별도로 확인한다.
