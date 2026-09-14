@@ -274,8 +274,8 @@ function renderPlayer() {
   similarVibesConnect.hidden = !needsAiKey;
   aiPicks.hidden = needsAiKey;
   aiPicks.disabled = !selectedRecommendationTrack() || recommendationLoading;
-  aiPicks.textContent = recommendationLoading ? 'SEARCHING' : hasRecommendations ? 'REFRESH' : 'GET PICKS';
-  aiPicks.setAttribute('aria-label', recommendationLoading ? 'Finding tracks with similar vibes' : hasRecommendations ? 'Refresh Similar Vibes picks' : 'Get Similar Vibes picks');
+  aiPicks.textContent = recommendationLoading ? 'CURATING' : hasRecommendations ? 'MORE LIKE THIS' : 'KEEP THIS VIBE';
+  aiPicks.setAttribute('aria-label', recommendationLoading ? 'Curating the next tracks' : hasRecommendations ? 'Find more tracks that keep this vibe' : 'Keep this vibe going');
   renderRecommendationStatus();
   renderPlaylist();
   if (typeof renderScreen === 'function') renderScreen();
@@ -669,7 +669,7 @@ function connect() {
         hasRecommendations = true;
         currentRecommendations = message.recommendations;
         aiPicksMessage.textContent = currentRecommendations.length < MIN_RECOMMENDATIONS
-          ? `${currentRecommendations.length} verified tracks are ready. Refresh to find more.` : '';
+          ? `${currentRecommendations.length} verified tracks keep the vibe going. Try More Like This for a new sequence.` : '';
         renderRecommendations(currentRecommendations);
         renderPlayer();
         return;

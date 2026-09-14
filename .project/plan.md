@@ -533,7 +533,7 @@ CANDIDATE|C02|Artist|Track
 초기 Candidate 수:
 
 ```text
-24
+20–30 (기본 목표 24)
 ```
 
 ### Selection
@@ -571,10 +571,10 @@ Selection은 Candidate ID만 반환한다.
 초기 Recommendation 수:
 
 ```text
-12
+12–20
 ```
 
-실제 OpenAI 비용, 응답 시간, 추천 품질 검증 후 확대 여부를 결정한다.
+실제 OpenAI 비용, 응답 시간, 추천 품질을 함께 검증한다.
 
 ### YouTube Resolver
 

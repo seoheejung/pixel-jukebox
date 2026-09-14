@@ -70,7 +70,7 @@ export function createRecommendationService(ai: Pick<AiService, 'response'>, req
       let supplementalFailure: unknown;
       const resolve = async (items: Candidate[], individual = false): Promise<Recommendation[]> => {
         options.progress?.('youtube-search');
-        const sources = parseYouTubeResults(await ai.response(youtubeResolverBody(items, individual), 'youtube-search'), items);
+        const sources = parseYouTubeResults(await ai.response(youtubeResolverBody(items, individual), 'youtube-search'), items, individual);
         if (sources.length === 0) return [];
         sawYouTubeSource = true;
         options.progress?.('metadata');

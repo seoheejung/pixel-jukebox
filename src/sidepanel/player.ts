@@ -35,7 +35,7 @@ export function createPlayer(root: HTMLElement, onCommand: (action: PlayerAction
           <h2 class="track-title">Paste a YouTube link to start.</h2>
           <p class="channel-title"></p><p class="playback-status" role="status" aria-live="polite"></p>
         </div>
-        <button class="mini-disc" type="button" aria-label="Find tracks with similar vibes" title="Similar Vibes" aria-expanded="false" aria-controls="continue-drawer"><i aria-hidden="true"></i></button>
+        <button class="mini-disc" type="button" aria-label="Keep this vibe going" title="Keep This Vibe" aria-expanded="false" aria-controls="continue-drawer"><i aria-hidden="true"></i></button>
         <div class="track-controls" aria-label="Playback order controls">
           <button class="track-previous" type="button" aria-label="Previous track">◀ PREV</button>
           <button class="track-repeat" type="button" aria-label="Repeat current track" aria-pressed="false">↻ ONE</button>
@@ -48,7 +48,7 @@ export function createPlayer(root: HTMLElement, onCommand: (action: PlayerAction
         <header><strong>PLAYLIST</strong><button class="now-playing-queue-close" type="button" aria-label="Close playlist">CLOSE</button></header>
         <div class="now-playing-queue-list"></div>
       </section>
-      <section id="continue-drawer" class="now-playing-queue recommendation-drawer" aria-label="Similar Vibes" aria-hidden="true" inert></section>
+      <section id="continue-drawer" class="now-playing-queue recommendation-drawer" aria-label="Keep This Vibe" aria-hidden="true" inert></section>
       </div>
     </div>
     <div class="control-deck">

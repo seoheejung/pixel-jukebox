@@ -3,18 +3,19 @@ import { parseDiscovery, parseSelection, recommendationTrack } from '../src/shar
 import { isAiRecommendationsMessage } from '../src/shared/ai';
 
 describe('recommendations', () => {
-  it('accepts 24 discovery candidates and at most 12 resolved recommendations', () => {
-    const lines = Array.from({ length: 25 }, (_, index) => `CANDIDATE|C${String(index + 1).padStart(2, '0')}|Artist ${index + 1}|Song ${index + 1}`);
+  it('accepts 30 discovery candidates and at most 20 resolved recommendations', () => {
+    const lines = Array.from({ length: 31 }, (_, index) => `CANDIDATE|C${String(index + 1).padStart(2, '0')}|Artist ${index + 1}|Song ${index + 1}`);
     const candidates = parseDiscovery(lines.join('\n'));
-    expect(candidates).toHaveLength(24);
-    const selection = candidates.slice(0, 12).map(({ candidateId }) => ({ candidateId }));
-    expect(parseSelection({ recommendations: selection }, candidates)).toHaveLength(12);
-    expect(parseSelection({ recommendations: [...selection, { candidateId: 'C13' }] }, candidates)).toBeNull();
-    const resolved = candidates.slice(0, 13).map((item, index) => {
+    expect(candidates).toHaveLength(30);
+    const selection = candidates.slice(0, 20).map(({ candidateId }) => ({ candidateId }));
+    expect(parseSelection({ recommendations: selection }, candidates)).toHaveLength(20);
+    expect(parseSelection({ recommendations: selection.slice(0, 11) }, candidates)).toBeNull();
+    expect(parseSelection({ recommendations: [...selection, { candidateId: 'C21' }] }, candidates)).toBeNull();
+    const resolved = candidates.slice(0, 21).map((item, index) => {
       const videoId = `AAAAAAAAA${String(index).padStart(2, '0')}`;
       return { ...item, videoId, videoUrl: `https://www.youtube.com/watch?v=${videoId}`, videoType: 'MV' as const, thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`, channelTitle: item.artist };
     });
-    expect(isAiRecommendationsMessage({ type: 'AI_RECOMMENDATIONS', recommendations: resolved.slice(0, 12) })).toBe(true);
+    expect(isAiRecommendationsMessage({ type: 'AI_RECOMMENDATIONS', recommendations: resolved.slice(0, 20) })).toBe(true);
     expect(isAiRecommendationsMessage({ type: 'AI_RECOMMENDATIONS', recommendations: resolved })).toBe(false);
   });
 

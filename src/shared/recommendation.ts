@@ -2,9 +2,10 @@ import { isRecord, isThumbnail, isVideoId, trackFromVideoId } from './track';
 import type { PlaylistTrack } from './playlist';
 import type { Track } from './track';
 
-export const MAX_CANDIDATES = 24;
+export const TARGET_CANDIDATES = 24;
+export const MAX_CANDIDATES = 30;
 export const MIN_RECOMMENDATIONS = 12;
-export const MAX_RECOMMENDATIONS = 12;
+export const MAX_RECOMMENDATIONS = 20;
 
 export const VIDEO_TYPES = ['MV', 'PERFORMANCE', 'LIVE', 'LYRIC', 'VISUALIZER', 'AUDIO', 'TOPIC', 'OFFICIAL_OTHER'] as const;
 export type VideoType = typeof VIDEO_TYPES[number];
@@ -66,6 +67,7 @@ export function parseSelection(value: unknown, candidates: Candidate[], onInvali
     try { parsed = JSON.parse(value); } catch { return invalid('선곡 응답이 올바른 JSON이 아닙니다.'); }
   }
   if (!isRecord(parsed) || !Array.isArray(parsed.recommendations) || Object.keys(parsed).length !== 1) return invalid('선곡 응답의 recommendations 형식이 올바르지 않습니다.');
+  if (parsed.recommendations.length < Math.min(MIN_RECOMMENDATIONS, candidates.length)) return invalid('선곡 응답이 필요한 추천 개수보다 적습니다.');
   if (parsed.recommendations.length > MAX_RECOMMENDATIONS) return invalid('선곡 응답이 최대 추천 개수를 초과했습니다.');
   const allowed = new Map(candidates.map((candidate) => [candidate.candidateId, candidate]));
   const selected = new Set<string>();

@@ -56,6 +56,22 @@ describe('YouTube recommendation resolver', () => {
     expect(request.mock.calls[0]?.[1]?.headers).toBeUndefined();
   });
 
+  it('uses cited YouTube search sources for an individual track and infers its video type', async () => {
+    const response = {
+      output: [{ type: 'web_search_call', action: { sources: [{ url: `https://youtu.be/${videoId}`, title: 'YouTube result' }] } }],
+    };
+    const sources = parseYouTubeResults(response, candidates, true);
+    expect(sources).toEqual([{ ...candidate, videoId, videoUrl: `https://www.youtube.com/watch?v=${videoId}`, videoType: null }]);
+    const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
+      ...metadata, title: 'Rick Astley - Never Gonna Give You Up (Official Audio)',
+    })));
+    expect(await resolveRecommendations(candidates, sources, request)).toMatchObject([{ videoId, videoType: 'AUDIO' }]);
+  });
+
+  it('does not accept an uncited URL written only in model text', () => {
+    expect(parseYouTubeResults(output(`Try https://youtu.be/${videoId}`), candidates, true)).toEqual([]);
+  });
+
   it('discards mismatched recordings, covers, reactions, and karaoke', async () => {
     const sources = parseYouTubeResults(output(youtubeLine(candidate)), candidates);
     for (const title of [
@@ -96,14 +112,16 @@ describe('YouTube recommendation resolver', () => {
     const discovery = response.mock.calls[0]?.[0] as { tool_choice?: string; input?: Array<{ content: string }> };
     expect(discovery.tool_choice).toBe('required');
     expect(discovery.input?.[0]?.content).toContain('current track as the strongest anchor');
-    expect(discovery.input?.[0]?.content).toContain('up to 24 supported tracks');
+    expect(discovery.input?.[0]?.content).toContain('if this played next, would the flow break');
+    expect(discovery.input?.[0]?.content).toContain('20 to 30');
     const extraction = response.mock.calls[1]?.[0] as { tools?: unknown; text?: unknown; input?: Array<{ content: string }> };
     expect(extraction.tools).toBeUndefined();
     expect(extraction.text).toBeUndefined();
     expect(extraction.input?.[0]?.content).toContain('CANDIDATE|C01|Artist|Track');
-    const firstSelection = response.mock.calls[2]?.[0] as { input?: Array<{ content: string }>; text: { format: { schema: { properties: { recommendations: { maxItems: number } } } } } };
+    const firstSelection = response.mock.calls[2]?.[0] as { input?: Array<{ content: string }>; text: { format: { schema: { properties: { recommendations: { minItems: number; maxItems: number } } } } } };
     const retriedSelection = response.mock.calls[3]?.[0] as typeof firstSelection;
-    expect(firstSelection.text.format.schema.properties.recommendations.maxItems).toBe(12);
+    expect(firstSelection.text.format.schema.properties.recommendations.maxItems).toBe(20);
+    expect(firstSelection.text.format.schema.properties.recommendations.minItems).toBe(1);
     expect(retriedSelection.input?.[1]).toEqual(firstSelection.input?.[1]);
     expect(retriedSelection.input?.[2]?.content).toContain('identical Candidate Set');
     const youtube = response.mock.calls[4]?.[0] as { input?: Array<{ content: string }> };

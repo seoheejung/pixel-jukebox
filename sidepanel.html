@@ -17,7 +17,7 @@
         <div class="lcd-content menu-list">
           <button data-open="now-playing" type="button">Now Playing <small>player</small></button>
           <button data-open="playlist" type="button">Playlist <small id="playlist-count">0 tracks</small></button>
-          <button data-open="ai-picks" type="button">Similar Vibes</button>
+          <button data-open="ai-picks" type="button">Keep This Vibe</button>
           <button data-open="settings" type="button">Settings <small>device</small></button>
         </div><div class="lcd-footer">▲▼ MOVE · A OPEN</div>
       </section>
@@ -31,11 +31,11 @@
         <div id="playlist-list" class="playlist-list menu-list" role="list"></div></div><div class="lcd-footer">A PLAY · × REMOVE · B BACK</div>
       </section>
       <section class="lcd-page ai-panel" data-view="ai-picks" aria-labelledby="ai-title" hidden>
-        <div class="lcd-header"><span>SIMILAR VIBES</span><button id="continue-close" type="button" aria-label="Close Similar Vibes" hidden>CLOSE ↓</button></div><div class="lcd-content">
-        <h2 id="ai-title" class="sr-only">Similar Vibes</h2>
+        <div class="lcd-header"><span>KEEP THIS VIBE</span><button id="continue-close" type="button" aria-label="Close Keep This Vibe" hidden>CLOSE ↓</button></div><div class="lcd-content">
+        <h2 id="ai-title" class="sr-only">Keep This Vibe</h2>
         <div id="similar-vibes-connect" class="similar-vibes-connect"><label for="similar-vibes-key">OPENAI API KEY</label><div class="ai-key-row"><input id="similar-vibes-key" type="password" autocomplete="off" spellcheck="false" /><button id="similar-vibes-connect-button" type="button">CONNECT</button></div><p id="similar-vibes-connect-message" role="status" aria-live="polite"></p></div>
         <div class="similar-vibes-source"><span id="similar-vibes-source-label">REFERENCE TRACK</span><button id="similar-vibes-source-trigger" type="button" aria-haspopup="listbox" aria-controls="similar-vibes-source-list" aria-expanded="false"></button><div id="similar-vibes-source-list" class="similar-vibes-source-list" role="listbox" aria-labelledby="similar-vibes-source-label" hidden></div><p id="similar-vibes-empty" hidden>No Playlist tracks yet.</p><button id="similar-vibes-open-playlist" type="button" hidden>OPEN PLAYLIST</button></div>
-        <button id="ai-picks" class="vibe-action" type="button" hidden>GET PICKS</button><p id="ai-picks-source" class="ai-picks-source" hidden></p>
+        <button id="ai-picks" class="vibe-action" type="button" hidden>KEEP THIS VIBE</button><p id="ai-picks-source" class="ai-picks-source" hidden></p>
         <div id="ai-picks-loading" class="ai-picks-loading" role="status" aria-live="polite" hidden><span class="pixel-loader" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span id="ai-picks-progress">Finding tracks…</span></div>
         <p id="ai-picks-message" role="status" aria-live="polite"></p><button id="ai-picks-retry" class="ai-picks-retry" type="button" hidden>RETRY</button>
         <div id="ai-picks-list" class="ai-picks-list menu-list"></div></div><div class="lcd-footer">A ADD TO PLAYLIST · B CLOSE/BACK</div>
