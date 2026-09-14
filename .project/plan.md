@@ -981,7 +981,7 @@ UX 로컬 구현 완료 (2026-09-08, 실제 연결 미검증):
 구현·자동 검증 완료:
 
 - [x] Cache Hit 시 OpenAI 요청 0건
-- [x] REFRESH PICKS Cache 우회
+- [x] MORE LIKE THIS Cache 우회
 - [x] Recent Recommendations
 - [x] Selection Retry
 - [x] Partial JSON 폐기
@@ -1092,3 +1092,115 @@ README.md
 - 구현하지 않은 결과 완료 처리 금지
 - 기획 변경 시 `.project/plan.md` 우선 수정
 - 실제 구현·검증 결과는 Phase 결과 문서에 기록
+
+---
+
+## 19. 제출 전 실제 E2E와 비용 실측
+
+가장 먼저 Extension을 새로고침하고 실제 OpenAI API Key로 서로 다른 기준 곡에서 `KEEP THIS VIBE`를 실행한다.
+
+확인:
+
+- Discovery Candidate 수
+- Selection 결과 수
+- YouTube Resolver 통과 수
+- 최종 추천 수와 추천 품질
+- Discovery 요청 수
+- Selection 요청 수
+- YouTube 검색 요청 수
+- Candidate 보충 검색 수
+- 전체 OpenAI 요청 수
+- 전체 응답 시간
+- OpenAI Usage
+- `KEEP THIS VIBE` 1회 실제 비용
+
+실측 후에만 Candidate 수, Batch 크기, Retry 횟수를 조정한다.
+
+## 20. 제출용 배포 경로 확정
+
+최종 제출 전에 심사자가 실제 프로젝트를 실행할 수 있는 경로를 확정한다.
+
+필요:
+
+- Extension 설치 또는 배포 링크
+- Player Bridge 구성 방법
+- 실행 방법
+- OpenAI API Key 연결 방법
+- 필요 시 GitHub Repository 또는 Release
+
+현재 Bridge는 사용자별 주소를 설정하는 구조이므로 심사 환경에서 실행 절차가 지나치게 복잡하지 않은지 확인한다.
+
+완료 기준:
+
+> 심사자가 제공된 링크와 안내만으로 Pixel Jukebox를 실행하고 주요 기능을 확인할 수 있음.
+
+## 21. 제출 자료
+
+최종 제출:
+
+- 한 줄 프로젝트 설명
+- 해결하려는 문제
+- AI 활용 방식
+- 사용한 AI Tool
+- 서비스·설치 링크
+- 대표 Screenshot
+- 필요한 최소 실행 안내
+
+Pixel Jukebox를 단순한 `AI 음악 추천 서비스`로 설명하지 않는다.
+
+핵심 메시지:
+
+> **현재 듣는 곡의 분위기를 유지하면서 다음에 이어질 Playlist를 AI가 큐레이션하고, 실제 YouTube 영상까지 검증해 재생 가능한 결과로 연결하는 Game Boy 스타일 음악 플레이어**
+
+## 22. 기능 동결과 제출 우선순위
+
+현재 제출 범위:
+
+```text
+Game Boy LCD UI
+YouTube Player Bridge
+Playlist
+Volume / Mute
+Auto Skip Ads
+PiP
+Design
+OpenAI BYOK
+KEEP THIS VIBE
+YouTube Resolver
+Recommendation Cache
+```
+
+신규 기능은 추가하지 않는다.
+
+허용되는 변경:
+
+- 실제 E2E 실패 수정
+- 추천 품질 문제 수정
+- Resolver 정확도 개선
+- 비용·응답 시간 개선
+- 배포·설치 문제 수정
+- 제출을 막는 UX 오류 수정
+
+기능 추가보다 안정화와 제출 완성도를 우선한다.
+
+작업 순서:
+
+```text
+신규 기능 중단
+    ↓
+실제 OpenAI E2E
+    ↓
+추천 품질
+    ↓
+Resolver 정확도
+    ↓
+비용·응답 시간
+    ↓
+최종 Regression
+    ↓
+배포·설치 경로
+    ↓
+Screenshot
+    ↓
+제출 문구
+```
