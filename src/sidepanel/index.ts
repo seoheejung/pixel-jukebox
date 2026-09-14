@@ -618,14 +618,17 @@ function renderRecommendations(recommendations: Recommendation[]) {
     artist.textContent = recommendation.channelTitle && recommendation.channelTitle !== recommendation.artist
       ? `${recommendation.artist} · ${recommendation.channelTitle}`
       : recommendation.artist || recommendation.channelTitle;
-    meta.append(title, artist);
+    const videoType = document.createElement('p');
+    videoType.className = 'ai-pick-type';
+    videoType.textContent = recommendation.videoType;
+    meta.append(title, artist, videoType);
     const track = recommendationTrack(recommendation);
     const added = Boolean(track && coreState.playlist.some((item) => item.videoId === track.videoId));
     const makeAdd = () => {
       const add = document.createElement('button');
       add.type = 'button'; add.className = 'ai-pick-add'; add.textContent = added ? '✓' : '+'; add.disabled = !track || added;
       add.setAttribute('aria-label', `Add ${recommendation.title} to playlist`);
-      add.addEventListener('click', () => { if (track) send({ type: MESSAGE.coreEdit, change: { kind: 'add', track: playlistTrackFor(track) } }); });
+      add.addEventListener('click', () => { if (track) loadTrack(track, true, true); });
       return add;
     };
     front.append(image, meta, makeAdd());

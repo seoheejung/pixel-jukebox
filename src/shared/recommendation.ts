@@ -1,38 +1,32 @@
-import { isRecord, isThumbnail, isVideoId, trackFromVideoId, videoIdFromUrl } from './track';
+import { isRecord, isThumbnail, isVideoId, trackFromVideoId } from './track';
 import type { PlaylistTrack } from './playlist';
 import type { Track } from './track';
 
-export const MAX_CANDIDATES = 15;
-export const MIN_RECOMMENDATIONS = 5;
-export const MAX_RECOMMENDATIONS = 8;
+export const MAX_CANDIDATES = 24;
+export const MIN_RECOMMENDATIONS = 12;
+export const MAX_RECOMMENDATIONS = 12;
+
+export const VIDEO_TYPES = ['MV', 'PERFORMANCE', 'LIVE', 'LYRIC', 'VISUALIZER', 'AUDIO', 'TOPIC', 'OFFICIAL_OTHER'] as const;
+export type VideoType = typeof VIDEO_TYPES[number];
 
 export interface Candidate {
   candidateId: string;
   artist: string;
   title: string;
-  channelTitle: string;
-  thumbnail: string;
-  videoId: string | null;
-  videoUrl: string | null;
 }
 
-export interface Recommendation {
-  candidateId: string;
-  artist: string;
-  title: string;
+export interface ResolvedRecommendation extends Candidate {
   channelTitle: string;
   thumbnail: string;
-  videoId: string | null;
-  videoUrl: string | null;
+  videoId: string;
+  videoUrl: string;
+  videoType: VideoType;
 }
+
+export type Recommendation = ResolvedRecommendation;
 
 function normalize(value: string): string {
   return value.normalize('NFKC').trim().toLocaleLowerCase().replace(/\s+/g, ' ');
-}
-
-function candidateSource(value: string): Pick<Candidate, 'videoId' | 'videoUrl' | 'thumbnail'> {
-  const videoId = videoIdFromUrl(value);
-  return videoId ? { videoId, videoUrl: `https://www.youtube.com/watch?v=${videoId}`, thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` } : { videoId: null, videoUrl: null, thumbnail: '' };
 }
 
 export function parseDiscovery(text: string, excluded: Array<{ artist: string; title: string }> = []): Candidate[] {
@@ -41,39 +35,17 @@ export function parseDiscovery(text: string, excluded: Array<{ artist: string; t
   const tracks = new Set<string>();
   const candidates: Candidate[] = [];
   for (const line of text.split(/\r?\n/u)) {
-    const match = /^(?:[-*]\s*)?CANDIDATE\s*\|\s*(C\d{1,2})\s*\|\s*([^|\r\n]+?)\s*\|\s*([^|\r\n]+?)(?:\s*\|\s*(https:\/\/[^|\r\n]+))?\s*$/iu.exec(line.trim());
+    const match = /^CANDIDATE\s*\|\s*(C\d{1,2})\s*\|\s*([^|\r\n]+?)\s*\|\s*([^|\r\n]+?)\s*$/iu.exec(line.trim());
     if (!match) continue;
     const candidateId = `C${match[1]!.slice(1).padStart(2, '0')}`;
     const artist = match[2]!.trim();
     const title = match[3]!.trim();
-    const source = match[4] ? candidateSource(match[4].trim()) : { videoId: null, videoUrl: null, thumbnail: '' };
     const trackKey = `${normalize(artist)}\u0000${normalize(title)}`;
     if (!artist || !title || ids.has(candidateId) || tracks.has(trackKey) || blocked.has(trackKey)) continue;
     ids.add(candidateId);
     tracks.add(trackKey);
-    candidates.push({ candidateId, artist, title, channelTitle: artist, ...source });
+    candidates.push({ candidateId, artist, title });
     if (candidates.length === MAX_CANDIDATES) break;
-  }
-  return candidates;
-}
-
-export function parseDiscoveryCandidates(value: unknown, excluded: Array<{ artist: string; title: string }> = []): Candidate[] | null {
-  let parsed: unknown = value;
-  if (typeof value === 'string') {
-    try { parsed = JSON.parse(value); } catch { return null; }
-  }
-  if (!isRecord(parsed) || !Array.isArray(parsed.candidates) || parsed.candidates.length > MAX_CANDIDATES) return null;
-  const blocked = new Set(excluded.map((item) => `${normalize(item.artist)}\u0000${normalize(item.title)}`));
-  const tracks = new Set<string>();
-  const candidates: Candidate[] = [];
-  for (const item of parsed.candidates) {
-    if (!isRecord(item) || Object.keys(item).length !== 2 || typeof item.artist !== 'string' || typeof item.title !== 'string') return null;
-    const artist = item.artist.trim();
-    const title = item.title.trim();
-    const trackKey = `${normalize(artist)}\u0000${normalize(title)}`;
-    if (!artist || !title || tracks.has(trackKey) || blocked.has(trackKey)) continue;
-    tracks.add(trackKey);
-    candidates.push({ candidateId: `C${String(candidates.length + 1).padStart(2, '0')}`, artist, title, channelTitle: artist, videoId: null, videoUrl: null, thumbnail: '' });
   }
   return candidates;
 }
@@ -86,7 +58,7 @@ export function excludedTracks(current: Track | null, playlist: PlaylistTrack[],
   ];
 }
 
-export function parseSelection(value: unknown, candidates: Candidate[], onInvalid?: (reason: string) => void): Recommendation[] | null {
+export function parseSelection(value: unknown, candidates: Candidate[], onInvalid?: (reason: string) => void): Candidate[] | null {
   const invalid = (reason: string) => { onInvalid?.(reason); return null; };
   let parsed: unknown = value;
   if (typeof value === 'string') {
@@ -97,7 +69,7 @@ export function parseSelection(value: unknown, candidates: Candidate[], onInvali
   if (parsed.recommendations.length > MAX_RECOMMENDATIONS) return invalid('선곡 응답이 최대 추천 개수를 초과했습니다.');
   const allowed = new Map(candidates.map((candidate) => [candidate.candidateId, candidate]));
   const selected = new Set<string>();
-  const recommendations: Recommendation[] = [];
+  const recommendations: Candidate[] = [];
   for (const item of parsed.recommendations) {
     if (!isRecord(item) || typeof item.candidateId !== 'string' || Object.keys(item).length !== 1) return invalid('선곡 항목은 candidateId만 포함해야 합니다.');
     const candidate = allowed.get(item.candidateId);
@@ -110,7 +82,7 @@ export function parseSelection(value: unknown, candidates: Candidate[], onInvali
 }
 
 export function recommendationTrack(recommendation: Recommendation) {
-  if (!recommendation.videoId || !isVideoId(recommendation.videoId)) return null;
+  if (!isVideoId(recommendation.videoId)) return null;
   const metadata: { videoTitle: string; channelTitle: string; thumbnail?: string } = {
     videoTitle: recommendation.title,
     channelTitle: recommendation.channelTitle || recommendation.artist,

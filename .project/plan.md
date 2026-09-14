@@ -461,9 +461,9 @@ OpenAI 요청은 Service Worker에서만 수행.
 
 ---
 
-## 9. 이어 듣기 (기존 AI PICKS)
+## 9. AI PICKS 추천 기준
 
-현재 곡의 느낌을 자연스럽게 이어갈 다음 5–8곡을 순서대로 제안한다. 사용자 표시 이름은 ‘이어 듣기’이며 내부 메시지·화면 ID는 기존 이름을 유지한다. LP로 열면 Now Playing을 벗어나거나 재생을 멈추지 않고 하단 슬라이드로 표시한다.
+목표는 단순 장르 유사곡 추천이 아니라, 현재 곡에서 자연스럽게 이어 들을 수 있는 Playlist 생성이다.
 
 ### 흐름
 
@@ -476,144 +476,307 @@ Recent Recommendations
         ↓
 Discovery
         ↓
-Structured Candidate Extraction
-        ↓
-Candidate Validation
-        ↓
 Candidate Set
         ↓
 Selection
         ↓
 YouTube Resolver
         ↓
-Application Validation
+Validation
         ↓
-Compact AI PICKS
+AI PICKS
+        ↓
+Playlist 직접 추가
 ```
 
 ### Discovery
 
-- 현재 Track 최우선
-- Playlist 재생 순서와 현재 곡 위치를 문맥으로 사용
-- 분위기·에너지·템포 느낌·그루브·질감·보컬·프로덕션의 자연스러운 전환 우선
-- YouTube 업로드일과 원곡 발매일 구분, 확인하지 못한 연도·음악적 특성 생성 금지
-- 발매 시기·장르·언어·아티스트 다양성은 보조 기준이며 급격한 분위기 전환을 피함
-- 같은 곡의 재업로드·커버·리믹스보다 새로운 곡과 아티스트 다양성 우선
-- 최근 추천·명백한 중복 제외
-- Web Search 실행 필수, 현재 곡 식별과 음악적 맥락 확인 후 후보 탐색
-- Candidate 최대 15개, 검증된 서로 다른 5–8곡을 목표로 후보 보충
-- Web Research는 간결한 근거 메모로 받고, 별도 Structured Output 요청이 근거에 명시된 Artist / Track만 추출
-- 추출 결과가 비면 Recent Recommendations 제외를 완화하고 인접 서브장르·분위기·에너지·악기·보컬·프로덕션까지 넓힌 Discovery를 1회만 재실행
+현재 곡을 가장 강한 추천 기준으로 사용하고 Playlist는 보조 문맥으로 사용한다.
+
+판단 기준:
+
+- 감정과 분위기
+- 사운드 질감
+- Energy / Tempo / Groove
+- Vocal 특성
+- Melody / Harmony
+- 시대와 음악 Scene
+- Artist 관계
+
+추천 구성:
+
+- 현재 곡과 매우 가까운 Track
+- 같은 Scene 또는 인접 장르 Track
+- 조금 의외지만 청취 흐름이 자연스럽게 이어지는 Track
+
+같은 Artist의 곡도 허용하되 특정 Artist 편중은 방지한다.
+
+제외 기준:
+
+- 현재 Track
+- Playlist에 이미 존재하는 Track
+- Recent Recommendations
+- Remix / Sped Up / Slowed / Karaoke / Cover 등 원곡과 다른 Version
+- 존재 여부가 불확실한 Track
+
+실재하는 공개 Track만 Candidate로 생성한다.
+
+Discovery 단계에서는 YouTube URL과 `videoId`를 생성하지 않는다.
 
 출력:
 
-```json
-{
-  "candidates": [
-    { "artist": "Artist", "title": "Track" }
-  ]
-}
+```text
+CANDIDATE|C01|Artist|Track
+CANDIDATE|C02|Artist|Track
 ```
 
-### Candidate Extraction / Validation
+초기 Candidate 수:
 
-- Research 근거에 없는 곡 생성 금지
-- Structured JSON Schema
-- Artist / Track 필수값
-- Artist + Track 중복
-- 현재 Track 중복
-- Playlist 중복
-- 최근 추천 중복
-- 검증 후 로컬 Candidate ID 부여
+```text
+24
+```
 
 ### Selection
 
-Web Search 미사용.
+Discovery에서 생성된 Candidate Set 내부에서만 최종 Track을 선택한다.
 
-Candidate Set 내부 ID에서 가능한 경우 5–8개 선택한다. 첫 곡은 사용자가 선택한 기준 곡에, 이후 곡은 앞선 추천곡에 자연스럽게 이어지는 순서로 선택한다. 검증 결과가 부족하면 남은 후보를 최대 5개씩 보충 검색하며, 추가 검색 후에도 선택한 순서를 유지한다. 후보 소진 후에는 검증된 부분 결과만 반환하고 부족한 개수를 안내한다.
+우선순위:
 
-선택한 기준 곡·Playlist·Recent Recommendations 문맥을 Selection에도 전달한다. 원래 발매 연도·시대, 장르, 언어를 우선하고 분위기·보컬을 다음으로 고려한다. 기준 곡과 다른 아티스트를 우선하며 후보·최종 목록에는 아티스트당 최대 1곡을 지시한다. 불확실한 음악적 사실은 추측으로 채우지 않는다.
+1. 현재 곡과의 자연스러운 연결
+2. 분위기와 감정선
+3. Production / Instrumentation
+4. Energy / Tempo / Groove
+5. Playlist 전체 Cohesion
+6. Artist 다양성
+7. Discovery 가치
 
-최종 UI에서 Reason / Tag 미사용.
+초반은 Seed Track과 가까운 곡을 우선하고, 후반으로 갈수록 인접 Scene과 조금 더 탐색적인 Track을 허용한다.
+
+같은 Artist Track은 허용하지만 연속 배치를 피하고 전체 Playlist를 특정 Artist가 지배하지 않도록 한다.
+
+Selection은 Candidate ID만 반환한다.
+
+출력 순서를 Playlist 추천 순서로 사용한다.
 
 ```json
 {
   "recommendations": [
-    {
-      "candidateId": "C01"
-    }
+    { "candidateId": "C03" },
+    { "candidateId": "C07" },
+    { "candidateId": "C01" }
   ]
 }
 ```
 
-Candidate ID는 실제 후보 ID의 enum으로 제한하고, 로컬 검증에서도 목록 밖 ID와 중복 ID를 차단한다.
+초기 Recommendation 수:
+
+```text
+12
+```
+
+실제 OpenAI 비용, 응답 시간, 추천 품질 검증 후 확대 여부를 결정한다.
 
 ### YouTube Resolver
 
-허용 영상 형식: 공식 Music Video(MV), Concept Video, Performance Video, Lyric Video. 아티스트 공식 채널을 우선하고 공식 레이블·배급사 채널을 다음으로 선택한다. 곡 전체가 포함된 영상만 대상으로 하며 짧은 콘셉트 티저, 팬 제작 가사 영상 등 기존 제외 조건은 유지한다. 일괄 검색과 누락 곡 개별 검색 모두 같은 기준을 적용한다.
+Selection에서 선택된 Track마다 실제 YouTube 영상을 검색한다.
 
-AI Candidate를 실제 YouTube Track으로 Resolve.
+영상 선택 우선순위:
 
-필수 결과:
+1. Official MV
+2. Official Performance / Live Clip
+3. Official Lyric Video
+4. Official Visualizer
+5. Official Audio
+6. Artist Topic
+7. Official Label / Distributor Upload
+
+공식 영상 판단 대상:
+
+- Artist 공식 Channel
+- Artist 공식 YouTube Channel
+- Label 공식 Channel
+- Distributor 공식 Channel
+- Artist Topic Channel
+
+제외:
+
+- Fan Upload
+- Cover
+- Reaction
+- Karaoke
+- Instrumental Cover
+- Sped Up / Slowed
+- Nightcore
+- Mashup
+- Compilation
+- Playlist
+- 관련 없는 Shorts
+- 다른 Artist의 Cover
+
+`Artist + Track + Recording`이 정확히 일치해야 한다.
+
+AI가 URL이나 `videoId`를 추측해서 생성하는 것을 금지한다.
+
+정확한 공식 영상 확인에 실패한 Candidate는 결과에서 제외한다.
+
+출력:
 
 ```text
-candidateId
-videoId
-videoTitle
-thumbnail
-videoUrl
+YOUTUBE|C03|MV|Artist|Track|https://www.youtube.com/watch?v=...
 ```
 
-기준:
-
-- AI 생성 Video ID/URL 신뢰 금지
-- Resolve 성공 Candidate만 UI 표시
-- Resolve 실패 Candidate 폐기
-- 첫 검색에서 확인한 곡은 누락 곡의 개별 보충 검색이 실패해도 부분 결과로 유지
-- 동일 videoId 결과 중복 제외
-- 새 Browser Tab 생성 금지
-
-### Recommendation Row
+지원 `videoType`:
 
 ```text
-[Thumbnail] Track Title     [+]
+MV
+PERFORMANCE
+LIVE
+LYRIC
+VISUALIZER
+AUDIO
+TOPIC
+OFFICIAL_OTHER
 ```
 
-`+`:
+### Validation
+
+Resolver 결과를 애플리케이션에서 다시 검증한다.
+
+검증 기준:
+
+- Selection 결과에 존재하는 Candidate ID
+- Candidate ID 중복 없음
+- Artist / Track 일치
+- YouTube `watch?v=` URL 형식
+- `videoId` 추출 성공
+- 동일 `videoId` 중복 없음
+- 허용된 `videoType`
+- Thumbnail 생성 가능
+- Resolve 실패 Candidate 제외
+
+검증을 통과한 Track만 AI PICKS에 표시한다.
+
+### 최종 데이터
+
+```ts
+interface ResolvedRecommendation {
+  candidateId: string;
+  artist: string;
+  title: string;
+  videoId: string;
+  videoUrl: string;
+  videoType:
+    | "MV"
+    | "PERFORMANCE"
+    | "LIVE"
+    | "LYRIC"
+    | "VISUALIZER"
+    | "AUDIO"
+    | "TOPIC"
+    | "OFFICIAL_OTHER";
+  thumbnail: string;
+  channelTitle: string;
+}
+```
+
+### AI PICKS UI
+
+추천 결과는 Compact Card로 표시한다.
+
+```text
+[Thumbnail]  Track Title
+             Artist / Channel
+             Video Type       [+]
+```
+
+기본 표시 정보:
+
+- Thumbnail
+- Track Title
+- Artist / Channel
+- Video Type
+- Playlist 추가 Action
+
+기본 미표시:
+
+- Candidate ID
+- 추천 점수
+- Web Search 상태
+- Cache 상태
+- Discovery / Selection 내부 상태
+
+`SEARCH ON YOUTUBE` 버튼은 사용하지 않는다.
+
+`+ PLAYLIST` 선택:
 
 ```text
 Playlist 직접 추가
-→ 새 Tab 없음
+→ 새 YouTube Tab 생성 없음
+→ Playlist Track 선택
+→ Player Bridge에 videoId 전달
+→ 바로 재생
 ```
 
 ### 실패 처리
 
-Selection 실패:
-
 ```text
-동일 Candidate Set
-→ 검증 실패 이유를 포함해 Selection 1회 Retry
+Discovery 결과 없음
+→ AI PICKS 실패
+
+Selection 실패
+→ 동일 Candidate Set으로 1회 Retry
+
+Selection Retry 실패
+→ AI PICKS 실패
+
+Resolver 일부 실패
+→ 실패 Candidate만 제외
+
+Resolver 전체 실패
+→ AI PICKS 실패
+
+Partial JSON
+→ 복구하지 않고 폐기
 ```
 
-후보가 비었을 때만 제외 조건을 완화한 Discovery를 1회 재실행한다. 형식 오류를 임의 복구하거나 무제한 재검색하지 않는다.
-
-Partial JSON 자동 복구 금지.
-
-요청 중에는 기준 곡과 단계별 진행 문구(후보 탐색·유사도 비교·YouTube 검색·영상 확인)를 표시한다. 실패하면 원인과 조치 및 `RETRY`를 제공한다. API가 제공한 HTTP 상태·오류 코드·대상 파라미터·요청 ID와 정제한 오류 설명으로 요청 실패를 진단할 수 있어야 한다. API Key·Authorization·원본 응답 본문은 메시지나 UI로 전달하지 않는다. 요청 빈도 제한과 사용량 부족, 네트워크·시간 초과, 잘못된 응답, 검색 결과 없음과 영상 조회 실패를 구분한다.
+Selection Retry에서는 Discovery를 다시 실행하지 않는다.
 
 ### Cache
 
+Cache Key:
+
 ```text
-cacheKey
-=
 currentTrack.videoId
 +
 playlistFingerprint
 ```
 
-Cache Hit 시 OpenAI 요청 0건.
+Cache Hit:
 
-`REFRESH PICKS`는 Cache 우회.
+```text
+기존 AI PICKS 반환
+→ OpenAI 요청 0건
+```
+
+`REFRESH PICKS`:
+
+```text
+Cache 우회
+→ 기존 추천을 Recent Recommendations에 반영
+→ Discovery 재실행
+```
+
+### 구현 기준
+
+실제 Prompt 전문은 문서에 넣지 않고 코드에서 관리한다.
+
+```text
+src/ai/prompts/discovery.ts
+src/ai/prompts/selection.ts
+src/ai/prompts/youtube-resolver.ts
+```
+
+문서에는 추천 목적, 단계별 책임, 출력 형식, 검증 기준, 실패 처리만 유지한다.
 
 ---
 

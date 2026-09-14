@@ -82,8 +82,9 @@ section + section { margin-top: 16px; }
 .ai-pick-card { display: grid; grid-template-columns: 48px minmax(0, 1fr) 28px; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid #0f380f40; }
 .ai-pick-card img { width: 48px; height: 48px; object-fit: cover; }
 .ai-pick-meta { min-width: 0; }
-.ai-pick-title, .ai-pick-artist { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0; }
+.ai-pick-title, .ai-pick-artist, .ai-pick-type { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0; }
 .ai-pick-artist { margin-top: 4px; font-size: 10px; }
+.ai-pick-type { margin-top: 2px; font-size: 8px; }
 .ai-pick-card button { padding: 0; min-height: 28px; border-width: 1px; border-radius: 6px; font-size: 18px; }
 details { margin-top: 16px; border-top: 1px solid var(--color-shell-dark); padding-top: 10px; }
 summary { cursor: pointer; font-size: 10px; font-weight: bold; }
@@ -276,11 +277,12 @@ input.is-selected { outline: 2px solid var(--color-screen-ink); outline-offset: 
 .now-playing-queue-track small { margin-top: 2px; font: 500 7px/1.2 ui-monospace, monospace; opacity: .75; }
 .now-playing-queue-track.is-selected, .now-playing-queue-track:focus-visible { background: var(--color-screen-ink); color: var(--color-screen); outline: none; }
 .ai-pick-card, .ai-pick-inner { min-height: 48px; perspective: none; }
-.ai-pick-face { position: static; display: grid; grid-template-columns: minmax(0,1fr) 30px; min-height: 48px; padding: 4px 2px; border: 0; background: transparent; }
-.ai-pick-face img { display: none; }
+.ai-pick-face { position: static; display: grid; grid-template-columns: 44px minmax(0,1fr) 30px; min-height: 48px; padding: 4px 2px; border: 0; background: transparent; }
+.ai-pick-face img { display: block; width: 44px; aspect-ratio: 16 / 9; object-fit: cover; }
 .ai-pick-meta { padding-left: 7px; }
 .ai-pick-title { font-size: 11px; }
 .ai-pick-artist { font-size: 9px; }
+.ai-pick-type { font-size: 8px; }
 .ai-pick-add { min-height: 32px; color: inherit; background: transparent; box-shadow: none; }
 .ai-pick-add.is-selected, .ai-pick-add:focus-visible { background: var(--color-screen-ink); color: var(--color-screen); }
 .video-link-row, .ai-key-row { grid-template-columns: minmax(0, 1fr); }

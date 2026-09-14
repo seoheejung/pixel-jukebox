@@ -28,7 +28,7 @@ Pixel Jukebox는 Chrome Desktop에서 동작하는 Manifest V3 확장 프로그�
 - 현재 곡과 Playlist 흐름을 기준으로 후보 탐색
 - OpenAI Web Search와 Structured Outputs 기반 추천
 - YouTube 영상과 곡 일치 여부 검증
-- 검증된 결과를 5–8곡 목표로 표시하고 Playlist에 추가
+- 검증된 결과를 최대 12곡까지 추천 순서대로 표시하고 Playlist에 추가
 - Cache, 중복 요청 병합, 실패 시 부분 결과 유지
 
 ## 전체 구조

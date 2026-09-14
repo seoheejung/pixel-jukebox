@@ -1,6 +1,6 @@
 import { isRecord, isTrack, isVideoId } from './track';
 import type { Recommendation } from './recommendation';
-import { MAX_RECOMMENDATIONS } from './recommendation';
+import { MAX_RECOMMENDATIONS, VIDEO_TYPES } from './recommendation';
 
 export const OPENAI_ORIGIN = 'https://api.openai.com/*';
 export const YOUTUBE_METADATA_ORIGIN = 'https://www.youtube.com/*';
@@ -57,7 +57,9 @@ export function isAiRecommendationMessage(value: unknown): value is { type: type
 export function isAiRecommendationsMessage(value: unknown): value is { type: typeof MESSAGE_AI.recommendations; recommendations: Recommendation[] } {
   if (!isRecord(value) || value.type !== MESSAGE_AI.recommendations || !Array.isArray(value.recommendations) || value.recommendations.length > MAX_RECOMMENDATIONS) return false;
   return value.recommendations.every((item) => {
-    if (!isRecord(item) || typeof item.candidateId !== 'string' || typeof item.artist !== 'string' || typeof item.title !== 'string') return false;
+    if (!isRecord(item) || typeof item.candidateId !== 'string' || typeof item.artist !== 'string' || typeof item.title !== 'string' ||
+      typeof item.videoType !== 'string' || !(VIDEO_TYPES as readonly string[]).includes(item.videoType)) return false;
+    if (!Object.keys(item).every((key) => ['candidateId', 'artist', 'title', 'videoId', 'videoUrl', 'videoType', 'thumbnail', 'channelTitle'].includes(key))) return false;
     return isTrack({ ...item, videoTitle: item.title, playbackState: 'paused' });
   });
 }

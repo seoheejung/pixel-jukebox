@@ -164,11 +164,11 @@ try {
           emit({ type: 'AI_PROGRESS', stage: 'discovery' });
           setTimeout(() => emit({ type: 'AI_PROGRESS', stage: 'selection' }), 20);
           setTimeout(() => emit({ type: 'AI_RECOMMENDATIONS', recommendations: [
-            { candidateId: 'fixture-1', videoId: 'aqz-KE-bpKQ', videoUrl: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', title: '새벽의 체크포인트', videoTitle: '새벽의 체크포인트', artist: '네온 고양이', channelTitle: '네온 고양이', thumbnail: '' },
-            { candidateId: 'fixture-2', videoId: 'jNQXAC9IVRw', videoUrl: 'https://www.youtube.com/watch?v=jNQXAC9IVRw', title: '메모리 카드', videoTitle: '메모리 카드', artist: '픽셀 웨이브', channelTitle: '픽셀 웨이브', thumbnail: '' },
+            { candidateId: 'fixture-1', videoId: 'aqz-KE-bpKQ', videoUrl: 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', videoType: 'MV', title: '새벽의 체크포인트', artist: '네온 고양이', channelTitle: '네온 고양이', thumbnail: '' },
+            { candidateId: 'fixture-2', videoId: 'jNQXAC9IVRw', videoUrl: 'https://www.youtube.com/watch?v=jNQXAC9IVRw', videoType: 'PERFORMANCE', title: '메모리 카드', artist: '픽셀 웨이브', channelTitle: '픽셀 웨이브', thumbnail: '' },
             ...Array.from({ length: 4 }, (_, index) => {
               const videoId = 'FLOW' + String(index).padStart(7, '0');
-              return { candidateId: 'flow-' + index, videoId, videoUrl: 'https://www.youtube.com/watch?v=' + videoId, title: '이어지는 밤 ' + (index + 3), artist: 'Pixel Radio', channelTitle: 'Pixel Radio', thumbnail: '' };
+              return { candidateId: 'flow-' + index, videoId, videoUrl: 'https://www.youtube.com/watch?v=' + videoId, videoType: 'AUDIO', title: '이어지는 밤 ' + (index + 3), artist: 'Pixel Radio', channelTitle: 'Pixel Radio', thumbnail: '' };
             }),
           ] }), 80);
         }
@@ -454,6 +454,7 @@ try {
   await until(() => evaluate(browser, panel, "document.querySelector('#ai-picks-progress').textContent.includes('Arranging')"), 'Continuation selection progress');
   await until(() => evaluate(browser, panel, "document.querySelectorAll('.ai-pick-card').length === 6"), 'Six continuation songs');
   assert.equal(await evaluate(browser, panel, "document.querySelectorAll('.ai-pick-info, .ai-pick-back').length"), 0, 'Recommendation rows must not expose redundant info controls or duplicate backs');
+  assert.equal(await evaluate(browser, panel, "document.querySelector('.ai-pick-type').textContent === 'MV' && getComputedStyle(document.querySelector('.ai-pick-face img')).display !== 'none'"), true, 'Recommendation rows must show thumbnail and video type');
   assert.equal(await evaluate(browser, panel, "getComputedStyle(document.querySelector('#ai-picks-loading')).display"), 'none', 'Completed AI loading indicator must not remain visible');
   await until(() => evaluate(browser, panel, "getComputedStyle(document.querySelector('#continue-drawer')).transform === 'matrix(1, 0, 0, 1, 0, 0)'"), 'Continuation drawer slide completion');
   const { data: continuationShot } = await browser.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }, panel);
@@ -466,12 +467,12 @@ try {
   await until(() => evaluate(browser, panel, `window.__uiMessages.filter(message => message.type === 'AI_RECOMMEND').length === ${recommendationsBeforeDisc + 2}`), 'LP replaces the prior manual source with the playing track');
   assert.equal(await evaluate(browser, panel, "window.__uiMessages.filter(message => message.type === 'AI_RECOMMEND').at(-1).sourceVideoId === document.querySelector('#player').dataset.videoId"), true, 'Reopened LP must restore the playing song as reference');
   await until(() => evaluate(browser, panel, "!document.querySelector('#similar-vibes-source-trigger').disabled && document.querySelectorAll('.ai-pick-card').length === 6"), 'Reopened LP results');
-  await evaluate(browser, panel, "document.querySelector('#ai-picks').focus({ preventScroll: true })");
-  await click('#dpad-down');
+  await evaluate(browser, panel, "document.querySelector('.ai-pick-add').focus({ preventScroll: true })");
   const continuationVideo = await evaluate(browser, panel, "document.querySelector('#player').dataset.videoId");
   await click('#button-a');
-  assert.equal(await evaluate(browser, panel, "document.querySelector('#player').dataset.videoId"), continuationVideo, 'Adding a continuation must not replace the playing song');
-  assert.equal(await evaluate(browser, panel, "window.__uiMessages.some(message => message.type === 'CORE_EDIT' && message.change?.kind === 'add' && message.change.track?.videoId === 'aqz-KE-bpKQ')"), true, 'A adds the selected continuation to Playlist');
+  await until(() => evaluate(browser, panel, "document.querySelector('#player').dataset.videoId === 'aqz-KE-bpKQ'"), 'A selects and plays the continuation');
+  assert.notEqual(await evaluate(browser, panel, "document.querySelector('#player').dataset.videoId"), continuationVideo, 'Adding a continuation must select the new Playlist track');
+  assert.equal(await evaluate(browser, panel, "window.__uiMessages.some(message => message.type === 'CORE_EDIT' && message.change?.kind === 'add' && message.change.track?.videoId === 'aqz-KE-bpKQ')"), true, 'A adds the selected continuation to Playlist and starts playback');
   const recommendationsBeforeRetry = await evaluate(browser, panel, "window.__uiMessages.filter((message) => message.type === 'AI_RECOMMEND').length");
   await evaluate(browser, panel, "window.__emitUiMessage({ type: 'AI_RECOMMENDATION_ERROR', code: 'NO_CANDIDATES', details: { stage: 'discovery' } })");
   assert.equal(await evaluate(browser, panel, "getComputedStyle(document.querySelector('#ai-picks-loading')).display"), 'none', 'Failed AI loading indicator must be hidden');
