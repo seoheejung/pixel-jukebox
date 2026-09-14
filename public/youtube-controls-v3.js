@@ -3,7 +3,7 @@
   'use strict';
   const extensionOrigin = `chrome-extension://${chrome.runtime.id}`;
   const ancestors = [...location.ancestorOrigins];
-  if (ancestors.length !== 2 || ancestors[0] !== 'https://seoheejung.github.io' || ancestors[1] !== extensionOrigin) return;
+  if (ancestors.length !== 2 || ancestors[0] !== '__PLAYER_BRIDGE_ORIGIN__' || ancestors[1] !== extensionOrigin) return;
   const source = 'pixel-jukebox-youtube-controls';
   let volume = null;
   let muted = false;

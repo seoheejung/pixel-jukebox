@@ -3,6 +3,9 @@ import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { attach, connectBrowser, evaluate, until } from './cdp.mjs';
+import { readBridgeConfig } from './bridge-config.mjs';
+
+const bridgeUrl = readBridgeConfig().url;
 
 const output = resolve('.chrome-test');
 const usePopup = process.argv.includes('--popup');
@@ -13,7 +16,6 @@ const child = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', [
   '--no-first-run', '--no-default-browser-check', '--disable-background-networking',
   `--user-data-dir=${resolve(output, `audio-profile-${process.pid}`)}`, 'about:blank',
 ], { windowsHide: true, stdio: 'ignore' });
-const bridgeUrl = 'https://seoheejung.github.io/pixel-jukebox/player.html';
 const youtubeUrl = 'https://www.youtube.com/embed/dQw4w9WgXcQ';
 const bridge = `<!doctype html><style>html,body,iframe{width:100%;height:100%;margin:0;border:0}</style><iframe src="${youtubeUrl}"></iframe><script>
 addEventListener('message', e => {

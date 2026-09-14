@@ -1,5 +1,6 @@
 node_modules/
 dist/
+bridge.config.local.json
 coverage/
 .chrome-test/
 .env

@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { attach, connectBrowser, evaluate, until } from './cdp.mjs';
+import { readBridgeConfig } from './bridge-config.mjs';
+
+const bridge = readBridgeConfig();
 
 const browser = await connectBrowser();
 try {
@@ -13,7 +16,7 @@ try {
   await evaluate(browser, panel, `(() => {
     window.__playbackState = '';
     window.addEventListener('message', (event) => {
-      if (event.source === document.querySelector('iframe').contentWindow && event.origin === 'https://seoheejung.github.io' && event.data?.type === 'state') window.__playbackState = event.data.state;
+      if (event.source === document.querySelector('iframe').contentWindow && event.origin === ${JSON.stringify(bridge.origin)} && event.data?.type === 'state') window.__playbackState = event.data.state;
     });
     const input = document.querySelector('#video-url');
     input.value = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
@@ -59,7 +62,7 @@ try {
   }
 
   const { targetInfos } = await browser.send('Target.getTargets');
-  const bridgeTarget = targetInfos.find((target) => target.url.startsWith('https://seoheejung.github.io/pixel-jukebox/player.html'));
+  const bridgeTarget = targetInfos.find((target) => target.url === bridge.url);
   assert.ok(bridgeTarget);
   assert.equal(targetInfos.some((target) => target.type === 'page' && target.url.includes('youtube.com/watch')), false);
   const bridge = await attach(browser, bridgeTarget.targetId);

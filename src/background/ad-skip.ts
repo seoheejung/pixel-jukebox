@@ -1,7 +1,7 @@
 const REQUEST = 'PIXEL_JUKEBOX_SKIP_AD';
 const MARKER = 'data-pixel-jukebox-skip';
 const YOUTUBE = 'https://www.youtube.com';
-const BRIDGE = 'https://seoheejung.github.io';
+const BRIDGE = new URL(__PLAYER_BRIDGE_URL__).origin;
 
 export function isSkipRequest(message: unknown, sender: chrome.runtime.MessageSender): message is { type: string; token: string } {
   if (!message || typeof message !== 'object') return false;

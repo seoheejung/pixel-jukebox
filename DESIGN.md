@@ -1,19 +1,14 @@
-# Pixel Jukebox 디자인 가이드
+# Pixel Jukebox Design Specification
 
-> Game Boy DMG 감성의 Chrome Extension UI(action popup·별도 창) 기준. 화면 구성은 `.project/plan.md` 10절의 LCD 메뉴 개편을 따른다.
+> Game Boy DMG 콘셉트의 Chrome Extension UI (Action Popup 및 Standalone Window) 디자인 시스템 명세.
 
-## Visual direction
+## 1. Visual Direction & Style Tokens
 
-- Game Boy DMG + 휴대용 음악 플레이어 분위기
-- Home 메뉴에서 시작하며, Now Playing 화면에서는 Video Screen과 현재 곡을 중심으로 배치
-- D-pad, A/B, SELECT/START의 물리 조작감 유지
-- Playlist, AI PICKS, Design, OpenAI Settings는 보조 영역
-- Soft UI, Glassmorphism, Blur Shadow, 과도한 3D 효과 금지
-- 기술 상태·Cache·Permission 내부 정보 상시 노출 금지
+Game Boy DMG의 물리 조작감과 휴대용 음악 플레이어의 감성을 결합한다. Soft UI, Glassmorphism, 과도한 3D 효과는 사용하지 않는다.
 
-## Core tokens
-
+### Core CSS Tokens
 ```css
+/* Color Palette */
 --color-shell: #D9D7CC;
 --color-shell-dark: #C8C4B7;
 --color-screen-frame: #5E5E63;
@@ -27,127 +22,83 @@
 --color-muted: #7D786F;
 --color-danger: #B24848;
 --color-focus: #5C6DFF;
-```
 
-```css
+/* Base Typography & Borders */
 font-family: "Courier New", "Noto Sans KR", monospace;
 border: 2px solid var(--color-ink);
 box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.18);
+
+### Style Constraints
+
+- **테마 변경 허용 범위**: Shell / Screen / Button Tone에 국한 (외부 웹폰트 추가 금지).
+- **외부 애니메이션 의존성 금지**: CSS `transform` 및 `opacity`만 사용.
+- **모션 허용**: 버튼 눌림(Press), 플레이리스트 드래그(Lift), Now Playing 소형 디스크 관성 회전, 카드 hover 홀로그램 효과.
+- **모션 금지**: 대형 디스크, 상시 반복 장식 애니메이션, 대형 크롬/유리 반사. `prefers-reduced-motion` 환경에서는 모든 회전/이동을 즉각적인 상태 전환으로 대체.
+
+## 2. Layout & Shell Architecture
+
+Plaintext
+
 ```
-
-Theme 변경 범위: Shell / Screen / Button Tone. 외부 Web Font 금지.
-
-## Layout
-
-```text
 ┌──────────────────────────────┐
 │ PIXEL JUKEBOX          POWER │
 │ ┌──────────────────────────┐ │
 │ │       VIDEO SCREEN       │ │
 │ │ NOW PLAYING              │ │
 │ └──────────────────────────┘ │
-│                        [A]   │
-│    [十]           [B]       │
-│       SELECT   START   //// │
-└─────────────────────────────╯
-
-LCD 화면 전환: Home / Now Playing / Playlist / AI PICKS / Settings
+│                         [A]  │
+│    [十]             [B]      │
+│       SELECT   START   ////  │
+└──────────────────────────────┘
 ```
 
-- LCD 안: Home, Player·NOW PLAYING, URL 입력·Playlist, AI PICKS, Settings 화면 전환
-- LCD 밖 본체: D-pad, A/B, SELECT/START. 본체 아래 별도 기능 카드나 toolbox를 두지 않음
-- Player 16:9 유지
-- iframe 위 Overlay·Blur·색상 필터 금지
-- 대형 LP 영역 금지
-- `channelTitle`을 Artist로 단정하지 않음
+- **LCD 내부**: 5개 화면(`Home`, `Now Playing`, `Playlist`, `AI PICKS`, `Settings`) 간 전환.
+- **LCD 외부 본체**: 물리 컨트롤러(D-pad, A/B, SELECT/START) 배치. 본체 하단에 별도 카드나 툴박스를 추가하지 않는다.
+- **Player 비디오**: 16:9 비율 고정. iframe 위 오버레이, 블러, 색상 필터 금지.
 
-## Controls
+## 3. Physical Controller Mapping
 
-- D-pad 상하: 메뉴·목록 이동, Now Playing 좌우: Previous / Next
-- A: 메뉴 확인·선택, Now Playing에서는 Play / Pause
-- B: 뒤로·취소, SELECT: Home, START: Settings
-- Hover / Focus / Pressed / Disabled 구분
-- 최소 클릭 영역 확보
+| **컨트롤** | **기본 모드 (Home/Menu/List)** | **Now Playing 모드** |
+| --- | --- | --- |
+| **D-pad 상/하** | 메뉴 및 목록 아이템 이동 | - |
+| **D-pad 좌/우** | - | Previous Track / Next Track |
+| **A 버튼** | 항목 확인 및 선택 | Play / Pause |
+| **B 버튼** | 뒤로 가기 / 취소 | 뒤로 가기 (Home 복귀) |
+| **SELECT** | Home 화면으로 즉시 이동 | Home 화면으로 즉시 이동 |
+| **START** | Settings 화면으로 즉시 이동 | Settings 화면으로 즉시 이동 |
 
-## Playlist / AI PICKS
+*공통: 버튼은 Hover, Focus, Pressed, Disabled 상태를 명확히 구분하고, 충분한 터치/클릭 타깃 영역을 확보한다.*
 
-Playlist:
-- Compact Row
-- Track Title + Channel
-- Current / Dragging / Drop Target / 삭제 / 순서 변경 지원
+## 4. View Specifications
 
-AI PICKS:
-- Thumbnail + Track Title + Playlist 추가 Action
-- Candidate ID, Cache, Web Search, 내부 처리 단계, 긴 Reason/Tag 노출 금지
-- 검증 없는 Playlist 자동 삽입 금지
+### Playlist & AI PICKS
 
-Card Flip (현재 미사용, 재도입 시 기준):
-- 별도 상세 버튼에서만 실행
-- 뒷면은 검증된 곡명·채널 등 짧은 정보만 표시
-- 추가 AI 조회 금지
-- Reduced Motion에서는 회전 없이 상태 전환
+- **Playlist**: Compact Row 형태. 곡명(`Track Title`) + 채널(`channelTitle`) 표시. 삭제, 순서 변경(DnD 및 키보드 대체 수단 제공) 지원.
+- **AI PICKS**: 썸네일 + 곡명 + 플레이리스트 추가 액션 제공.
+    - 내부 파라미터(Candidate ID, Cache, Search 단계, 긴 이유/태그 등) 노출 금지.
+    - 사용자 승인 없는 플레이리스트 자동 삽입 금지.
+- **채널명 취급**: `channelTitle`은 채널명 그대로 표기하며, 임의로 '아티스트'로 단정하여 가공하지 않는다.
 
-## Settings / PiP
+### Settings & PiP
 
-OpenAI Settings:
-- API Key + `CONNECT` 단일 흐름
-- Key 원문 재표시 금지
-- 성공은 작은 `Connected`, 실패는 한 줄 Error
-- 기본 Session 저장, 영속 저장은 보조 옵션
+- **OpenAI Settings**: API Key 입력 + `CONNECT` 단일 액션.
+    - 저장된 Key 원문은 마스킹 없이 재표시하지 않는다.
+    - 기본 저장소는 Session Storage이며, Local Storage(영속 저장)는 보조 옵션으로 둔다.
+- **Design Settings**: Shell / Screen / Button Tone 색상 선택. `SAVE` 버튼 클릭 시에만 저장 반영.
+- **PiP (Picture-in-Picture)**: 영상 + 곡명 + 채널 + 재생 제어(Prev/Play/Next)만 포함. 플레이리스트 편집 및 설정 진입은 제외. 창 복원 시 기존 디자인 및 모션 설정 유지.
 
-Design Settings:
-- Shell / Screen / Button Tone
-- `SAVE` 시에만 영속 저장
-- 복잡한 Theme Editor 금지
+## 5. UI State Exposure Invariants
 
-PiP:
-- 실제 영상 + Track Title + Channel + Previous / Play-Pause / Next
-- Playlist 편집, AI PICKS, Settings 제외
-- 닫으면 Player 원위치 복원
-- 기존 디자인 설정값과 Reduced Motion 상태 유지
+사용자 인터페이스에 노출 가능한 상태와 은닉해야 하는 내부 런타임 상태를 엄격히 구분한다.
 
-## Motion / material
+- **노출 허용 상태**: `Loading`, `Connected`, `Error`, `Empty`, `Playing`, `Paused`
+- **노출 금지 (내부 상태)**: `SESSION_ONLY`, `CACHE_HIT`, `DISCOVERY`, `SELECTION`, `REQUESTING_PERMISSION`, `CONFIGURED`
 
-허용:
-- Button Press
-- Playlist Drag Lift
-- NOW PLAYING 옆 작은 Disc 관성 회전
-- 약한 금속 하이라이트와 화면 외곽 유리 반사
-- AI 카드 Hover의 낮은 강도 Hologram
+## 6. Verification Checklist
 
-금지:
-- 대형 Disc
-- 상시 장식 애니메이션
-- 넓은 크롬 반사
-- 전체 Glass UI
-- Player보다 눈에 띄는 3D 효과
+UI 작업 완료 시 아래 3개 반응형 기준점에서 오버플로 및 깨짐이 없어야 한다.
 
-Motion은 `transform` / `opacity` 중심. 외부 애니메이션 라이브러리 추가 금지.
-
-## Responsive / accessibility
-
-- Compact: 320–379px
-- Default: 380–479px
-- Wide: 480px+
-- 320 / 390 / 480px에서 Playlist·AI Card Overflow 금지
-- Focus Ring, Accessible Name, 키보드 조작, Reduced Motion 지원
-- 색상만으로 상태 구분 금지
-- Drag & Drop 외 순서 변경 대안 제공
-
-사용자 표시 가능 상태:
-`Loading`, `Connected`, `Error`, `Empty`, `Playing`, `Paused`
-
-직접 노출 금지:
-`SESSION_ONLY`, `CACHE_HIT`, `DISCOVERY`, `SELECTION`, `REQUESTING_PERMISSION`, `CONFIGURED`
-
-## Done
-
-- Game Boy 본체와 Home 시작 구조
-- Now Playing에서 Video Screen 중심 구조
-- NOW PLAYING과 물리 조작부 배치
-- Playlist / AI PICKS Compact UI
-- OpenAI 단일 Connect 흐름
-- Design `SAVE` 저장
-- Press / Drag / Disc Motion 및 Reduced Motion 대응
-- 320 / 390 / 480px Overflow 없음
-- 실제 Chrome action popup·별도 창 시각 검증
+- **Compact (320px ~ 379px)**: 320px에서 가로 스크롤 및 컴포넌트 겹침 없음.
+- **Default (380px ~ 479px)**: 390px 표준 크기 정상 렌더링.
+- **Wide (480px+)**: 480px 확장 상태 정상 렌더링.
+- 키보드 접근성(Focus Ring)과 `prefers-reduced-motion` 모드 동작 확인.

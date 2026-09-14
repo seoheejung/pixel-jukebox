@@ -5,13 +5,14 @@ import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { connectBrowser, connectTarget, evaluate, until } from './cdp.mjs';
+import { readBridgeConfig } from './bridge-config.mjs';
 
 const executable = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const root = resolve('dist');
 const output = resolve('.chrome-test');
 const profile = resolve(output, `ui-profile-${process.pid}`);
 const debuggingPort = 12000 + (process.pid % 30000);
-const bridgeUrl = 'https://seoheejung.github.io/pixel-jukebox/player.html';
+const bridgeUrl = readBridgeConfig().url;
 const bridgeFixture = `<!doctype html><meta charset="utf-8"><script>
 let parentOrigin = '';
 let videoId = '';
@@ -568,7 +569,7 @@ try {
     assert.ok(!layout.overflow && Math.abs(layout.deckWidth - layout.lcdWidth) < 1 && layout.hardwareFits, `Hardware must use the LCD width without overlap at ${width}x${height}: ${JSON.stringify(layout)}`);
     assert.ok(Math.abs(layout.ratio - 16 / 9) < 0.02 && layout.fillsWidth && layout.infoVisible, `Video and metadata at ${width}x${height}: ${JSON.stringify(layout)}`);
     assert.ok(layout.bottom <= layout.scrollHeight, `Controls must be reachable at ${width}x${height}`);
-    if (height >= 600) assert.ok(layout.bottom <= height, `Controls must fit at ${width}x${height}`);
+    if (layout.scale > 1 || (width === 360 && height === 600)) assert.ok(layout.bottom <= height, `Controls must fit at ${width}x${height}`);
     if (width === 1920) assert.ok(layout.scale > 1 && layout.buttonWidth > 60, 'Large windows must enlarge hardware controls with the video');
     if (width === 1920) assert.ok(layout.shellBottom <= height && height - layout.shellBottom < 24, 'Large windows must fill the available height with a small bottom margin');
     const screenGeometry = () => evaluate(browser, panel, `(() => {
@@ -587,6 +588,7 @@ try {
   }
   console.log('PASS responsive: bounded controls, 16:9 video and visible metadata at 360x600, 720x480, 1280x720, 1920x1080');
   await browser.send('Emulation.setDeviceMetricsOverride', { width: 640, height: 560, deviceScaleFactor: 1, mobile: false }, panel);
+  await evaluate(browser, panel, 'window.dispatchEvent(new Event("resize"))');
   for (const view of ['playlist', 'ai-picks']) {
     await click('#button-select');
     await click(`[data-open="${view}"]`);

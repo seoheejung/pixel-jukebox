@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
+import { readBridgeConfig, renderBridgeAsset } from './bridge-config.mjs';
 
 const manifest = JSON.parse(readFileSync('public/manifest.json', 'utf8'));
 assert.equal(manifest.manifest_version, 3);
@@ -25,11 +26,14 @@ for (const [size, icon] of Object.entries(expectedIcons)) {
   assert.equal(data.readUInt32BE(20), Number(size));
 }
 assert.equal(manifest.side_panel, undefined);
-assert.equal(manifest.content_security_policy.extension_pages, "script-src 'self'; object-src 'self'; frame-src https://seoheejung.github.io; img-src 'self' https://i.ytimg.com data:");
+assert.equal(manifest.content_security_policy.extension_pages, "script-src 'self'; object-src 'self'; frame-src __PLAYER_BRIDGE_ORIGIN__; img-src 'self' https://i.ytimg.com data:");
 console.log('PASS: source manifest and minimum permissions');
 
 if (existsSync('dist/manifest.json')) {
-  assert.deepEqual(JSON.parse(readFileSync('dist/manifest.json', 'utf8')), manifest);
+  const bridge = readBridgeConfig();
+  const expected = JSON.parse(renderBridgeAsset(JSON.stringify(manifest), bridge));
+  assert.deepEqual(JSON.parse(readFileSync('dist/manifest.json', 'utf8')), expected);
+  assert.equal(readFileSync('dist/youtube-controls-v3.js', 'utf8'), renderBridgeAsset(readFileSync('public/youtube-controls-v3.js', 'utf8'), bridge));
   for (const entry of [manifest.background.service_worker, manifest.action.default_popup, 'youtube-controls-v3.js', ...Object.values(manifest.icons)]) {
     assert.ok(existsSync(`dist/${entry}`), `Missing built entry: ${entry}`);
   }

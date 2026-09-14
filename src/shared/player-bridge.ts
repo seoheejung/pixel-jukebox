@@ -1,7 +1,7 @@
 import { isRecord, isVideoId } from './track';
 import type { PlaybackState } from './track';
 
-export const PLAYER_BRIDGE_URL = 'https://seoheejung.github.io/pixel-jukebox/player.html';
+export const PLAYER_BRIDGE_URL = __PLAYER_BRIDGE_URL__;
 export const PLAYER_BRIDGE_ORIGIN = new URL(PLAYER_BRIDGE_URL).origin;
 export const PLAYER_BRIDGE_VERSION = 1;
 export const PLAYER_BRIDGE_CLIENT = 'pixel-jukebox-sidepanel';

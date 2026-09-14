@@ -23,6 +23,6 @@
     }
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; frame-src https://seoheejung.github.io; img-src 'self' https://i.ytimg.com data:"
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src __PLAYER_BRIDGE_ORIGIN__; img-src 'self' https://i.ytimg.com data:"
   }
 }

@@ -1,31 +1,26 @@
 ---
 name: sol-worker-astra-advisor
-description: Use when Sol is blocked by a reproduced hard failure, an unresolved architecture tradeoff, or when an independent high-value review is requested.
+description: Sol의 구현 중 병목 해결을 위해 Astra에게 아키텍처 및 원인 분석 자문을 구합니다. Sol 수준에서 실패가 재현되었거나 고난도 트레이드오프 검토가 필요할 때 사용하세요.
 ---
 
 # Sol Worker / Astra Advisor
 
-Keep implementation, tests, debugging, and verification on `GPT-5.6 Sol`.
+## 완료 조건
+- **버그 자문**: Sol 수준에서 해결되지 않은 핵심 병목과 재현 결과가 정리되어 있다.
+- **아키텍처 자문**: 구체적인 선택지와 각 옵션별 판단 근거/트레이드오프가 정리되어 있다.
+- Astra로부터 다음 항목이 포함된 읽기 전용 자문 보고를 수신한다:
+  - **분석 결과 (Finding)**
+  - **판단 근거 (Evidence)**
+  - **권장 해결 방향 (Recommended Direction)**
+  - **잔여 리스크 (Risks / Unresolved Points)**
+- 수신한 자문을 바탕으로 Sol이 최종 구현 및 검증을 완료한다.
+- Astra 환경을 사용할 수 없는 경우, 가능한 범위에서 Sol로 구현을 계속 진행하고 최종 보고에 해당 제약과 사유를 기록한다.
 
-Before escalation, try a reasonable Sol pass at `Medium` and collect only the evidence needed to explain the blocker.
+## 기본 절차
+1. **Sol 선행 검토**: 현재 설정된 추론 강도에서 문제를 분석/재현하고, 필요한 최소한의 인터페이스와 증거만 수집합니다.
+2. **Astra 자문 호출**: 전체 히스토리 대신 핵심 질문, 재현 결과(또는 설계 선택지), 시도 내역, 제약만 전달합니다.
+3. **구현 복귀**: Astra의 권고를 바탕으로 실제 파일 수정과 검증은 Sol에서 완결합니다.
 
-For Astra, pass only:
-- the concrete question;
-- relevant code/interface/error excerpts;
-- reproduced behavior;
-- attempts already made;
-- project constraints.
-
-When supported, use `GPT-6 Astra` with `fork_turns: "none"` as a read-only advisor.
-
-Astra must not edit files, commit, change dependencies, expand scope, or spawn other agents.
-
-Ask Astra for:
-- Finding
-- Evidence
-- Recommended direction
-- Risks / unresolved points
-
-Return to Sol for implementation and verification.
-
-If explicit model selection or `fork_turns: "none"` is unsupported, state that limitation instead of pretending Astra was used.
+## 손대지 말 것
+- Astra 세션에 파일 수정, 커밋, 의존성 변경, 서브에이전트 스폰 권한을 주지 마세요. (순수 Read-only 자문으로만 제한)
+- 거대 파일 전체나 세션 로그 전체를 복사해 전달하지 마세요.

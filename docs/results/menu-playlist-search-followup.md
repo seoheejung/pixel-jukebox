@@ -2,7 +2,7 @@
 
 ## 요청과 구현 기준
 
-2026-09-12 사용자 요청을 기준으로 API Key 연결 성공 후 AI Picks 이동, Home의 Add Music/AI Picks 순서 변경, Playlist 제목 중심 방향키 이동, Now Playing의 하단 슬라이딩 목록, A/B 라벨과 LCD 여백을 수정한다. 세부 기준은 [화면 지침](../instructions/gameboy-screen-redesign.md)에 기록했다.
+2026-09-12 사용자 요청을 기준으로 API Key 연결 성공 후 AI Picks 이동, Home의 Add Music/AI Picks 순서 변경, Playlist 제목 중심 방향키 이동, Now Playing의 하단 슬라이딩 목록, A/B 라벨과 LCD 여백을 수정했다.
 
 ## YouTube 검색 출처
 
