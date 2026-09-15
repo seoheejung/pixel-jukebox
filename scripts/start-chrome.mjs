@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { endpoint, until } from './cdp.mjs';
 
 const executable = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
+const headed = process.argv.includes('--headed');
 if (!existsSync(executable)) throw new Error('Chrome executable is unavailable');
 try {
   await fetch(`${endpoint}/json/version`, { signal: AbortSignal.timeout(500) });
@@ -14,7 +15,7 @@ try {
 const profile = resolve('.chrome-test/profile');
 mkdirSync(profile, { recursive: true });
 const child = spawn(executable, [
-  '--headless=new', '--remote-debugging-port=9223', '--enable-unsafe-extension-debugging',
+  ...(headed ? [] : ['--headless=new']), '--remote-debugging-port=9223', '--enable-unsafe-extension-debugging',
   '--no-first-run', '--no-default-browser-check', '--disable-background-networking',
   `--user-data-dir=${profile}`, 'about:blank',
 ], { detached: true, windowsHide: true, stdio: 'ignore' });
@@ -23,7 +24,7 @@ const version = await until(async () => {
   try { return await fetch(`${endpoint}/json/version`, { signal: AbortSignal.timeout(500) }).then((response) => response.json()); }
   catch { return false; }
 }, 'test Chrome debugging endpoint');
-console.log(`Started isolated test browser: ${version.Browser}`);
+console.log(`Started isolated ${headed ? 'visible ' : ''}test browser: ${version.Browser}`);
 // 검증 세션 종료 전 테스트 브라우저 프로세스 유지
 await new Promise((resolve) => {
   let misses = 0;

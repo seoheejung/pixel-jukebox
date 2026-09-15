@@ -9,6 +9,13 @@ export interface YouTubeResult extends Candidate {
   videoType: VideoType | null;
 }
 
+export interface YouTubeParseDiagnostics {
+  urlExtractionFailure: number;
+  candidateMismatch: number;
+  videoTypeExcluded: number;
+  validationFailure: number;
+}
+
 function normalize(value: string): string {
   return value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 }
@@ -46,16 +53,6 @@ function responseUrls(response: unknown): string[] {
   return urls;
 }
 
-function canonicalVideo(value: string): { videoId: string; videoUrl: string } | null {
-  try {
-    const url = new URL(value);
-    if (url.protocol !== 'https:' || url.username || url.password || url.port || !['youtube.com', 'www.youtube.com'].includes(url.hostname) || url.pathname !== '/watch') return null;
-    const videoId = videoIdFromUrl(url.toString());
-    if (!videoId || url.searchParams.get('v') !== videoId) return null;
-    return { videoId, videoUrl: `https://www.youtube.com/watch?v=${videoId}` };
-  } catch { return null; }
-}
-
 function canonicalSourceVideo(value: string): { videoId: string; videoUrl: string } | null {
   try {
     const url = new URL(value);
@@ -75,7 +72,7 @@ function isVideoType(value: string): value is VideoType {
   return (VIDEO_TYPES as readonly string[]).includes(value);
 }
 
-export function parseYouTubeResults(response: unknown, candidates: Candidate[], useSearchSources = false): YouTubeResult[] {
+export function parseYouTubeResults(response: unknown, candidates: Candidate[], useSearchSources = false, diagnostics?: YouTubeParseDiagnostics): YouTubeResult[] {
   const allowed = new Map(candidates.map((candidate) => [candidate.candidateId, candidate]));
   const candidateIds = new Set<string>();
   const videoIds = new Set<string>();
@@ -88,9 +85,23 @@ export function parseYouTubeResults(response: unknown, candidates: Candidate[], 
     const artist = match[3]!.trim();
     const title = match[4]!.trim();
     const candidate = allowed.get(candidateId);
-    const video = canonicalVideo(match[5]!);
-    if (!candidate || !isVideoType(videoType) || !video || candidateIds.has(candidateId) || videoIds.has(video.videoId)) continue;
-    if (normalize(candidate.artist) !== normalize(artist) || normalize(candidate.title) !== normalize(title)) continue;
+    const video = canonicalSourceVideo(match[5]!);
+    if (!candidate || normalize(candidate.artist) !== normalize(artist) || normalize(candidate.title) !== normalize(title)) {
+      if (diagnostics) diagnostics.candidateMismatch += 1;
+      continue;
+    }
+    if (!isVideoType(videoType)) {
+      if (diagnostics) diagnostics.videoTypeExcluded += 1;
+      continue;
+    }
+    if (!video) {
+      if (diagnostics) diagnostics.urlExtractionFailure += 1;
+      continue;
+    }
+    if (candidateIds.has(candidateId) || videoIds.has(video.videoId)) {
+      if (diagnostics) diagnostics.validationFailure += 1;
+      continue;
+    }
     candidateIds.add(candidateId);
     videoIds.add(video.videoId);
     results.push({ ...candidate, ...video, videoType });

@@ -607,9 +607,11 @@ Chrome UI Fixture
 - [x] Auto Skip Ads 실제 검증
 - [x] Design
 - [x] 자동 테스트·빌드
-- [ ] 최종 제출 버전 Regression 확인
+- [x] 최종 제출 버전 Regression 확인
 
 ### AI
+
+- [x] Discovery → Selection → Resolver → oEmbed 단계별 drop count 계측
 
 - [x] Research Discovery
 - [x] Candidate Extraction / Validation
@@ -617,19 +619,42 @@ Chrome UI Fixture
 - [x] YouTube Resolver
 - [x] Cache
 - [x] AI / Player 오류 격리
-- [ ] 실제 OpenAI E2E
-- [ ] 여러 기준 곡 추천 품질 검증
-- [ ] 최종 결과 수 안정성 확인
-- [ ] 실제 Usage·비용 확인
+- [x] 실제 OpenAI E2E
+- [x] 실제 UI AI 추천 결과 확인
+- [x] Discovery Candidate 규모 실측
+- [x] YouTube 중복 검증
+- [x] 계측 반영 새 실제 OpenAI E2E 실행
+- [x] Resolver 병목 수정 및 URL canonicalize 보정
+- [x] Timeout-safe 부분 계측 관측성 보강
+- [x] 관련 자동 검증
+- [x] Live measurement E2E 전달 경로 검증 및 수정
+- [ ] Tyler 동일 조건 E2E 1회 재실행
+- [ ] 지연 원인 판별
+- [ ] Resolver drop 감소 효과 검증
+- [ ] 최종 추천 최소 12곡 안정성 확인
+- [ ] 추천 품질 청취 평가: 흐름·Scene·Artist 편중·탐색성·영상 정확성
+
+### Known Limitations
+
+- 최종 추천 수가 내부 목표 12곡에 미달할 수 있음
+- Resolver / video verification 처리 시간이 길 수 있음
+- E2E runner와 실제 UI 완료 상태의 동기화 문제가 남아 있음
+- [x] 실제 Usage·비용 확인
 
 ### 제출
 
+- [ ] 제출 자료 완성
+- [x] 최종 Regression: Player·Playlist·Volume/Mute·Auto Skip Ads·PiP·Design·OpenAI BYOK·KEEP THIS VIBE·YouTube Resolver·Cache·AI/Player 장애 격리
+- [ ] 제출용 실행 경로 확정: Extension 설치/Release·Player Bridge·OpenAI API Key 연결
+- [x] 심사자 최소 실행 절차
+- [ ] GitHub Repository / Release 링크 정리
+- [ ] 제출 자료: 한 줄 설명·해결하려는 문제·AI 활용 방식·사용 AI Tool·서비스/설치 링크·대표 Screenshot·최소 실행 안내
 - [x] Fork용 Bridge 구성·배포 문서
-- [ ] 제출용 Extension 실행·설치 경로
-- [ ] 심사자 실행 확인
-- [ ] 서비스·설치 링크
-- [ ] 제출 문구
-- [ ] 최종 대표 Screenshot
+- [x] 제출용 Extension 실행·설치 경로: Repository clone → `npm ci` → Bridge local config → `npm run build` → `dist/` Load unpacked
+- [x] 심사자 실행 확인
+- [x] 서비스·설치 링크
+- [x] 제출 문구
+- [x] 최종 대표 Screenshot: `docs/images/Screenshot 2026-09-14 202236.png` (YouTube 재생 화면)
 
 ---
 

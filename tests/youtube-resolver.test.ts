@@ -20,6 +20,16 @@ function output(text: string) {
   return { output_text: text };
 }
 
+function measuredOutput(text: string, webSearch = false) {
+  return {
+    output_text: text,
+    model: 'gpt-4.1-mini-2025-04-14',
+    service_tier: 'default',
+    usage: { input_tokens: 100, input_tokens_details: { cached_tokens: 20 }, output_tokens: 30, total_tokens: 130 },
+    output: webSearch ? [{ type: 'web_search_call' }] : [],
+  };
+}
+
 function youtubeLine(item: Candidate, id = videoId, type: VideoType = 'MV') {
   return `YOUTUBE|${item.candidateId}|${type}|${item.artist}|${item.title}|https://www.youtube.com/watch?v=${id}`;
 }
@@ -30,6 +40,13 @@ describe('YouTube recommendation resolver', () => {
     const pool = supported.map((_, index) => ({ candidateId: `C${String(index + 1).padStart(2, '0')}`, artist: `Artist ${index}`, title: `Song ${index}` }));
     const lines = pool.map((item, index) => youtubeLine(item, `AAAAAAAAA${String(index).padStart(2, '0')}`, supported[index]!));
     expect(parseYouTubeResults(output(lines.join('\n')), pool).map((item) => item.videoType)).toEqual(supported);
+  });
+
+  it('canonicalizes supported YouTube URL forms in resolver lines', () => {
+    const variants = ['https://youtu.be/dQw4w9WgXcQ', 'https://music.youtube.com/watch?v=dQw4w9WgXcQ', 'https://www.youtube.com/embed/dQw4w9WgXcQ'];
+    for (const url of variants) {
+      expect(parseYouTubeResults(output(`YOUTUBE|C01|MV|Rick Astley|Never Gonna Give You Up|${url}`), candidates)).toMatchObject([{ videoId }]);
+    }
   });
 
   it('rejects guessed, mismatched, duplicate, and unsupported sources', () => {
@@ -105,7 +122,8 @@ describe('YouTube recommendation resolver', () => {
     const context = { current: trackFromVideoId('4Ygvv_Ae3dg'), playlist: [], recent: [] };
     const result = await service.run(context);
     expect(result.recommendations[0]).toMatchObject({ candidateId: 'C01', videoId, videoType: 'MV' });
-    expect(await service.run(context)).toEqual(result);
+    const cached = await service.run(context);
+    expect(cached).toMatchObject({ candidates: result.candidates, recommendations: result.recommendations, measurement: { cacheHit: true, requests: [] } });
     expect(response).toHaveBeenCalledTimes(5);
     expect(request).toHaveBeenCalledTimes(1);
 
@@ -143,6 +161,34 @@ describe('YouTube recommendation resolver', () => {
     expect(result.recommendations[0]?.candidateId).toBe('C01');
     expect(response).toHaveBeenCalledTimes(5);
     expect(response.mock.calls[4]?.[0]).toMatchObject({ input: expect.arrayContaining([expect.objectContaining({ role: 'user', content: JSON.stringify([second]) })]) });
+  });
+
+  it('measures each live Responses call without retaining response content', async () => {
+    const response = vi.fn()
+      .mockResolvedValueOnce(measuredOutput('Evidence for the supported track.', true))
+      .mockResolvedValueOnce(measuredOutput('CANDIDATE|C01|Rick Astley|Never Gonna Give You Up'))
+      .mockResolvedValueOnce(measuredOutput('{"recommendations":[{"candidateId":"C01"}]}'))
+      .mockResolvedValueOnce(measuredOutput(youtubeLine(candidate), true));
+    const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(metadata)));
+    const result = await createRecommendationService({ response }, request).run({ current: trackFromVideoId('4Ygvv_Ae3dg'), playlist: [], recent: [] }, { refresh: true });
+    expect(result.measurement).toMatchObject({
+      cacheHit: false, candidateCount: 1, selectedCount: 1, youtubeSourceCount: 1, recommendationCount: 1,
+      stageCounts: [
+        { stage: 'discovery', inputCount: 0, outputCount: 1, dropCount: 0, attempts: 1 },
+        { stage: 'selection', inputCount: 1, outputCount: 1, dropCount: 0, attempts: 1 },
+        { stage: 'resolver', inputCount: 1, outputCount: 1, dropCount: 0, attempts: 1 },
+        { stage: 'oembed', inputCount: 1, outputCount: 1, dropCount: 0, attempts: 1 },
+      ],
+      resolverDiagnostics: { searchSourceEmpty: 0, urlExtractionFailure: 0, candidateMismatch: 0, videoTypeExcluded: 0, validationFailure: 0, supplementalSearchFailure: 0 },
+    });
+    expect(result.measurement?.requests).toHaveLength(4);
+    expect(result.measurement?.requests[0]).toMatchObject({
+      kind: 'discovery-research', stage: 'discovery', model: 'gpt-4.1-mini-2025-04-14', serviceTier: 'default',
+      inputTokens: 100, cachedInputTokens: 20, outputTokens: 30, totalTokens: 130, webSearchCalls: 1,
+    });
+    expect(result.measurement?.requests.map((item) => item.kind)).toEqual(['discovery-research', 'candidate-extraction', 'selection', 'youtube-search']);
+    expect(JSON.stringify(result.measurement)).not.toContain('Evidence for the supported track.');
+    expect(JSON.stringify(result.measurement)).not.toContain('Never Gonna Give You Up');
   });
 
   it('fails Discovery without retry when no valid Candidate line exists', async () => {

@@ -1,5 +1,5 @@
 import { isAiMessage, isCoreEdit, hasType, MESSAGE, MESSAGE_AI, PORT } from '../shared/messages';
-import { isAiRecommendationMessage, type AiErrorDetails, type RecommendationErrorCode, type RecommendationProgressStage } from '../shared/ai';
+import { isAiRecommendationMessage, type AiErrorDetails, type RecommendationErrorCode, type RecommendationLiveMeasurement, type RecommendationProgressStage } from '../shared/ai';
 import type { CoreChange } from '../shared/messages';
 import { addTrack, moveTrack, removeTrack, updateTrack } from '../shared/playlist';
 import { trackFromVideoId } from '../shared/track';
@@ -12,7 +12,7 @@ import { AiDiagnosticError } from './ai';
 interface CoreServices {
   store: CoreStore;
   ai: AiService;
-  recommendations: { run(context: { current: import('../shared/track').Track | null; playlist: import('../shared/playlist').PlaylistTrack[]; recent: import('../shared/recommendation').Recommendation[] }, options?: { refresh?: boolean; progress?: (stage: RecommendationProgressStage) => void }): Promise<RecommendationResult> };
+  recommendations: { run(context: { current: import('../shared/track').Track | null; playlist: import('../shared/playlist').PlaylistTrack[]; recent: import('../shared/recommendation').Recommendation[] }, options?: { refresh?: boolean; progress?: (stage: RecommendationProgressStage, measurement?: RecommendationLiveMeasurement) => void }): Promise<RecommendationResult> };
 }
 
 export function isPanelSender(panelUrl: string, senderUrl: string | undefined): boolean {
@@ -88,9 +88,9 @@ export function createConnections(panelUrl: string, core?: CoreServices) {
     if (!source) throw new AiDiagnosticError('NO_TRACK', { stage: 'discovery', message: 'The selected Playlist track is unavailable.' });
     const result = await core.recommendations.run({ current: trackFromVideoId(source.videoId, source), playlist, recent: [] }, {
       ...(message.refresh === undefined ? {} : { refresh: message.refresh }),
-      progress: (stage) => send(port, { type: MESSAGE_AI.progress, stage }),
+      progress: (stage, measurement) => send(port, { type: MESSAGE_AI.progress, stage, ...(measurement ? { measurement } : {}) }),
     });
-    send(port, { type: MESSAGE_AI.recommendations, recommendations: result.recommendations });
+    send(port, { type: MESSAGE_AI.recommendations, recommendations: result.recommendations, ...(result.measurement ? { measurement: result.measurement } : {}) });
   }
 
   function editCore(change: CoreChange, port: chrome.runtime.Port) {

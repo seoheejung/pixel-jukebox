@@ -15,6 +15,16 @@ import { createPlayer } from './player';
 import { backScreen, clampSelection, homeScreen, initialScreenState, moveSelection, openScreen } from './screen-navigation';
 import type { ScreenId, ScreenState } from './screen-navigation';
 import './style.css';
+import { storeLiveMeasurement } from './live-measurement';
+
+declare global {
+  interface Window {
+    __pixelJukeboxE2E?: boolean;
+    __pixelJukeboxLiveMeasurement?: import('../shared/ai').RecommendationLiveMeasurement;
+    __pixelJukeboxMeasurement?: import('../shared/ai').RecommendationMeasurement;
+    __pixelJukeboxRecommendations?: Recommendation[];
+  }
+}
 
 const videoUrl = document.querySelector<HTMLInputElement>('#video-url')!;
 const addVideo = document.querySelector<HTMLButtonElement>('#add-video')!;
@@ -668,6 +678,10 @@ function connect() {
         recommendationLoading = false;
         hasRecommendations = true;
         currentRecommendations = message.recommendations;
+        if (window.__pixelJukeboxE2E) {
+          if (message.measurement) window.__pixelJukeboxMeasurement = structuredClone(message.measurement);
+          window.__pixelJukeboxRecommendations = structuredClone(message.recommendations);
+        }
         aiPicksMessage.textContent = currentRecommendations.length < MIN_RECOMMENDATIONS
           ? `${currentRecommendations.length} verified tracks keep the vibe going. Try More Like This for a new sequence.` : '';
         renderRecommendations(currentRecommendations);
@@ -675,6 +689,7 @@ function connect() {
         return;
       }
       if (isAiProgressMessage(message)) {
+        storeLiveMeasurement(window, Boolean(window.__pixelJukeboxE2E), message.measurement);
         if (recommendationLoading) { recommendationStage = message.stage; renderRecommendationStatus(); }
         return;
       }
