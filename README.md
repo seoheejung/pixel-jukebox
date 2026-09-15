@@ -1,6 +1,6 @@
 # Pixel Jukebox
 
-> 현재 곡의 분위기를 이어갈 Playlist를 AI가 큐레이션하고, 실제 YouTube 영상까지 검증해 재생하는 Game Boy 스타일 Chrome Extension
+> 현재 곡의 분위기를 이어갈 Playlist를 AI가 큐레이션하고, 실제 YouTube 영상까지 검증해 재생하는 레트로 픽셀 스타일 Chrome Extension
 
 <p align="center">
   <img src="docs/images/Screenshot%202026-09-16%20003528.png" alt="Playlist 화면" width="30%" />
