@@ -91,7 +91,7 @@ flowchart TD
 
 ## 빠른 실행
 
-> 제출 검토자는 제공된 Player Bridge를 그대로 사용할 수 있다. 별도 Fork나 Bridge 배포는 필요하지 않다.
+> 제공된 Player Bridge를 사용할 경우 별도 Fork나 Bridge 배포는 필요하지 않다.
 
 1. [Pixel Jukebox Repository](https://github.com/seoheejung/pixel-jukebox)를 clone하고 Node.js 22.12 이상을 준비한다.
 2. 저장소 루트에서 의존성을 설치한다.
@@ -130,13 +130,15 @@ npm run build
 6. YouTube URL을 입력해 재생한다.
 7. `KEEP THIS VIBE`를 사용하려면 Settings에서 OpenAI API Key를 입력하고 `CONNECT`를 누른다. Core Player 재생에는 API Key가 필요하지 않다.
 
-`bridge.config.local.json`은 빌드 전 필요한 로컬 설정이며 Git에 포함되지 않는다. GitHub Release ZIP과 별도 설치 링크는 아직 제공하지 않는다.
+`bridge.config.local.json`은 빌드 전 필요한 로컬 설정이며 Git에 포함되지 않는다.
 
 ## 상세 설치 및 실행
 
 Node.js 22.12 이상이 필요하다.
 
 ### Extension 빌드
+
+`bridge.config.local.json` 설정을 완료한 뒤 빌드한다.
 
 ```sh
 npm ci
@@ -156,9 +158,9 @@ Settings의 OpenAI 화면에서 `CONNECT`를 눌러 필요한 host 권한을 승
 
 API Key 조회와 OpenAI 호출은 Service Worker에서만 처리한다. Key를 소스, Git, 로그, Runtime 메시지 또는 Player 프레임에 포함하지 않는다.
 
-### Fork 사용자의 Player Bridge 배포
+### 자체 Player Bridge 배포
 
-각 사용자는 저장소를 Fork하고 자기 GitHub Pages에 `player-bridge/`를 배포한다.
+제공된 Player Bridge 대신 자신의 Bridge를 사용하려는 경우 저장소를 Fork하고 GitHub Pages에 `player-bridge/`를 배포한다.
 
 1. GitHub 저장소의 **Settings → Pages → Source**에서 **GitHub Actions**를 선택한다.
 2. **Actions → Deploy player bridge → Run workflow**를 실행한다.
@@ -173,7 +175,7 @@ API Key 조회와 OpenAI 호출은 Service Worker에서만 처리한다. Key를 
 
 빌드 시 이 주소가 Player URL, CSP와 프레임 검증 설정에 함께 반영된다. 설정이 없거나 올바른 HTTPS 페이지 주소가 아니면 빌드가 중단된다. `bridge.config.local.json`은 Git에 포함되지 않는다.
 
-공유된 소스를 사용하는 사람도 자기 Bridge를 배포하고 설정한 뒤 빌드해야 한다. `dist/`에는 빌드한 사람의 Bridge 주소가 포함된다.
+자체 Bridge를 사용하는 경우 `bridge.config.local.json`에 해당 주소를 설정한 뒤 빌드한다. `dist/`에는 빌드 시 설정한 Bridge 주소가 포함된다.
 
 ## 검증
 
@@ -193,9 +195,9 @@ npm run test:chrome:audio
 npm run test:chrome:audio:popup
 ```
 
-실제 OpenAI E2E, 추천 품질, Usage·비용 측정은 [측정 절차](docs/results/openai-e2e-runbook.md)를 따른다. API Key는 열린 Extension UI에 사용자가 직접 입력하며 측정 스크립트나 결과 파일에 전달하지 않는다.
+실제 OpenAI E2E와 Usage·비용 측정 절차는 [측정 절차](docs/results/openai-e2e-runbook.md)를 따른다. API Key는 열린 Extension UI에 사용자가 직접 입력하며 측정 스크립트나 결과 파일에 전달하지 않는다.
 
-실제 Bridge 재생은 `npm run chrome:start`로 연 테스트 프로필에서 확인하고, 검증 후 `npm run chrome:stop`으로 종료한다. Auto Skip Ads와 Document PiP는 최종 Regression에서 확인했다. 실제 OpenAI E2E·추천 품질·Usage 측정 결과는 `docs/results/openai-e2e-*.md`에 기록한다.
+실제 Bridge 재생은 `npm run chrome:start`로 연 테스트 프로필에서 확인하고, 검증 후 `npm run chrome:stop`으로 종료한다. Auto Skip Ads와 Document PiP는 최종 Regression에서 확인했다. 실제 OpenAI E2E·Usage 측정 결과는 `docs/results/openai-e2e-*.md`에 기록한다.
 
 ## Known Limitations
 
