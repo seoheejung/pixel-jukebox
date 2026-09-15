@@ -24,7 +24,7 @@ Pixel Jukebox는 현재 곡과 Playlist 흐름을 기준으로 다음에 이어 
 
 - HTTPS Player Bridge 기반 YouTube 재생
 - Playlist 추가·삭제·순서 변경과 이전·다음·반복 재생
-- 음량·음소거, 광고 자동 건너뛰기, 사용자 설정 복구
+- 음량·음소거, 사용자 설정 복구
 - D-pad, A/B, SELECT/START와 키보드 조작
 - Popup, 반응형 독립 창, Document Picture-in-Picture
 - 본체·LCD·버튼 색상 설정
@@ -32,7 +32,7 @@ Pixel Jukebox는 현재 곡과 Playlist 흐름을 기준으로 다음에 이어 
 ### KEEP THIS VIBE
 
 - 현재 곡을 중심으로 분위기·시대감·질감·감정선이 이어지는 후보 탐색
-- Discovery 20–30곡에서 Selection 12–20곡을 구성
+- Discovery에서 20–30곡을 탐색하고 Selection에서 12–20곡 구성을 목표로 함
 - OpenAI Web Search와 Structured Outputs 기반 큐레이션
 - 실제 YouTube 출처와 oEmbed Metadata로 곡·Artist 일치 여부 검증
 - 검증된 결과만 추천 순서대로 표시하고 Playlist에 바로 추가
@@ -197,7 +197,7 @@ npm run test:chrome:audio:popup
 
 실제 OpenAI E2E와 Usage·비용 측정 절차는 [측정 절차](docs/results/openai-e2e-runbook.md)를 따른다. API Key는 열린 Extension UI에 사용자가 직접 입력하며 측정 스크립트나 결과 파일에 전달하지 않는다.
 
-실제 Bridge 재생은 `npm run chrome:start`로 연 테스트 프로필에서 확인하고, 검증 후 `npm run chrome:stop`으로 종료한다. Auto Skip Ads와 Document PiP는 최종 Regression에서 확인했다. 실제 OpenAI E2E·Usage 측정 결과는 `docs/results/openai-e2e-*.md`에 기록한다.
+실제 Bridge 재생은 `npm run chrome:start`로 연 테스트 프로필에서 확인하고, 검증 후 `npm run chrome:stop`으로 종료한다. Document PiP는 최종 Regression에서 확인했다. 실제 OpenAI E2E·Usage 측정 결과는 `docs/results/openai-e2e-*.md`에 기록한다.
 
 ## Known Limitations
 
