@@ -3,8 +3,8 @@
 > 현재 곡의 분위기를 이어갈 Playlist를 AI가 큐레이션하고, 실제 YouTube 영상까지 검증해 재생하는 Game Boy 스타일 Chrome Extension
 
 <p align="center">
-  <img src="docs/images/Screenshot%202026-09-14%20202201.png" alt="Home 메뉴" width="30%" />
-  <img src="docs/images/Screenshot%202026-09-14%20202209.png" alt="Now Playing 화면" width="30%" />
+  <img src="docs/images/Screenshot%202026-09-16%20003528.png" alt="Playlist 화면" width="30%" />
+  <img src="docs/images/Screenshot%202026-09-16%20003741.png" alt="KEEP THIS VIBE 추천 결과" width="30%" />
   <img src="docs/images/Screenshot%202026-09-14%20202236.png" alt="YouTube 재생 화면" width="30%" />
 </p>
 
@@ -151,7 +151,7 @@ npm run test:chrome:audio:popup
 - 해결하려는 문제: 장르·유사도만 나열하지 않고 지금 듣는 곡 다음에 자연스럽게 이어질 음악을 찾는 문제
 - AI 활용: OpenAI Responses API와 Web Search로 후보를 조사하고, Structured Outputs로 Selection을 고정한 뒤 YouTube oEmbed로 실제 영상을 재검증한다.
 - 사용 AI Tool: OpenAI Responses API, Web Search, Structured Outputs
-- 대표 화면: 현재 저장소에서 제출용 대표 이미지는 [YouTube 재생 화면](docs/images/Screenshot%202026-09-14%20202236.png)으로 선정했다. Game Boy 본체, 실제 YouTube 영상, 재생 컨트롤이 한 화면에 보인다. KEEP THIS VIBE 결과 화면은 실제 실행 시 캡처해 교체할 수 있다.
+- 대표 화면: 제출용 대표 이미지는 [KEEP THIS VIBE 추천 결과](docs/images/Screenshot%202026-09-16%20003741.png)로 선정했다. Game Boy 본체, 실제 YouTube 썸네일, AI 추천 결과가 한 화면에 보인다.
 
 ### Known Limitations
 
