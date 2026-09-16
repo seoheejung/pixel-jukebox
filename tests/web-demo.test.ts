@@ -38,6 +38,15 @@ describe('GitHub Pages web demo', () => {
     expect(readFileSync('player-bridge/player.html', 'utf8')).toContain('<title>Pixel Jukebox Player Bridge</title>');
   });
 
+  it('uses the Extension hardware structure in the demo console', () => {
+    expect(html).toContain('class="action-control button-b"');
+    expect(html).toContain('class="action-control button-a"');
+    expect(html).toContain('<strong>SELECT</strong>');
+    expect(html).toContain('<strong>START</strong>');
+    expect(html).toContain('class="speaker"');
+    expect(html).not.toContain('class="screen-label"');
+  });
+
   it('uses the documented E2E source and eight verified recommendation links', () => {
     expect(html).toContain('openai-e2e-2026-09-15T12-52-13-346Z.md');
     expect(html).toContain('Radiohead — No Surprises');

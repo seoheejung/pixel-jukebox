@@ -28,10 +28,11 @@
   const curatingPanel = document.querySelector('#curating-panel');
   const resultsPanel = document.querySelector('#results-panel');
   const screenState = document.querySelector('#screen-state');
+  const demoFooter = document.querySelector('#demo-footer');
   const progressMessage = document.querySelector('#progress-message');
   const sessionMessage = document.querySelector('#session-message');
 
-  if (!(demoButton instanceof HTMLButtonElement) || !(readyPanel instanceof HTMLElement) || !(curatingPanel instanceof HTMLElement) || !(resultsPanel instanceof HTMLElement) || !(screenState instanceof HTMLElement) || !(progressMessage instanceof HTMLElement) || !(sessionMessage instanceof HTMLElement)) return;
+  if (!(demoButton instanceof HTMLButtonElement) || !(readyPanel instanceof HTMLElement) || !(curatingPanel instanceof HTMLElement) || !(resultsPanel instanceof HTMLElement) || !(screenState instanceof HTMLElement) || !(demoFooter instanceof HTMLElement) || !(progressMessage instanceof HTMLElement) || !(sessionMessage instanceof HTMLElement)) return;
 
   const progress = [
     ['discovery', '분위기에 맞는 곡을 찾는 중…'],
@@ -49,8 +50,8 @@
   function renderResults(restored) {
     showPanel(resultsPanel);
     screenState.textContent = 'COMPLETE';
+    demoFooter.textContent = 'A OPEN YOUTUBE · VERIFIED RESULTS';
     demoButton.disabled = true;
-    demoButton.querySelector('strong').textContent = 'DEMO PLAYED';
     sessionMessage.textContent = restored
       ? '이 브라우저 세션에서는 이미 Demo를 실행했습니다. 새 세션에서 다시 체험할 수 있습니다.'
       : '큐레이션 완료. 같은 세션의 두 번째 실행은 제한되며, 새 세션에서 다시 체험할 수 있습니다.';
@@ -88,6 +89,7 @@
     }
     demoButton.disabled = true;
     screenState.textContent = 'CURATING';
+    demoFooter.textContent = 'CURATING · PLEASE WAIT';
     sessionMessage.textContent = '검증된 E2E 진행 상태를 재생하고 있습니다. OpenAI 네트워크 요청은 발생하지 않습니다.';
     showPanel(curatingPanel);
     runProgress(0);

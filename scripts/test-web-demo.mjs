@@ -136,6 +136,15 @@ try {
   await desktop.send('Page.navigate', { url: `${origin}/` });
   await until(() => evaluate(desktop, undefined, "document.readyState === 'complete' && document.querySelector('#screen-state')?.textContent === 'READY'"), 'desktop demo ready');
   assert.equal(await evaluate(desktop, undefined, 'document.documentElement.scrollWidth <= innerWidth'), true, 'Desktop page must not overflow horizontally');
+  assert.equal(await evaluate(desktop, undefined, `(() => {
+    const device = document.querySelector('.device').getBoundingClientRect();
+    const screen = document.querySelector('.screen-bezel').getBoundingClientRect();
+    return device.width >= 420 && device.width <= 450 && Math.round(screen.height) === 360
+      && document.querySelector('.screen-label') === null
+      && document.querySelectorAll('.action-control').length === 2
+      && document.querySelectorAll('.system-controls > span').length === 2
+      && document.querySelectorAll('.speaker i').length === 6;
+  })()`), true, 'Demo console must match the Extension hardware structure and scale');
   assert.equal(await evaluate(desktop, undefined, intactKoreanWords), true, 'Desktop Korean words must not split across lines');
   assert.equal(await evaluate(desktop, undefined, "window.PixelJukeboxDemo.hasCompleted(sessionStorage)"), false, 'First session must be ready');
   for (const [width, height, selector, name] of [
@@ -166,6 +175,11 @@ try {
   await until(() => evaluate(mobile, undefined, "document.readyState === 'complete' && document.querySelector('#screen-state')?.textContent === 'READY'"), 'mobile demo ready');
   assert.equal(await evaluate(mobile, undefined, "!window.PixelJukeboxDemo.hasCompleted(sessionStorage)"), true, 'A new tab session must allow a new run');
   assert.equal(await evaluate(mobile, undefined, 'document.documentElement.scrollWidth <= innerWidth && document.body.scrollWidth <= innerWidth'), true, '390px page must not overflow horizontally');
+  assert.equal(await evaluate(mobile, undefined, `(() => {
+    const device = document.querySelector('.device').getBoundingClientRect();
+    const lower = document.querySelector('.device-lower').getBoundingClientRect();
+    return device.left >= 0 && device.right <= innerWidth && lower.height > 0;
+  })()`), true, 'Mobile console hardware must remain visible inside the viewport');
   assert.equal(await evaluate(mobile, undefined, intactKoreanWords), true, 'Mobile Korean words must not split across lines');
   await evaluate(mobile, undefined, "document.querySelector('#demo').scrollIntoView({ block: 'start' }); document.querySelector('#demo-button').click()", { userGesture: true });
   await until(() => evaluate(mobile, undefined, "!document.querySelector('#results-panel').hidden && document.querySelectorAll('.result-list li').length === 8"), 'mobile demo results', 10000);
