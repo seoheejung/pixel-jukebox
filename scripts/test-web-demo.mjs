@@ -70,6 +70,31 @@ let browser;
 const pages = [];
 const browserErrors = [];
 const failedAssets = [];
+const intactKoreanWords = `(() => {
+  const checks = [
+    ['.problem-lead', '뒤에도,'],
+    ['#demo-title', '눌러보세요.'],
+    ['.demo-notes h3', '재현합니다.'],
+    ['.workflow-section .section-heading > p', '실제'],
+    ['.workflow-grid li:nth-child(5) p', '확인'],
+  ];
+  return checks.every(([selector, word]) => {
+    const root = document.querySelector(selector);
+    if (!root) return false;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      const index = node.data.indexOf(word);
+      if (index < 0) continue;
+      const range = document.createRange();
+      range.setStart(node, index);
+      range.setEnd(node, index + word.length);
+      const lines = new Set([...range.getClientRects()].filter((rect) => rect.width > 0).map((rect) => Math.round(rect.top)));
+      return lines.size === 1;
+    }
+    return false;
+  });
+})()`;
 
 async function page(width, height) {
   const { targetId } = await browser.send('Target.createTarget', { url: 'about:blank' });
@@ -111,7 +136,21 @@ try {
   await desktop.send('Page.navigate', { url: `${origin}/` });
   await until(() => evaluate(desktop, undefined, "document.readyState === 'complete' && document.querySelector('#screen-state')?.textContent === 'READY'"), 'desktop demo ready');
   assert.equal(await evaluate(desktop, undefined, 'document.documentElement.scrollWidth <= innerWidth'), true, 'Desktop page must not overflow horizontally');
+  assert.equal(await evaluate(desktop, undefined, intactKoreanWords), true, 'Desktop Korean words must not split across lines');
   assert.equal(await evaluate(desktop, undefined, "window.PixelJukeboxDemo.hasCompleted(sessionStorage)"), false, 'First session must be ready');
+  for (const [width, height, selector, name] of [
+    [1191, 335, '.problem-strip', 'problem-1191'],
+    [1526, 1123, '#demo', 'demo-1526'],
+    [1630, 902, '#workflow', 'workflow-1630'],
+  ]) {
+    await desktop.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
+    await evaluate(desktop, undefined, `document.documentElement.style.scrollBehavior = 'auto'; document.querySelector(${JSON.stringify(selector)}).scrollIntoView({ block: 'start' })`);
+    await until(() => evaluate(desktop, undefined, `Math.abs(document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect().top) < 1`), `${name} screenshot position`);
+    assert.equal(await evaluate(desktop, undefined, intactKoreanWords), true, `${width}px Korean words must not split across lines`);
+    const { data } = await desktop.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+    await writeFile(resolve(output, `web-demo-wrap-${name}.png`), data, 'base64');
+  }
+  await desktop.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   await evaluate(desktop, undefined, "document.querySelector('#demo').scrollIntoView({ block: 'start' }); document.querySelector('#demo-button').click()", { userGesture: true });
   await until(() => evaluate(desktop, undefined, "!document.querySelector('#results-panel').hidden && document.querySelectorAll('.result-list li').length === 8"), 'desktop demo results', 10000);
   assert.equal(await evaluate(desktop, undefined, "window.PixelJukeboxDemo.claimDemo(sessionStorage)"), false, 'Second run in one session must be rejected');
@@ -127,6 +166,7 @@ try {
   await until(() => evaluate(mobile, undefined, "document.readyState === 'complete' && document.querySelector('#screen-state')?.textContent === 'READY'"), 'mobile demo ready');
   assert.equal(await evaluate(mobile, undefined, "!window.PixelJukeboxDemo.hasCompleted(sessionStorage)"), true, 'A new tab session must allow a new run');
   assert.equal(await evaluate(mobile, undefined, 'document.documentElement.scrollWidth <= innerWidth && document.body.scrollWidth <= innerWidth'), true, '390px page must not overflow horizontally');
+  assert.equal(await evaluate(mobile, undefined, intactKoreanWords), true, 'Mobile Korean words must not split across lines');
   await evaluate(mobile, undefined, "document.querySelector('#demo').scrollIntoView({ block: 'start' }); document.querySelector('#demo-button').click()", { userGesture: true });
   await until(() => evaluate(mobile, undefined, "!document.querySelector('#results-panel').hidden && document.querySelectorAll('.result-list li').length === 8"), 'mobile demo results', 10000);
   const { data: mobileShot } = await mobile.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
@@ -135,10 +175,12 @@ try {
   assert.deepEqual(failedAssets, [], `Static assets failed: ${failedAssets.join(', ')}`);
   assert.deepEqual(browserErrors, [], `Browser errors: ${browserErrors.join(', ')}`);
   console.log('PASS: Web Demo renders at 1280px and 390px without horizontal overflow');
+  console.log('PASS: Korean headings and descriptions keep words intact across line wraps');
   console.log('PASS: first run, same-session limit, and new-session run');
   console.log('PASS: eight documented E2E results, no local asset 404, no console error');
   console.log('PASS: existing player.html, player.css, and player.js remain available');
   console.log(`Screenshots: ${resolve(output, 'web-demo-{desktop,mobile-390}.png')}`);
+  console.log(`Wrap screenshots: ${resolve(output, 'web-demo-wrap-{problem-1191,demo-1526,workflow-1630}.png')}`);
 } finally {
   for (const connection of pages) connection.close();
   if (browser) {

@@ -41,7 +41,9 @@ main { overflow: hidden; }
 .hero-copy { position: relative; z-index: 2; }
 .eyebrow, .section-number, .note-label { margin: 0 0 22px; font: 800 11px/1.4 "Courier New", monospace; letter-spacing: 1.5px; }
 .eyebrow span { display: inline-block; padding: 7px 10px 6px; color: #fff; background: var(--purple); box-shadow: 3px 3px 0 var(--pink); }
-h1, h2, h3, p { overflow-wrap: anywhere; }
+h1, h2, h3, .problem-lead { overflow-wrap: break-word; word-break: keep-all; text-wrap: balance; }
+p, li, dt, dd { overflow-wrap: break-word; word-break: keep-all; }
+.hero-description, .problem-answer, .section-heading > p, .demo-notes > p, .workflow-grid p, .feature-grid p, .install-copy > p, .install-steps p { text-wrap: pretty; }
 h1 { max-width: 760px; margin: 0; font-size: clamp(48px, 6vw, 82px); line-height: .98; letter-spacing: -5px; }
 h1 em { position: relative; z-index: 0; color: var(--pink); font-style: normal; }
 h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom: 4px; left: -8px; height: 17px; background: #d7cd64; transform: rotate(-1.5deg); opacity: .75; }
@@ -73,9 +75,10 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 .spark-two { top: 280px; left: 4%; color: var(--purple); }
 .spark-three { top: 300px; right: 2%; font-size: 64px; }
 
-.problem-strip { display: grid; grid-template-columns: .65fr 1.3fr 1fr; gap: 48px; align-items: start; padding: 70px max(24px, calc((100vw - 1180px) / 2)); color: #fff; background: var(--purple); }
+.problem-strip { display: grid; grid-template-columns: 150px minmax(0, 1.5fr) minmax(300px, .9fr); gap: clamp(28px, 4vw, 48px); align-items: start; padding: 70px max(24px, calc((100vw - 1180px) / 2)); color: #fff; background: var(--purple); }
 .problem-strip .section-number { color: #bbb9dc; }
 .problem-lead { margin: 0; font-size: clamp(24px, 3vw, 38px); font-weight: 800; line-height: 1.3; letter-spacing: -1.5px; }
+.problem-lead span { display: block; }
 .problem-answer { margin: 0; color: #d7d3db; font-size: 15px; line-height: 1.8; }
 .problem-answer strong { color: #d7cd64; }
 
@@ -160,7 +163,7 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 
 .demo-notes { max-width: 440px; }
 .note-label { color: var(--pink); }
-.demo-notes h3 { margin: 0; font-size: clamp(31px, 4vw, 47px); line-height: 1.08; letter-spacing: -2px; }
+.demo-notes h3 { margin: 0; font-size: clamp(31px, 3.7vw, 44px); line-height: 1.08; letter-spacing: -2px; }
 .demo-notes > p:not(.note-label, .session-message) { margin: 24px 0; color: var(--ink-soft); font-size: 15px; line-height: 1.8; }
 .demo-notes dl { margin: 28px 0; border-top: 2px solid var(--ink); }
 .demo-notes dl div { display: grid; grid-template-columns: 94px minmax(0, 1fr); gap: 18px; padding: 13px 0; border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.5; }
@@ -217,6 +220,7 @@ code { padding: 3px 6px; color: var(--lcd-ink); background: var(--lcd); font: 80
   .hero { grid-template-columns: 1fr; gap: 10px; padding-top: 66px; }
   .hero-art { min-height: 420px; }
   .problem-strip { grid-template-columns: 1fr 1.5fr; }
+  .problem-lead span { display: inline; }
   .problem-answer { grid-column: 2; }
   .demo-stage { grid-template-columns: minmax(360px, 520px); justify-content: center; }
   .demo-notes { max-width: 520px; }
