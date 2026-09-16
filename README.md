@@ -6,13 +6,16 @@
 
 **공식 제출 서비스:** <https://seoheejung.github.io/pixel-jukebox/>
 
-Web Demo는 설치 없이 `KEEP THIS VIBE` 흐름을 체험하는 공식 제출 경로다. 실제 OpenAI나 YouTube를 호출하지 않으며, 기존 Chrome Extension E2E에서 검증된 8곡 결과를 화면에 재현한다. D-pad, A/B, SELECT/START는 Demo 화면 안에서만 동작하며 결과는 표시 전용으로 YouTube 재생이나 외부 이동이 발생하지 않는다.
+Web Demo는 설치 없이 `KEEP THIS VIBE` 흐름을 체험하는 공식 제출 경로다.
+실제 OpenAI API 호출이나 YouTube 재생은 발생하지 않으며, 기존 Chrome Extension E2E에서 검증된 8곡 결과를 화면에 재현한다.
+D-pad, A/B, SELECT/START는 Demo 화면 안에서만 동작하며, 추천 결과는 표시 전용으로 외부 재생이나 페이지 이동이 발생하지 않는다.
+큐레이션 진행 재현은 동일 브라우저 탭 세션당 1회 실행할 수 있다.
 
 | 구분 | 주소 | 용도 |
 | --- | --- | --- |
 | Web Demo | <https://seoheejung.github.io/pixel-jukebox/> | 심사자용 기본 실행 경로 |
 | Repository | <https://github.com/seoheejung/pixel-jukebox> | 전체 Extension 소스와 설치 방법 |
-| Player Bridge | `https://seoheejung.github.io/pixel-jukebox/player.html` | Extension이 재생 정보를 전달하는 HTTPS endpoint · 단독 실행 화면 아님 |
+| Player Bridge | <https://seoheejung.github.io/pixel-jukebox/player.html> | Extension이 재생 정보를 전달하는 HTTPS endpoint · 단독 실행 화면 아님 |
 
 <p align="center">
   <img src="docs/images/Screenshot%202026-09-16%20003528.png" alt="Playlist 화면" width="30%" />
@@ -22,7 +25,10 @@ Web Demo는 설치 없이 `KEEP THIS VIBE` 흐름을 체험하는 공식 제출 
 
 ## 프로젝트 개요
 
-Pixel Jukebox는 Chrome Desktop에서 동작하는 Manifest V3 확장 프로그램이다. Core Player는 OpenAI 없이 사용할 수 있다. 사용자의 OpenAI API Key는 `CONNECT` 연결 확인과 `KEEP THIS VIBE` 큐레이션에만 사용한다.
+Pixel Jukebox는 Chrome Desktop에서 동작하는 Manifest V3 확장 프로그램이다.
+Core Player는 OpenAI 없이 사용할 수 있다.
+Settings에서 `CONNECT`를 누르면 입력한 OpenAI API Key를 `chrome.storage.session`에 저장하고, Service Worker가 OpenAI 연결을 즉시 검증한다.
+검증된 API Key는 이후 `KEEP THIS VIBE` 큐레이션에 사용한다.
 
 ## 해결하려는 문제
 
@@ -44,7 +50,7 @@ Pixel Jukebox는 현재 곡과 Playlist 흐름을 기준으로 다음에 이어 
 ### KEEP THIS VIBE
 
 - 현재 곡을 중심으로 분위기·시대감·질감·감정선이 이어지는 후보 탐색
-- Discovery에서 20–30곡을 탐색하고 Selection에서 12–20곡 구성을 목표로 함
+- Discovery에서 20–30곡 탐색, Selection에서 12–20곡 구성을 목표로 함
 - OpenAI Web Search와 Structured Outputs 기반 큐레이션
 - 실제 YouTube 출처와 oEmbed Metadata로 곡·Artist 일치 여부 검증
 - 검증된 결과만 추천 순서대로 표시하고 Playlist에 바로 추가
@@ -202,7 +208,7 @@ npm run check:manifest
 npm run test:web:demo
 ```
 
-`test:web:demo`는 실제 OpenAI E2E가 아니라 정적 Web Demo의 Desktop/Mobile 표시, 세션당 1회 실행, 물리 컨트롤의 화면 내 이동, 외부 재생 차단과 자산 오류를 로컬 Chrome에서 확인한다.
+`test:web:demo`는 실제 OpenAI E2E가 아니라 정적 Web Demo의 Desktop/Mobile 표시, 동일 브라우저 탭 세션당 1회 실행, 물리 컨트롤의 화면 내 이동, 외부 재생 차단과 자산 오류를 로컬 Chrome에서 확인한다.
 
 UI와 Audio fixture는 각각 격리된 Chrome을 실행해 검증한다.
 
@@ -228,6 +234,6 @@ Document PiP는 최종 Regression에서 확인했다. 실제 OpenAI E2E·Usage �
 
 - 최종 추천 수가 내부 목표 12곡에 미달할 수 있다.
 - Resolver / video verification 처리 시간이 길 수 있다.
-- E2E runner와 실제 UI 완료 상태의 동기화 문제가 남아 있다.
+- E2E 자동화 runner의 완료 감지 동기화 이슈가 있으며, 실제 UI의 추천 결과 표시와는 별개다.
 
 실제 OpenAI E2E 성공 보고서는 `docs/results/openai-e2e-*.md`에 보존하며, 실패·timeout 실행은 성공 근거로 사용하지 않는다.

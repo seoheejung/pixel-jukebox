@@ -117,8 +117,8 @@
     demoButton.disabled = false;
     updateResultSelection();
     sessionMessage.textContent = restored
-      ? '이 브라우저 세션에서는 이미 Demo를 실행했습니다. 새 세션에서 다시 체험할 수 있습니다.'
-      : '큐레이션 완료. 같은 세션의 두 번째 실행은 제한되며, 새 세션에서 다시 체험할 수 있습니다.';
+      ? '이 브라우저 탭 세션에서는 이미 Demo를 실행했습니다. 새 탭 세션에서 다시 체험할 수 있습니다.'
+      : '큐레이션 완료. 같은 탭 세션의 두 번째 실행은 제한되며, 새 탭 세션에서 다시 체험할 수 있습니다.';
   }
 
   function setProgress(activeIndex) {

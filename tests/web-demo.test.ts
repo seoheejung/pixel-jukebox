@@ -6,6 +6,7 @@ const html = readFileSync('player-bridge/index.html', 'utf8');
 const script = readFileSync('player-bridge/demo.js', 'utf8');
 const readme = readFileSync('README.md', 'utf8');
 const pagesWorkflow = readFileSync('.github/workflows/deploy-player-bridge.yml', 'utf8');
+const connections = readFileSync('src/background/connections.ts', 'utf8');
 
 function demoApi() {
   const window = {} as {
@@ -37,7 +38,15 @@ describe('GitHub Pages web demo', () => {
   it('documents the official Demo and Extension-only Player Bridge accurately', () => {
     expect(readme).toContain('https://seoheejung.github.io/pixel-jukebox/');
     expect(readme).toContain('단독 실행 화면 아님');
+    expect(readme).toContain('동일 브라우저 탭 세션당 1회');
+    expect(html).toContain('OpenAI API 호출이나 YouTube 재생은 발생하지 않으며');
+    expect(readme).toContain('Service Worker가 OpenAI 연결을 즉시 검증한다');
+    expect(connections).toContain('const connection = await core.ai.testConnection();');
     expect(readme).toContain('npm run test:web:demo');
+    expect(readme).not.toContain('test\\:web\\:demo');
+    expect(readme).not.toContain('check\\:bridge');
+    expect(readme).toContain('"url": "https://seoheejung.github.io/pixel-jukebox/player.html"');
+    expect(readme).toContain('[Pixel Jukebox Repository](https://github.com/seoheejung/pixel-jukebox)');
     expect(readme).toContain('Deploy web demo and player bridge');
     expect(pagesWorkflow).toContain('name: Deploy web demo and player bridge');
     expect(readme).not.toContain('Actions → Deploy player bridge');
@@ -85,7 +94,7 @@ describe('GitHub Pages web demo', () => {
     expect(html).not.toContain('REPLAYED INSTANTLY');
     expect(html).toContain('VERIFIED FIXTURE');
     expect(script).toContain('VERIFIED RESULTS · NO PLAYBACK');
-    expect(html).toContain('실제 OpenAI 호출 없이');
+    expect(html).toContain('OpenAI API 호출이나 YouTube 재생은 발생하지 않으며');
   });
 
   it('allows one run per session and a new run in a new session', () => {
