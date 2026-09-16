@@ -114,6 +114,16 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 .reference-track span { margin-top: 6px; font-size: 10px; font-weight: 700; }
 .reference-track small { margin-top: 14px; font-size: 8px; font-weight: 700; }
 .ready-copy { margin: 18px 2px 0; font-size: 10px; font-weight: 700; line-height: 1.6; }
+.demo-menu { display: grid; gap: 7px; }
+.demo-menu button { position: relative; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 8px; align-items: center; min-height: 48px; padding: 0 10px; border: 1px solid #0f380f66; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.demo-menu button.is-selected { color: var(--lcd); background: var(--lcd-ink); }
+.demo-menu button.is-selected::before { content: ">"; position: absolute; margin-left: -7px; color: var(--lcd); }
+.demo-menu span { font-size: 9px; font-weight: 900; }
+.demo-menu strong { font-size: 10px; }
+.demo-settings { margin: 0; border-top: 2px solid var(--lcd-ink); }
+.demo-settings div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 4px; border-bottom: 1px solid #0f380f66; }
+.demo-settings dt, .demo-settings dd { margin: 0; font-size: 9px; font-weight: 900; }
+.settings-copy { margin: 16px 2px 0; font-size: 9px; font-weight: 700; line-height: 1.6; }
 .curating-title { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 11px; align-items: center; min-height: 52px; margin-bottom: 10px; }
 .curating-title .lcd-kicker { margin-bottom: 4px; }
 .curating-title strong { font-size: 10px; }
@@ -137,6 +147,7 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 .results-summary small { font-size: 7px; font-weight: 900; text-align: right; }
 .result-list { height: calc(100% - 40px); overflow-y: auto; scrollbar-color: var(--lcd-ink) var(--lcd-soft); scrollbar-width: thin; }
 .result-row { display: grid; grid-template-columns: 23px minmax(0, 1fr) auto; gap: 7px; align-items: center; min-height: 45px; border-bottom: 1px solid #0f380f66; }
+.result-row.is-selected { background: #0f380f18; box-shadow: inset 3px 0 0 var(--lcd-ink); }
 .result-row > span:first-child { font-size: 9px; font-weight: 900; }
 .result-row > span:nth-child(2) { min-width: 0; }
 .result-list strong, .result-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -150,10 +161,16 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 .dpad::before { top: 0; left: 29px; width: 30px; height: 88px; }
 .dpad::after { top: 29px; left: 0; width: 88px; height: 30px; }
 .dpad i { position: absolute; z-index: 2; top: 36px; left: 36px; width: 16px; height: 16px; border: 2px solid #4b4b50; border-radius: 50%; background: #29292d; }
+.dpad button { position: absolute; z-index: 3; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.dpad button:active { background: #00000018; box-shadow: inset 0 2px 3px #0000003d; }
+.dpad-up { top: 0; left: 29px; width: 30px; height: 29px; }
+.dpad-right { top: 29px; right: 0; width: 29px; height: 30px; }
+.dpad-down { bottom: 0; left: 29px; width: 30px; height: 29px; }
+.dpad-left { top: 29px; left: 0; width: 29px; height: 30px; }
 .action-buttons { display: grid; grid-template-columns: 52px 52px; gap: 22px; justify-self: end; align-items: start; }
 .action-control { display: grid; justify-items: center; gap: 8px; color: #30376d; }
 .action-control.button-b { margin-top: 30px; }
-.action-control > span, .action-control > button { width: 52px; height: 52px; min-height: 52px; padding: 0; border: 0; border-radius: 50%; background: linear-gradient(145deg, #ffffff24, transparent 45%, #2305191a), var(--pink); box-shadow: inset 1px 2px 1px #ffffff50, inset -1px -2px 1px #4b13274d, 0 1px 0 var(--pink-dark), 0 3px 0 var(--pink-dark), 0 5px 0 var(--pink-dark), 1px 8px 7px #33233540; }
+.action-control > button { width: 52px; height: 52px; min-height: 52px; padding: 0; border: 0; border-radius: 50%; background: linear-gradient(145deg, #ffffff24, transparent 45%, #2305191a), var(--pink); box-shadow: inset 1px 2px 1px #ffffff50, inset -1px -2px 1px #4b13274d, 0 1px 0 var(--pink-dark), 0 3px 0 var(--pink-dark), 0 5px 0 var(--pink-dark), 1px 8px 7px #33233540; }
 .action-control > button { cursor: pointer; transition: transform 70ms ease, box-shadow 70ms ease; }
 .action-control > button:hover:not(:disabled) { box-shadow: inset 0 0 0 2px #ffffff18, 0 1px 0 var(--pink-dark), 0 3px 0 var(--pink-dark), 0 5px 0 var(--pink-dark), 1px 8px 7px #33233540; }
 .action-control > button:active:not(:disabled) { transform: translateY(4px); box-shadow: inset 0 2px 3px #3513274f, 0 1px 0 var(--pink-dark), 0 3px 3px #33233530; }
@@ -161,7 +178,8 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 .action-control strong { font: 900 12px/1 "Courier New", monospace; transform: rotate(-25deg); }
 .device-lower { position: relative; min-height: 88px; }
 .system-controls { position: absolute; top: 7px; left: 62px; display: flex; gap: 14px; }
-.system-controls > span { display: grid; justify-items: center; gap: 6px; min-width: 60px; color: #30376d; font: 900 9px/1 "Courier New", monospace; transform: rotate(-25deg); }
+.system-controls > button { display: grid; justify-items: center; gap: 6px; min-width: 60px; padding: 0; border: 0; color: #30376d; background: transparent; font: 900 9px/1 "Courier New", monospace; transform: rotate(-25deg); cursor: pointer; }
+.system-controls > button:active { transform: translateY(2px) rotate(-25deg); }
 .system-controls i { display: block; width: 58px; height: 13px; border-radius: 9px; background: #b5b8be; box-shadow: inset 0 1px 1px #ffffff50; }
 .speaker { position: absolute; top: 12px; right: 8px; display: flex; justify-content: center; gap: 5px; width: 55px; transform: rotate(-24deg); }
 .speaker i { flex: 0 0 3px; width: 3px; height: 36px; border-radius: 4px; background: #b2b0aa; box-shadow: inset 1px 0 1px #48424c15; }
@@ -299,10 +317,14 @@ code { padding: 3px 6px; color: var(--lcd-ink); background: var(--lcd); font: 80
   .dpad::before { left: 26px; width: 28px; height: 80px; }
   .dpad::after { top: 26px; width: 80px; height: 28px; }
   .dpad i { top: 32px; left: 32px; }
+  .dpad-up { left: 26px; width: 28px; height: 26px; }
+  .dpad-right { top: 26px; width: 26px; height: 28px; }
+  .dpad-down { left: 26px; width: 28px; height: 26px; }
+  .dpad-left { top: 26px; width: 26px; height: 28px; }
   .action-buttons { grid-template-columns: 48px 48px; gap: 12px; }
-  .action-control > span, .action-control > button { width: 48px; height: 48px; min-height: 48px; }
+  .action-control > button { width: 48px; height: 48px; min-height: 48px; }
   .system-controls { left: 42px; }
-  .system-controls > span { min-width: 54px; }
+  .system-controls > button { min-width: 54px; }
   .system-controls i { width: 52px; }
   .demo-notes { padding-inline: 14px; }
 }

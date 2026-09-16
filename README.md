@@ -2,9 +2,17 @@
 
 > 현재 곡의 분위기를 이어갈 Playlist를 AI가 큐레이션하고, 실제 YouTube 영상까지 검증해 재생하는 레트로 픽셀 스타일 Chrome Extension
 
-**[Web Demo — KEEP THIS VIBE 체험하기](https://seoheejung.github.io/pixel-jukebox/)**
+## Web Demo
 
-Web Demo는 설치 없이 실행할 수 있는 공식 제출 경로다. 실제 OpenAI를 호출하지 않으며, 기존 Chrome Extension E2E에서 검증된 결과를 재현한다.
+**공식 제출 서비스:** <https://seoheejung.github.io/pixel-jukebox/>
+
+Web Demo는 설치 없이 `KEEP THIS VIBE` 흐름을 체험하는 공식 제출 경로다. 실제 OpenAI나 YouTube를 호출하지 않으며, 기존 Chrome Extension E2E에서 검증된 8곡 결과를 화면에 재현한다. D-pad, A/B, SELECT/START는 Demo 화면 안에서만 동작하며 결과는 표시 전용으로 YouTube 재생이나 외부 이동이 발생하지 않는다.
+
+| 구분 | 주소 | 용도 |
+| --- | --- | --- |
+| Web Demo | <https://seoheejung.github.io/pixel-jukebox/> | 심사자용 기본 실행 경로 |
+| Repository | <https://github.com/seoheejung/pixel-jukebox> | 전체 Extension 소스와 설치 방법 |
+| Player Bridge | `https://seoheejung.github.io/pixel-jukebox/player.html` | Extension이 재생 정보를 전달하는 HTTPS endpoint · 단독 실행 화면 아님 |
 
 <p align="center">
   <img src="docs/images/Screenshot%202026-09-16%20003528.png" alt="Playlist 화면" width="30%" />
@@ -14,7 +22,7 @@ Web Demo는 설치 없이 실행할 수 있는 공식 제출 경로다. 실제 O
 
 ## 프로젝트 개요
 
-Pixel Jukebox는 Chrome Desktop에서 동작하는 Manifest V3 확장 프로그램이다. Core Player는 OpenAI 없이 사용할 수 있으며, `KEEP THIS VIBE`를 실행할 때만 사용자의 OpenAI API Key로 현재 곡의 흐름을 이어갈 Playlist를 탐색한다.
+Pixel Jukebox는 Chrome Desktop에서 동작하는 Manifest V3 확장 프로그램이다. Core Player는 OpenAI 없이 사용할 수 있다. 사용자의 OpenAI API Key는 `CONNECT` 연결 확인과 `KEEP THIS VIBE` 큐레이션에만 사용한다.
 
 ## 해결하려는 문제
 
@@ -40,7 +48,7 @@ Pixel Jukebox는 현재 곡과 Playlist 흐름을 기준으로 다음에 이어 
 - OpenAI Web Search와 Structured Outputs 기반 큐레이션
 - 실제 YouTube 출처와 oEmbed Metadata로 곡·Artist 일치 여부 검증
 - 검증된 결과만 추천 순서대로 표시하고 Playlist에 바로 추가
-- Cache와 중복 요청 병합, `MORE LIKE THIS` 재탐색, 실패 시 부분 결과 유지
+- Cache와 동일 Panel의 동시 중복 실행 차단, `MORE LIKE THIS` 재탐색, 실패 시 부분 결과 유지
 
 ## AI 활용 방식
 
@@ -89,15 +97,15 @@ flowchart TD
 | Language | TypeScript |
 | UI | HTML · CSS · TypeScript |
 | Build · Test | Vite · Vitest |
-| Player | GitHub Pages · YouTube IFrame Player API |
-| Storage | `chrome.storage.local` · `chrome.storage.session` |
+| Player | GitHub Pages Player Bridge · YouTube IFrame Player API |
+| Storage | `chrome.storage.local` · `chrome.storage.session` · UI `localStorage` |
 | AI | OpenAI Responses API · Web Search · Structured Outputs |
 
 ## 빠른 실행
 
 > 제공된 Player Bridge를 사용할 경우 별도 Fork나 Bridge 배포는 필요하지 않다.
 
-1. [Pixel Jukebox Repository](https://github.com/seoheejung/pixel-jukebox)를 clone하고 Node.js 22.12 이상을 준비한다.
+1. [Pixel Jukebox Repository](https://github.com/seoheejung/pixel-jukebox)를 clone하고 Node.js 22.12.0 이상을 준비한다.
 2. 저장소 루트에서 의존성을 설치한다.
 
 ```sh
@@ -136,9 +144,11 @@ npm run build
 
 `bridge.config.local.json`은 빌드 전 필요한 로컬 설정이며 Git에 포함되지 않는다.
 
+Player Bridge URL은 Extension iframe용 endpoint다. 브라우저에서 `player.html`만 직접 열면 재생 정보가 전달되지 않아 빈 화면으로 보이는 것이 정상이며, Web Demo URL로 사용하지 않는다.
+
 ## 상세 설치 및 실행
 
-Node.js 22.12 이상이 필요하다.
+Node.js 22.12.0 이상이 필요하다.
 
 ### Extension 빌드
 
@@ -162,12 +172,12 @@ Settings의 OpenAI 화면에서 `CONNECT`를 눌러 필요한 host 권한을 승
 
 API Key 조회와 OpenAI 호출은 Service Worker에서만 처리한다. Key를 소스, Git, 로그, Runtime 메시지 또는 Player 프레임에 포함하지 않는다.
 
-### 자체 Player Bridge 배포
+### 자체 GitHub Pages와 Player Bridge 배포
 
-제공된 Player Bridge 대신 자신의 Bridge를 사용하려는 경우 저장소를 Fork하고 GitHub Pages에 `player-bridge/`를 배포한다.
+제공된 서비스를 대신 자신의 Pages와 Bridge를 사용하려는 경우 저장소를 Fork하고 GitHub Pages에 `player-bridge/`를 배포한다. 이 디렉터리의 `index.html`은 Web Demo, `player.html`은 Extension 전용 Player Bridge다.
 
 1. GitHub 저장소의 **Settings → Pages → Source**에서 **GitHub Actions**를 선택한다.
-2. **Actions → Deploy player bridge → Run workflow**를 실행한다.
+2. **Actions → Deploy web demo and player bridge → Run workflow**를 실행한다.
 3. `bridge.config.example.json`을 `bridge.config.local.json`으로 복사한다.
 4. 복사한 파일에 자기 Bridge 주소를 입력한다.
 
@@ -186,22 +196,33 @@ API Key 조회와 OpenAI 호출은 Service Worker에서만 처리한다. Key를 
 ```sh
 npm run typecheck
 npm test
+npm run build
 npm run check:bridge
 npm run check:manifest
+npm run test:web:demo
 ```
 
-빌드 후 Chrome fixture를 실행할 수 있다.
+`test:web:demo`는 실제 OpenAI E2E가 아니라 정적 Web Demo의 Desktop/Mobile 표시, 세션당 1회 실행, 물리 컨트롤의 화면 내 이동, 외부 재생 차단과 자산 오류를 로컬 Chrome에서 확인한다.
+
+UI와 Audio fixture는 각각 격리된 Chrome을 실행해 검증한다.
 
 ```sh
-npm run test:chrome:bridge
 npm run test:chrome:ui
 npm run test:chrome:audio
 npm run test:chrome:audio:popup
 ```
 
+Player Bridge fixture는 공용 테스트 프로필을 먼저 연 뒤 실행하고 종료한다.
+
+```sh
+npm run chrome:start
+npm run test:chrome:bridge
+npm run chrome:stop
+```
+
 실제 OpenAI E2E와 Usage·비용 측정 절차는 [측정 절차](docs/results/openai-e2e-runbook.md)를 따른다. API Key는 열린 Extension UI에 사용자가 직접 입력하며 측정 스크립트나 결과 파일에 전달하지 않는다.
 
-실제 Bridge 재생은 `npm run chrome:start`로 연 테스트 프로필에서 확인하고, 검증 후 `npm run chrome:stop`으로 종료한다. Document PiP는 최종 Regression에서 확인했다. 실제 OpenAI E2E·Usage 측정 결과는 `docs/results/openai-e2e-*.md`에 기록한다.
+Document PiP는 최종 Regression에서 확인했다. 실제 OpenAI E2E·Usage 측정 결과는 `docs/results/openai-e2e-*.md`에 기록한다.
 
 ## Known Limitations
 

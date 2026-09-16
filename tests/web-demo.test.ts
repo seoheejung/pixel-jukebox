@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 const html = readFileSync('player-bridge/index.html', 'utf8');
 const script = readFileSync('player-bridge/demo.js', 'utf8');
+const readme = readFileSync('README.md', 'utf8');
+const pagesWorkflow = readFileSync('.github/workflows/deploy-player-bridge.yml', 'utf8');
 
 function demoApi() {
   const window = {} as {
@@ -32,6 +34,15 @@ function sessionStorage(): Storage {
 }
 
 describe('GitHub Pages web demo', () => {
+  it('documents the official Demo and Extension-only Player Bridge accurately', () => {
+    expect(readme).toContain('https://seoheejung.github.io/pixel-jukebox/');
+    expect(readme).toContain('단독 실행 화면 아님');
+    expect(readme).toContain('npm run test:web:demo');
+    expect(readme).toContain('Deploy web demo and player bridge');
+    expect(pagesWorkflow).toContain('name: Deploy web demo and player bridge');
+    expect(readme).not.toContain('Actions → Deploy player bridge');
+  });
+
   it('keeps the demo and existing player bridge as separate Pages entries', () => {
     expect(html).toContain('<script type="module" src="./demo.js"></script>');
     expect(html).toContain('href="./demo.css"');
@@ -44,8 +55,14 @@ describe('GitHub Pages web demo', () => {
   it('uses the Extension hardware structure in the demo console', () => {
     expect(html).toContain('class="action-control button-b"');
     expect(html).toContain('class="action-control button-a"');
-    expect(html).toContain('<strong>SELECT</strong>');
-    expect(html).toContain('<strong>START</strong>');
+    expect(html).toContain('id="demo-back"');
+    expect(html).toContain('id="demo-select"');
+    expect(html).toContain('id="demo-start"');
+    expect(html.match(/id="dpad-(up|right|down|left)"/g)).toHaveLength(4);
+    expect(html).toContain('<strong aria-hidden="true">SELECT</strong>');
+    expect(html).toContain('<strong aria-hidden="true">START</strong>');
+    expect(html).toContain('id="home-panel"');
+    expect(html).toContain('id="settings-panel"');
     expect(html).toContain('class="speaker"');
     expect(html).not.toContain('class="screen-label"');
   });
@@ -65,6 +82,8 @@ describe('GitHub Pages web demo', () => {
     ]);
     expect(html).not.toContain('href="https://www.youtube.com/watch');
     expect(html).not.toContain('OPEN YOUTUBE');
+    expect(html).not.toContain('REPLAYED INSTANTLY');
+    expect(html).toContain('VERIFIED FIXTURE');
     expect(script).toContain('VERIFIED RESULTS · NO PLAYBACK');
     expect(html).toContain('실제 OpenAI 호출 없이');
   });

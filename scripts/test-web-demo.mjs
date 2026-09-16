@@ -143,7 +143,10 @@ try {
     return device.width >= 420 && device.width <= 450 && Math.round(screen.height) === 360
       && document.querySelector('.screen-label') === null
       && document.querySelectorAll('.action-control').length === 2
-      && document.querySelectorAll('.system-controls > span').length === 2
+      && document.querySelectorAll('.action-control > button').length === 2
+      && document.querySelectorAll('.system-controls > button').length === 2
+      && document.querySelectorAll('.dpad > button').length === 4
+      && [...document.querySelectorAll('.action-control > button, .system-controls > button, .dpad > button')].every((button) => !button.disabled)
       && document.querySelectorAll('.speaker i').length === 6;
   })()`), true, 'Demo console must match the Extension hardware structure and scale');
   assert.equal(await evaluate(desktop, undefined, intactKoreanWords), true, 'Desktop Korean words must not split across lines');
@@ -168,7 +171,19 @@ try {
     await writeFile(resolve(output, `web-demo-wrap-${name}.png`), data, 'base64');
   }
   await desktop.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
-  await evaluate(desktop, undefined, "document.querySelector('#demo').scrollIntoView({ block: 'start' }); document.querySelector('#demo-button').click()", { userGesture: true });
+  await evaluate(desktop, undefined, "document.querySelector('#demo').scrollIntoView({ block: 'start' }); document.querySelector('#demo-start').click()", { userGesture: true });
+  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#settings-panel').hidden && document.querySelector('#screen-state').textContent === 'DEMO'"), true, 'START must open Demo settings');
+  const { data: settingsShot } = await desktop.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  await writeFile(resolve(output, 'web-demo-controls-settings.png'), settingsShot, 'base64');
+  await evaluate(desktop, undefined, "document.querySelector('#demo-back').click()", { userGesture: true });
+  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#ready-panel').hidden"), true, 'B must return from Demo settings');
+  await evaluate(desktop, undefined, "document.querySelector('#demo-select').click()", { userGesture: true });
+  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#home-panel').hidden && document.querySelector('#screen-state').textContent === 'HOME'"), true, 'SELECT must open Home');
+  const { data: homeShot } = await desktop.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+  await writeFile(resolve(output, 'web-demo-controls-home.png'), homeShot, 'base64');
+  await evaluate(desktop, undefined, "document.querySelector('#dpad-up').click(); document.querySelector('#dpad-down').click()", { userGesture: true });
+  assert.equal(await evaluate(desktop, undefined, "document.querySelector('.demo-menu button.is-selected')?.dataset.demoTarget === 'vibe'"), true, 'D-pad must move the Home selection');
+  await evaluate(desktop, undefined, "document.querySelector('#dpad-right').click()", { userGesture: true });
   await until(() => evaluate(desktop, undefined, "!document.querySelector('#results-panel').hidden && document.querySelectorAll('.result-list li').length === 8"), 'desktop demo results', 10000);
   assert.equal(await evaluate(desktop, undefined, `(() => {
     const before = location.href;
@@ -179,13 +194,19 @@ try {
       && location.href === before
       && document.querySelector('#demo-footer')?.textContent === 'VERIFIED RESULTS · NO PLAYBACK';
   })()`), true, 'Verified results must not navigate to YouTube');
+  await evaluate(desktop, undefined, "document.querySelector('#dpad-down').click()", { userGesture: true });
+  assert.equal(await evaluate(desktop, undefined, "document.querySelector('.result-row.is-selected')?.dataset.e2eVideoId === 'A-Tod1_tZdU'"), true, 'D-pad must move through verified results');
+  await evaluate(desktop, undefined, "document.querySelector('#demo-back').click()", { userGesture: true });
+  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#ready-panel').hidden && document.querySelector('#screen-state').textContent === 'COMPLETE'"), true, 'B must return from results to the reference track');
+  await evaluate(desktop, undefined, "document.querySelector('#demo-button').click()", { userGesture: true });
+  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#results-panel').hidden && document.querySelector('#screen-state').textContent === 'COMPLETE'"), true, 'A must restore completed results without rerunning curation');
   assert.equal(await evaluate(desktop, undefined, "window.PixelJukeboxDemo.claimDemo(sessionStorage)"), false, 'Second run in one session must be rejected');
   const { data: desktopShot } = await desktop.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   await writeFile(resolve(output, 'web-demo-desktop.png'), desktopShot, 'base64');
 
   await desktop.send('Page.reload');
   await until(() => evaluate(desktop, undefined, "document.readyState === 'complete' && !document.querySelector('#results-panel').hidden"), 'same-session reload');
-  assert.equal(await evaluate(desktop, undefined, "document.querySelector('#demo-button').disabled && document.querySelector('#session-message').textContent.includes('이미 Demo를 실행')"), true, 'Same session must restore the completed state');
+  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#demo-button').disabled && document.querySelector('#session-message').textContent.includes('이미 Demo를 실행')"), true, 'Same session must restore the completed state without disabling screen navigation');
 
   const mobile = await page(390, 844);
   await mobile.send('Page.navigate', { url: `${origin}/` });
@@ -210,9 +231,11 @@ try {
   console.log('PASS: first run, same-session limit, and new-session run');
   console.log('PASS: eight documented E2E results, no local asset 404, no console error');
   console.log('PASS: verified result rows do not navigate to YouTube');
+  console.log('PASS: D-pad, A/B, SELECT, and START navigate only inside the Demo screen');
   console.log('PASS: Player Bridge is documented without a misleading launch link');
   console.log('PASS: existing player.html, player.css, and player.js remain available');
   console.log(`Screenshots: ${resolve(output, 'web-demo-{desktop,mobile-390}.png')}`);
+  console.log(`Control screenshots: ${resolve(output, 'web-demo-controls-{home,settings}.png')}`);
   console.log(`Section screenshots: ${resolve(output, 'web-demo-wrap-{problem-1191,demo-1526,workflow-1630,install-502}.png')}`);
 } finally {
   for (const connection of pages) connection.close();

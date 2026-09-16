@@ -70,7 +70,7 @@
             <h2 id="demo-title">KEEP THIS VIBE를 눌러보세요.</h2>
           </div>
           <p class="demo-disclosure">
-            실제 OpenAI 호출 없이, 기존 Extension E2E에서 통과한 결과를 재생합니다. 브라우저 세션당 1회 체험할 수 있습니다.
+            실제 OpenAI 호출 없이, 기존 Extension E2E에서 통과한 진행 단계와 결과를 재현합니다. 브라우저 세션당 1회 체험할 수 있습니다.
           </p>
         </div>
 
@@ -84,8 +84,17 @@
             <div class="screen-bezel">
               <div class="lcd" id="demo-screen">
                 <div class="lcd-toolbar">
-                  <span>KEEP THIS VIBE</span>
+                  <span id="screen-title">KEEP THIS VIBE</span>
                   <span id="screen-state">READY</span>
+                </div>
+
+                <div class="demo-panel" id="home-panel" hidden>
+                  <p class="lcd-kicker">HOME</p>
+                  <div class="demo-menu" role="listbox" aria-label="Web Demo 화면 선택">
+                    <button type="button" data-demo-target="reference" role="option"><span>01</span><strong>REFERENCE TRACK</strong></button>
+                    <button type="button" data-demo-target="vibe" role="option"><span>02</span><strong>KEEP THIS VIBE</strong></button>
+                    <button type="button" data-demo-target="settings" role="option"><span>03</span><strong>DEMO SETTINGS</strong></button>
+                  </div>
                 </div>
 
                 <div class="demo-panel is-active" id="ready-panel">
@@ -117,7 +126,7 @@
                 <div class="demo-panel" id="results-panel" hidden>
                   <div class="results-summary">
                     <div><span>PASS</span><strong>8 TRACKS VERIFIED</strong></div>
-                    <small>72.47s E2E · REPLAYED INSTANTLY</small>
+                    <small>72.47s E2E · VERIFIED FIXTURE</small>
                   </div>
                   <ol class="result-list" aria-label="검증된 추천 결과">
                     <li class="result-row" data-e2e-video-id="6hUpJ94q0c8"><span>01</span><span><strong>Let Down</strong><small>Radiohead</small></span><i>MV</i></li>
@@ -130,26 +139,46 @@
                     <li class="result-row" data-e2e-video-id="z7xPjk1ldjg"><span>08</span><span><strong>Tiger Mountain Peasant Song</strong><small>Fleet Foxes</small></span><i>MV</i></li>
                   </ol>
                 </div>
+
+                <div class="demo-panel" id="settings-panel" hidden>
+                  <p class="lcd-kicker">SETTINGS / WEB DEMO</p>
+                  <dl class="demo-settings">
+                    <div><dt>OPENAI CALL</dt><dd>OFF</dd></div>
+                    <div><dt>PLAYBACK</dt><dd>OFF</dd></div>
+                    <div><dt>RESULT SOURCE</dt><dd>VERIFIED E2E</dd></div>
+                    <div><dt>SESSION LIMIT</dt><dd>1 RUN</dd></div>
+                  </dl>
+                  <p class="settings-copy">설치 없이 검증 흐름과 결과 화면만 재현합니다.</p>
+                </div>
                 <div class="lcd-footer" id="demo-footer">A KEEP THIS VIBE · WEB DEMO</div>
               </div>
             </div>
 
             <div class="device-controls">
-              <div class="dpad" aria-hidden="true"><i></i></div>
+              <div class="dpad" aria-label="화면 이동">
+                <button id="dpad-up" class="dpad-up" type="button" aria-label="위로 이동"></button>
+                <button id="dpad-right" class="dpad-right" type="button" aria-label="선택"></button>
+                <button id="dpad-down" class="dpad-down" type="button" aria-label="아래로 이동"></button>
+                <button id="dpad-left" class="dpad-left" type="button" aria-label="뒤로"></button>
+                <i aria-hidden="true"></i>
+              </div>
               <div class="action-buttons">
-                <div class="action-control button-b" aria-hidden="true"><span></span><strong>B</strong></div>
+                <div class="action-control button-b">
+                  <button id="demo-back" type="button" aria-label="뒤로" title="BACK"></button>
+                  <strong aria-hidden="true">B</strong>
+                </div>
                 <div class="action-control button-a">
-                  <button id="demo-button" type="button" aria-label="KEEP THIS VIBE Demo 실행" title="KEEP THIS VIBE"></button>
+                  <button id="demo-button" type="button" aria-label="선택 또는 KEEP THIS VIBE Demo 실행" title="SELECT / KEEP THIS VIBE"></button>
                   <strong aria-hidden="true">A</strong>
                 </div>
               </div>
             </div>
-            <div class="device-lower" aria-hidden="true">
+            <div class="device-lower">
               <div class="system-controls">
-                <span><i></i><strong>SELECT</strong></span>
-                <span><i></i><strong>START</strong></span>
+                <button id="demo-select" type="button" aria-label="Home 화면" title="HOME"><i aria-hidden="true"></i><strong aria-hidden="true">SELECT</strong></button>
+                <button id="demo-start" type="button" aria-label="Demo 설정 화면" title="SETTINGS"><i aria-hidden="true"></i><strong aria-hidden="true">START</strong></button>
               </div>
-              <div class="speaker"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="speaker" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
             </div>
           </article>
 
