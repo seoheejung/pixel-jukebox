@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "check:bridge": "node --check player-bridge/player.js",
     "check:manifest": "node scripts/check-manifest.mjs",
+    "test:web:demo": "node scripts/test-web-demo.mjs",
     "chrome:start": "node scripts/start-chrome.mjs",
     "chrome:stop": "node scripts/stop-chrome.mjs",
     "test:chrome:bridge": "node scripts/test-chrome-player-bridge.mjs",

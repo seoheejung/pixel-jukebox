@@ -1,4 +1,4 @@
-name: Deploy player bridge
+name: Deploy web demo and player bridge
 
 on:
   push:
@@ -26,6 +26,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Verify Pages bundle
+        run: |
+          test -f player-bridge/index.html
+          test -f player-bridge/demo.css
+          test -f player-bridge/demo.js
+          test -f player-bridge/player.html
+          test -f player-bridge/player.css
+          test -f player-bridge/player.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: player-bridge

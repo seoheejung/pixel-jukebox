@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Pixel Jukebox KEEP THIS VIBE 검증 결과 기반 Web Demo" />
+    <meta name="theme-color" content="#28242d" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Pixel Jukebox — KEEP THIS VIBE Demo</title>
+    <link rel="stylesheet" href="./demo.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#demo">데모로 바로 가기</a>
+
+    <header class="site-header">
+      <a class="wordmark" href="#top" aria-label="Pixel Jukebox 홈">
+        <span class="wordmark-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span>PIXEL JUKEBOX</span>
+      </a>
+      <nav aria-label="페이지 메뉴">
+        <a href="#demo">DEMO</a>
+        <a href="#workflow">WORKFLOW</a>
+        <a href="#install">RUN IT</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span>WANTED AI CHAMPIONSHIP</span> · WEB DEMO</p>
+          <h1 id="hero-title">한 곡의 끝에서,<br /><em>다음 분위기</em>가 시작됩니다.</h1>
+          <p class="hero-description">
+            Pixel Jukebox는 지금 듣는 곡의 흐름을 읽고, 실제 재생 가능한 YouTube 영상까지 검증해 다음 Playlist를 큐레이션하는 Chrome Extension입니다.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#demo">KEEP THIS VIBE 체험</a>
+            <a class="button button-quiet" href="https://github.com/seoheejung/pixel-jukebox">GITHUB ↗</a>
+          </div>
+          <ul class="hero-facts" aria-label="데모 특징">
+            <li><strong>NO INSTALL</strong><span>브라우저에서 바로 체험</span></li>
+            <li><strong>REAL E2E</strong><span>검증된 실행 결과 사용</span></li>
+            <li><strong>NO API CALL</strong><span>OpenAI 실시간 호출 없음</span></li>
+          </ul>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="pixel-sun"></div>
+          <div class="sound-wave wave-one"></div>
+          <div class="sound-wave wave-two"></div>
+          <div class="sound-wave wave-three"></div>
+          <div class="hero-disc"><span></span></div>
+          <span class="spark spark-one">+</span>
+          <span class="spark spark-two">×</span>
+          <span class="spark spark-three">·</span>
+        </div>
+      </section>
+
+      <section class="problem-strip" aria-label="해결하려는 문제">
+        <p class="section-number">01 / THE PROBLEM</p>
+        <p class="problem-lead">좋아하는 한 곡을 찾은 뒤에도,<br />그 분위기를 계속 잇는 일은 수동 검색의 연속입니다.</p>
+        <p class="problem-answer">검색 → 비교 → 재생 확인을 반복하는 대신, <strong>한 번의 KEEP THIS VIBE</strong>로 탐색부터 재생 가능한 영상 검증까지 이어갑니다.</p>
+      </section>
+
+      <section class="demo-section" id="demo" aria-labelledby="demo-title">
+        <div class="section-heading">
+          <div>
+            <p class="section-number">02 / TRY THE FLOW</p>
+            <h2 id="demo-title">KEEP THIS VIBE를 눌러보세요.</h2>
+          </div>
+          <p class="demo-disclosure">
+            실제 OpenAI 호출 없이, 기존 Extension E2E에서 통과한 결과를 재생합니다. 브라우저 세션당 1회 체험할 수 있습니다.
+          </p>
+        </div>
+
+        <div class="demo-stage">
+          <article class="device" aria-label="Pixel Jukebox 데모 플레이어">
+            <div class="device-brand">
+              <strong>PIXEL JUKEBOX</strong>
+              <span><i aria-hidden="true"></i> POWER</span>
+            </div>
+
+            <div class="screen-bezel">
+              <div class="screen-label"><span>DOT MATRIX WITH STEREO SOUND</span></div>
+              <div class="lcd" id="demo-screen">
+                <div class="lcd-toolbar">
+                  <span>KEEP THIS VIBE</span>
+                  <span id="screen-state">READY</span>
+                </div>
+
+                <div class="demo-panel is-active" id="ready-panel">
+                  <p class="lcd-kicker">REFERENCE TRACK</p>
+                  <div class="reference-track">
+                    <div class="pixel-album" aria-hidden="true"><span></span></div>
+                    <div>
+                      <strong>NO SURPRISES</strong>
+                      <span>Radiohead</span>
+                      <small>PLAYING · 03:49</small>
+                    </div>
+                  </div>
+                  <p class="ready-copy">지금 곡의 감정선과 질감을 이어갈 다음 Playlist를 찾아봅니다.</p>
+                </div>
+
+                <div class="demo-panel" id="curating-panel" hidden>
+                  <div class="curating-title">
+                    <span class="pixel-loader" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                    <div><p class="lcd-kicker">CURATING</p><strong id="progress-message">분위기에 맞는 곡을 찾는 중…</strong></div>
+                  </div>
+                  <ol class="progress-list" aria-label="큐레이션 진행 상태">
+                    <li data-progress="discovery"><span>01</span><strong>RESEARCH DISCOVERY</strong><i>WAIT</i></li>
+                    <li data-progress="selection"><span>02</span><strong>SEQUENCE SELECTION</strong><i>WAIT</i></li>
+                    <li data-progress="youtube"><span>03</span><strong>YOUTUBE RESOLVER</strong><i>WAIT</i></li>
+                    <li data-progress="metadata"><span>04</span><strong>METADATA VALIDATION</strong><i>WAIT</i></li>
+                  </ol>
+                </div>
+
+                <div class="demo-panel" id="results-panel" hidden>
+                  <div class="results-summary">
+                    <div><span>PASS</span><strong>8 TRACKS VERIFIED</strong></div>
+                    <small>72.47s E2E · REPLAYED INSTANTLY</small>
+                  </div>
+                  <ol class="result-list" aria-label="검증된 추천 결과">
+                    <li><a href="https://www.youtube.com/watch?v=6hUpJ94q0c8"><span>01</span><span><strong>Let Down</strong><small>Radiohead</small></span><i>MV ↗</i></a></li>
+                    <li><a href="https://www.youtube.com/watch?v=A-Tod1_tZdU"><span>02</span><span><strong>I Need My Girl</strong><small>The National</small></span><i>MV ↗</i></a></li>
+                    <li><a href="https://www.youtube.com/watch?v=4texipD7faM"><span>03</span><span><strong>Retrograde</strong><small>James Blake</small></span><i>MV ↗</i></a></li>
+                    <li><a href="https://www.youtube.com/watch?v=oAhO5eegMfY"><span>04</span><span><strong>re:member</strong><small>Ólafur Arnalds</small></span><i>MV ↗</i></a></li>
+                    <li><a href="https://www.youtube.com/watch?v=68nVcK58qO8"><span>05</span><span><strong>Flightless Bird, American Mouth</strong><small>Iron &amp; Wine</small></span><i>LIVE ↗</i></a></li>
+                    <li><a href="https://www.youtube.com/watch?v=AIOAlaACuv4"><span>06</span><span><strong>Fast Car</strong><small>Tracy Chapman</small></span><i>MV ↗</i></a></li>
+                    <li><a href="https://www.youtube.com/watch?v=kz9jhG963no"><span>07</span><span><strong>Chamber of Reflection</strong><small>Mac DeMarco</small></span><i>MV ↗</i></a></li>
+                    <li><a href="https://www.youtube.com/watch?v=z7xPjk1ldjg"><span>08</span><span><strong>Tiger Mountain Peasant Song</strong><small>Fleet Foxes</small></span><i>MV ↗</i></a></li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+            <div class="device-controls">
+              <div class="dpad" aria-hidden="true"><i></i></div>
+              <button id="demo-button" type="button"><span>A</span><strong>KEEP THIS VIBE</strong></button>
+            </div>
+            <div class="device-lower" aria-hidden="true"><span></span><span></span><i></i><i></i><i></i><i></i><i></i></div>
+          </article>
+
+          <aside class="demo-notes">
+            <p class="note-label">WHAT YOU'RE SEEING</p>
+            <h3>실제 성공 결과를<br />안전하게 재현합니다.</h3>
+            <p>데모는 API Key를 받거나 네트워크로 OpenAI를 호출하지 않습니다. Repository에 기록된 실제 Chrome Extension E2E의 최종 Metadata 검증 결과를 그대로 보여줍니다.</p>
+            <dl>
+              <div><dt>기준곡</dt><dd>Radiohead — No Surprises</dd></div>
+              <div><dt>E2E 결과</dt><dd>PASS · 8 recommendations</dd></div>
+              <div><dt>검증 경계</dt><dd>OpenAI → Resolver → YouTube oEmbed</dd></div>
+            </dl>
+            <a class="text-link" href="https://github.com/seoheejung/pixel-jukebox/blob/main/docs/results/openai-e2e-2026-09-15T12-52-13-346Z.md">E2E 원본 기록 보기 ↗</a>
+            <p class="session-message" id="session-message" role="status" aria-live="polite">A 버튼을 누르면 큐레이션 흐름이 시작됩니다.</p>
+          </aside>
+        </div>
+      </section>
+
+      <section class="workflow-section" id="workflow" aria-labelledby="workflow-title">
+        <div class="section-heading">
+          <div>
+            <p class="section-number">03 / AI WORKFLOW</p>
+            <h2 id="workflow-title">추천보다 중요한 건,<br />검증된 다음 곡입니다.</h2>
+          </div>
+          <p>모델이 만든 링크를 믿는 대신, 조사된 후보 안에서 흐름을 설계하고 실제 YouTube Metadata까지 다시 확인합니다.</p>
+        </div>
+        <ol class="workflow-grid">
+          <li><span>01</span><strong>CONTEXT</strong><p>현재 곡, Playlist, 최근 추천으로 중복과 흐름을 파악</p></li>
+          <li><span>02</span><strong>DISCOVERY</strong><p>Web Search로 분위기와 시대감이 이어지는 후보 탐색</p></li>
+          <li><span>03</span><strong>EXTRACTION</strong><p>근거가 있는 Artist와 Track만 구조화해 추출</p></li>
+          <li><span>04</span><strong>SELECTION</strong><p>검증 후보 ID만으로 다음 재생 순서를 구성</p></li>
+          <li><span>05</span><strong>RESOLVER</strong><p>실제 YouTube 출처를 찾고 허용 영상 유형 확인</p></li>
+          <li><span>06</span><strong>VALIDATION</strong><p>oEmbed Metadata가 Artist와 곡에 일치하는지 최종 검증</p></li>
+        </ol>
+      </section>
+
+      <section class="features-section" aria-labelledby="features-title">
+        <p class="section-number">04 / MORE THAN AI PICKS</p>
+        <h2 id="features-title">음악 감상을 위한<br />작은 게임기 하나.</h2>
+        <div class="feature-grid">
+          <article><span>▶</span><div><h3>YOUTUBE PLAYER</h3><p>HTTPS Player Bridge를 통한 실제 YouTube 재생</p></div></article>
+          <article><span>≡</span><div><h3>PLAYLIST</h3><p>추가·삭제·순서 변경과 이전·다음·반복 재생</p></div></article>
+          <article><span>✦</span><div><h3>KEEP THIS VIBE</h3><p>검증된 곡만 추천 순서대로 Playlist에 바로 추가</p></div></article>
+          <article><span>◫</span><div><h3>PIXEL INTERFACE</h3><p>D-pad와 A/B 버튼, Popup·독립 창·Picture-in-Picture</p></div></article>
+        </div>
+      </section>
+
+      <section class="install-section" id="install" aria-labelledby="install-title">
+        <div class="install-copy">
+          <p class="section-number">05 / RUN THE FULL EXTENSION</p>
+          <h2 id="install-title">전체 기능은 Chrome에서.</h2>
+          <p>Web Demo가 공식 제출 경로입니다. 아래 설치는 실제 YouTube Player와 OpenAI 연동을 포함한 전체 Extension을 추가로 확인하려는 사용자를 위한 방법입니다.</p>
+          <div class="install-links">
+            <a class="button button-primary" href="https://github.com/seoheejung/pixel-jukebox">REPOSITORY ↗</a>
+            <a class="button button-quiet" href="./player.html">PLAYER BRIDGE ↗</a>
+          </div>
+        </div>
+        <ol class="install-steps">
+          <li><span>01</span><p><strong>Node.js 22.12+</strong> 준비 후 Repository clone</p></li>
+          <li><span>02</span><p><code>npm ci</code></p></li>
+          <li><span>03</span><p><code>bridge.config.local.json</code>에 Player Bridge URL 설정</p></li>
+          <li><span>04</span><p><code>npm run build</code></p></li>
+          <li><span>05</span><p>Chrome 확장 프로그램 페이지에서 <code>dist/</code> Load unpacked</p></li>
+          <li><span>06</span><p>KEEP THIS VIBE 사용 시 Settings의 OpenAI API Key 입력 후 <strong>CONNECT</strong></p></li>
+        </ol>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div><strong>PIXEL JUKEBOX</strong><span>KEEP THE SONG. KEEP THE FEELING.</span></div>
+      <div class="footer-links">
+        <a href="https://github.com/seoheejung/pixel-jukebox">GITHUB ↗</a>
+        <a href="./player.html">PLAYER BRIDGE ↗</a>
+      </div>
+    </footer>
+
+    <script type="module" src="./demo.js"></script>
+  </body>
+</html>

@@ -2,6 +2,10 @@
 
 > 현재 곡의 분위기를 이어갈 Playlist를 AI가 큐레이션하고, 실제 YouTube 영상까지 검증해 재생하는 레트로 픽셀 스타일 Chrome Extension
 
+**[Web Demo — KEEP THIS VIBE 체험하기](https://seoheejung.github.io/pixel-jukebox/)**
+
+Web Demo는 설치 없이 실행할 수 있는 공식 제출 경로다. 실제 OpenAI를 호출하지 않으며, 기존 Chrome Extension E2E에서 검증된 결과를 재현한다.
+
 <p align="center">
   <img src="docs/images/Screenshot%202026-09-16%20003528.png" alt="Playlist 화면" width="30%" />
   <img src="docs/images/Screenshot%202026-09-16%20003741.png" alt="KEEP THIS VIBE 추천 결과" width="30%" />
