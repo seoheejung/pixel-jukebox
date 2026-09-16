@@ -50,7 +50,7 @@
   function renderResults(restored) {
     showPanel(resultsPanel);
     screenState.textContent = 'COMPLETE';
-    demoFooter.textContent = 'A OPEN YOUTUBE · VERIFIED RESULTS';
+    demoFooter.textContent = 'VERIFIED RESULTS · NO PLAYBACK';
     demoButton.disabled = true;
     sessionMessage.textContent = restored
       ? '이 브라우저 세션에서는 이미 Demo를 실행했습니다. 새 세션에서 다시 체험할 수 있습니다.'

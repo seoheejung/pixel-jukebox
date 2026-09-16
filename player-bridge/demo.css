@@ -136,11 +136,9 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 .results-summary strong { font-size: 11px; }
 .results-summary small { font-size: 7px; font-weight: 900; text-align: right; }
 .result-list { height: calc(100% - 40px); overflow-y: auto; scrollbar-color: var(--lcd-ink) var(--lcd-soft); scrollbar-width: thin; }
-.result-list li { border-bottom: 1px solid #0f380f66; }
-.result-list a { display: grid; grid-template-columns: 23px minmax(0, 1fr) auto; gap: 7px; align-items: center; min-height: 45px; color: inherit; text-decoration: none; }
-.result-list a:hover, .result-list a:focus-visible { background: #0f380f15; }
-.result-list a > span:first-child { font-size: 9px; font-weight: 900; }
-.result-list a > span:nth-child(2) { min-width: 0; }
+.result-row { display: grid; grid-template-columns: 23px minmax(0, 1fr) auto; gap: 7px; align-items: center; min-height: 45px; border-bottom: 1px solid #0f380f66; }
+.result-row > span:first-child { font-size: 9px; font-weight: 900; }
+.result-row > span:nth-child(2) { min-width: 0; }
 .result-list strong, .result-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .result-list strong { font-size: 10px; }
 .result-list small { margin-top: 2px; font-size: 8px; }
@@ -203,6 +201,10 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 .install-section .button { border-color: #fff; box-shadow: 4px 4px 0 #2e1722; }
 .install-section .button-primary { color: var(--pink-dark); background: #fff; }
 .install-section .button-quiet { color: #fff; background: transparent; }
+.bridge-note { display: grid; gap: 8px; max-width: 500px; margin-top: 20px; padding: 14px 16px; border-left: 3px solid #fff; background: #ffffff12; }
+.bridge-note strong { font: 900 10px/1.4 "Courier New", monospace; letter-spacing: .5px; }
+.bridge-note code { width: fit-content; max-width: 100%; overflow-wrap: anywhere; }
+.bridge-note span { color: #efdce5; font-size: 12px; line-height: 1.6; word-break: keep-all; overflow-wrap: break-word; }
 .install-steps { margin: 0; padding: 0; border-top: 2px solid #fff; list-style: none; }
 .install-steps li { display: grid; grid-template-columns: 45px minmax(0, 1fr); gap: 10px; align-items: center; min-height: 72px; border-bottom: 1px solid #ffffff66; }
 .install-steps span { font: 900 11px/1 "Courier New", monospace; }
@@ -290,7 +292,7 @@ code { padding: 3px 6px; color: var(--lcd-ink); background: var(--lcd); font: 80
   .pixel-album::after { top: 18px; left: 25px; box-shadow: 11px 0 0 var(--lcd), 5px 16px 0 -1px var(--lcd-ink); }
   .pixel-album span { box-shadow: -50px 0 0 var(--lcd), 0 -50px 0 var(--lcd), -50px -50px 0 var(--lcd); }
   .reference-track strong { font-size: 13px; }
-  .result-list a { grid-template-columns: 21px minmax(0, 1fr) auto; gap: 5px; }
+  .result-row { grid-template-columns: 21px minmax(0, 1fr) auto; gap: 5px; }
   .results-summary small { display: none; }
   .device-controls { grid-template-columns: 80px minmax(0, 1fr); padding-inline: 8px; }
   .dpad { width: 80px; height: 80px; }

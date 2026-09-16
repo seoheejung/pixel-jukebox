@@ -36,6 +36,9 @@ describe('GitHub Pages web demo', () => {
     expect(html).toContain('<script type="module" src="./demo.js"></script>');
     expect(html).toContain('href="./demo.css"');
     expect(readFileSync('player-bridge/player.html', 'utf8')).toContain('<title>Pixel Jukebox Player Bridge</title>');
+    expect(html).not.toContain('href="./player.html"');
+    expect(html).toContain('PLAYER BRIDGE · EXTENSION ONLY');
+    expect(html).toContain('단독 실행 화면이 아닙니다');
   });
 
   it('uses the Extension hardware structure in the demo console', () => {
@@ -47,10 +50,10 @@ describe('GitHub Pages web demo', () => {
     expect(html).not.toContain('class="screen-label"');
   });
 
-  it('uses the documented E2E source and eight verified recommendation links', () => {
+  it('uses eight documented E2E results without YouTube navigation', () => {
     expect(html).toContain('openai-e2e-2026-09-15T12-52-13-346Z.md');
     expect(html).toContain('Radiohead — No Surprises');
-    expect([...html.matchAll(/https:\/\/www\.youtube\.com\/watch\?v=([\w-]+)/g)].map((match) => match[1])).toEqual([
+    expect([...html.matchAll(/data-e2e-video-id="([\w-]+)"/g)].map((match) => match[1])).toEqual([
       '6hUpJ94q0c8',
       'A-Tod1_tZdU',
       '4texipD7faM',
@@ -60,6 +63,9 @@ describe('GitHub Pages web demo', () => {
       'kz9jhG963no',
       'z7xPjk1ldjg',
     ]);
+    expect(html).not.toContain('href="https://www.youtube.com/watch');
+    expect(html).not.toContain('OPEN YOUTUBE');
+    expect(script).toContain('VERIFIED RESULTS · NO PLAYBACK');
     expect(html).toContain('실제 OpenAI 호출 없이');
   });
 

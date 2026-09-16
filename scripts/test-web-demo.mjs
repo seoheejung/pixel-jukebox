@@ -77,6 +77,7 @@ const intactKoreanWords = `(() => {
     ['.demo-notes h3', '재현합니다.'],
     ['.workflow-section .section-heading > p', '실제'],
     ['.workflow-grid li:nth-child(5) p', '확인'],
+    ['.bridge-note span', '화면'],
   ];
   return checks.every(([selector, word]) => {
     const root = document.querySelector(selector);
@@ -146,11 +147,18 @@ try {
       && document.querySelectorAll('.speaker i').length === 6;
   })()`), true, 'Demo console must match the Extension hardware structure and scale');
   assert.equal(await evaluate(desktop, undefined, intactKoreanWords), true, 'Desktop Korean words must not split across lines');
+  assert.equal(await evaluate(desktop, undefined, `(() => {
+    const bridgeNote = document.querySelector('.bridge-note');
+    return document.querySelector('a[href="./player.html"]') === null
+      && bridgeNote?.textContent.includes('EXTENSION ONLY')
+      && bridgeNote?.textContent.includes('단독 실행 화면이 아닙니다');
+  })()`), true, 'Player Bridge must be documented as an Extension-only endpoint, not a launch link');
   assert.equal(await evaluate(desktop, undefined, "window.PixelJukeboxDemo.hasCompleted(sessionStorage)"), false, 'First session must be ready');
   for (const [width, height, selector, name] of [
     [1191, 335, '.problem-strip', 'problem-1191'],
     [1526, 1123, '#demo', 'demo-1526'],
     [1630, 902, '#workflow', 'workflow-1630'],
+    [502, 535, '#install', 'install-502'],
   ]) {
     await desktop.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
     await evaluate(desktop, undefined, `document.documentElement.style.scrollBehavior = 'auto'; document.querySelector(${JSON.stringify(selector)}).scrollIntoView({ block: 'start' })`);
@@ -162,6 +170,15 @@ try {
   await desktop.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   await evaluate(desktop, undefined, "document.querySelector('#demo').scrollIntoView({ block: 'start' }); document.querySelector('#demo-button').click()", { userGesture: true });
   await until(() => evaluate(desktop, undefined, "!document.querySelector('#results-panel').hidden && document.querySelectorAll('.result-list li').length === 8"), 'desktop demo results', 10000);
+  assert.equal(await evaluate(desktop, undefined, `(() => {
+    const before = location.href;
+    const firstResult = document.querySelector('.result-row');
+    firstResult?.click();
+    return document.querySelectorAll('.result-list a').length === 0
+      && document.querySelectorAll('.result-row[data-e2e-video-id]').length === 8
+      && location.href === before
+      && document.querySelector('#demo-footer')?.textContent === 'VERIFIED RESULTS · NO PLAYBACK';
+  })()`), true, 'Verified results must not navigate to YouTube');
   assert.equal(await evaluate(desktop, undefined, "window.PixelJukeboxDemo.claimDemo(sessionStorage)"), false, 'Second run in one session must be rejected');
   const { data: desktopShot } = await desktop.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   await writeFile(resolve(output, 'web-demo-desktop.png'), desktopShot, 'base64');
@@ -192,9 +209,11 @@ try {
   console.log('PASS: Korean headings and descriptions keep words intact across line wraps');
   console.log('PASS: first run, same-session limit, and new-session run');
   console.log('PASS: eight documented E2E results, no local asset 404, no console error');
+  console.log('PASS: verified result rows do not navigate to YouTube');
+  console.log('PASS: Player Bridge is documented without a misleading launch link');
   console.log('PASS: existing player.html, player.css, and player.js remain available');
   console.log(`Screenshots: ${resolve(output, 'web-demo-{desktop,mobile-390}.png')}`);
-  console.log(`Wrap screenshots: ${resolve(output, 'web-demo-wrap-{problem-1191,demo-1526,workflow-1630}.png')}`);
+  console.log(`Section screenshots: ${resolve(output, 'web-demo-wrap-{problem-1191,demo-1526,workflow-1630,install-502}.png')}`);
 } finally {
   for (const connection of pages) connection.close();
   if (browser) {

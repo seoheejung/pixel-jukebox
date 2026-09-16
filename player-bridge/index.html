@@ -120,14 +120,14 @@
                     <small>72.47s E2E · REPLAYED INSTANTLY</small>
                   </div>
                   <ol class="result-list" aria-label="검증된 추천 결과">
-                    <li><a href="https://www.youtube.com/watch?v=6hUpJ94q0c8"><span>01</span><span><strong>Let Down</strong><small>Radiohead</small></span><i>MV ↗</i></a></li>
-                    <li><a href="https://www.youtube.com/watch?v=A-Tod1_tZdU"><span>02</span><span><strong>I Need My Girl</strong><small>The National</small></span><i>MV ↗</i></a></li>
-                    <li><a href="https://www.youtube.com/watch?v=4texipD7faM"><span>03</span><span><strong>Retrograde</strong><small>James Blake</small></span><i>MV ↗</i></a></li>
-                    <li><a href="https://www.youtube.com/watch?v=oAhO5eegMfY"><span>04</span><span><strong>re:member</strong><small>Ólafur Arnalds</small></span><i>MV ↗</i></a></li>
-                    <li><a href="https://www.youtube.com/watch?v=68nVcK58qO8"><span>05</span><span><strong>Flightless Bird, American Mouth</strong><small>Iron &amp; Wine</small></span><i>LIVE ↗</i></a></li>
-                    <li><a href="https://www.youtube.com/watch?v=AIOAlaACuv4"><span>06</span><span><strong>Fast Car</strong><small>Tracy Chapman</small></span><i>MV ↗</i></a></li>
-                    <li><a href="https://www.youtube.com/watch?v=kz9jhG963no"><span>07</span><span><strong>Chamber of Reflection</strong><small>Mac DeMarco</small></span><i>MV ↗</i></a></li>
-                    <li><a href="https://www.youtube.com/watch?v=z7xPjk1ldjg"><span>08</span><span><strong>Tiger Mountain Peasant Song</strong><small>Fleet Foxes</small></span><i>MV ↗</i></a></li>
+                    <li class="result-row" data-e2e-video-id="6hUpJ94q0c8"><span>01</span><span><strong>Let Down</strong><small>Radiohead</small></span><i>MV</i></li>
+                    <li class="result-row" data-e2e-video-id="A-Tod1_tZdU"><span>02</span><span><strong>I Need My Girl</strong><small>The National</small></span><i>MV</i></li>
+                    <li class="result-row" data-e2e-video-id="4texipD7faM"><span>03</span><span><strong>Retrograde</strong><small>James Blake</small></span><i>MV</i></li>
+                    <li class="result-row" data-e2e-video-id="oAhO5eegMfY"><span>04</span><span><strong>re:member</strong><small>Ólafur Arnalds</small></span><i>MV</i></li>
+                    <li class="result-row" data-e2e-video-id="68nVcK58qO8"><span>05</span><span><strong>Flightless Bird, American Mouth</strong><small>Iron &amp; Wine</small></span><i>LIVE</i></li>
+                    <li class="result-row" data-e2e-video-id="AIOAlaACuv4"><span>06</span><span><strong>Fast Car</strong><small>Tracy Chapman</small></span><i>MV</i></li>
+                    <li class="result-row" data-e2e-video-id="kz9jhG963no"><span>07</span><span><strong>Chamber of Reflection</strong><small>Mac DeMarco</small></span><i>MV</i></li>
+                    <li class="result-row" data-e2e-video-id="z7xPjk1ldjg"><span>08</span><span><strong>Tiger Mountain Peasant Song</strong><small>Fleet Foxes</small></span><i>MV</i></li>
                   </ol>
                 </div>
                 <div class="lcd-footer" id="demo-footer">A KEEP THIS VIBE · WEB DEMO</div>
@@ -204,7 +204,11 @@
           <p>Web Demo가 공식 제출 경로입니다. 아래 설치는 실제 YouTube Player와 OpenAI 연동을 포함한 전체 Extension을 추가로 확인하려는 사용자를 위한 방법입니다.</p>
           <div class="install-links">
             <a class="button button-primary" href="https://github.com/seoheejung/pixel-jukebox">REPOSITORY ↗</a>
-            <a class="button button-quiet" href="./player.html">PLAYER BRIDGE ↗</a>
+          </div>
+          <div class="bridge-note">
+            <strong>PLAYER BRIDGE · EXTENSION ONLY</strong>
+            <code>https://seoheejung.github.io/pixel-jukebox/player.html</code>
+            <span>Extension이 재생 정보를 전달할 때 사용하는 연결 경로이며, 단독 실행 화면이 아닙니다.</span>
           </div>
         </div>
         <ol class="install-steps">
@@ -222,7 +226,6 @@
       <div><strong>PIXEL JUKEBOX</strong><span>KEEP THE SONG. KEEP THE FEELING.</span></div>
       <div class="footer-links">
         <a href="https://github.com/seoheejung/pixel-jukebox">GITHUB ↗</a>
-        <a href="./player.html">PLAYER BRIDGE ↗</a>
       </div>
     </footer>
 
