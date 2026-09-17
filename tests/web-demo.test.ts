@@ -53,6 +53,13 @@ describe('GitHub Pages web demo', () => {
     expect(readme).toContain('Deploy web demo and player bridge');
     expect(pagesWorkflow).toContain('name: Deploy web demo and player bridge');
     expect(readme).not.toContain('Actions → Deploy player bridge');
+    expect(readme).toContain('## 전체 Extension 직접 실행 (선택)');
+    expect(readme).toContain('## 전체 Extension 설치 및 실행');
+    expect(readme).toContain('> Web Demo가 공식 제출 경로다.');
+    expect(readme).toContain('Player Bridge URL은 Extension과 YouTube IFrame Player를 연결하는 HTTPS Bridge다.');
+    expect(readme).toContain('검증 실패 Candidate를 제외하고 검증된 결과만 유지');
+    expect(readme).not.toContain('## 빠른 실행');
+    expect(readme).not.toContain('## 상세 설치 및 실행');
   });
 
   it('keeps the demo and existing player bridge as separate Pages entries', () => {

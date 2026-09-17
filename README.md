@@ -71,7 +71,7 @@ Pixel Jukebox는 현재 곡과 Playlist 흐름을 기준으로 다음에 이어 
 - OpenAI Web Search와 Structured Outputs 기반 큐레이션
 - 실제 YouTube 출처와 oEmbed Metadata로 곡·Artist 일치 여부 검증
 - 검증된 결과만 추천 순서대로 표시하고 Playlist에 바로 추가
-- Cache와 동일 Panel의 동시 중복 실행 차단, `MORE LIKE THIS` 재탐색, 실패 시 부분 결과 유지
+- Cache와 동일 Panel의 동시 중복 실행 차단, `MORE LIKE THIS` 재탐색, 검증 실패 Candidate를 제외하고 검증된 결과만 유지
 
 ## AI 활용 방식
 
@@ -124,8 +124,11 @@ flowchart TD
 | Storage | `chrome.storage.local` · `chrome.storage.session` · UI `localStorage` |
 | AI | OpenAI Responses API · Web Search · Structured Outputs |
 
-## 빠른 실행
+## 전체 Extension 직접 실행 (선택)
 
+> Web Demo가 공식 제출 경로다.
+> 아래 절차는 실제 YouTube 재생과 OpenAI 연동까지 포함한 전체 Chrome Extension을 직접 확인하려는 경우에만 필요하다.
+>
 > 제공된 Player Bridge를 사용할 경우 별도 Fork나 Bridge 배포는 필요하지 않다.
 
 1. [Pixel Jukebox Repository](https://github.com/seoheejung/pixel-jukebox)를 clone하고 Node.js 22.12.0 이상을 준비한다.
@@ -167,9 +170,11 @@ npm run build
 
 `bridge.config.local.json`은 빌드 전 필요한 로컬 설정이며 Git에 포함되지 않는다.
 
-Player Bridge URL은 Extension iframe용 endpoint다. 브라우저에서 `player.html`만 직접 열면 재생 정보가 전달되지 않아 빈 화면으로 보이는 것이 정상이며, Web Demo URL로 사용하지 않는다.
+Player Bridge URL은 Extension과 YouTube IFrame Player를 연결하는 HTTPS Bridge다.
+브라우저에서 `player.html`만 직접 열면 재생 정보가 전달되지 않아 빈 화면으로 보이는 것이 정상이며,
+Web Demo URL로 사용하지 않는다.
 
-## 상세 설치 및 실행
+## 전체 Extension 설치 및 실행
 
 Node.js 22.12.0 이상이 필요하다.
 
