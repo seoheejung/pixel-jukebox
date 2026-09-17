@@ -271,8 +271,8 @@ try {
     try {
       terminal = await waitForValue(() => evaluate(browser, panel, `(() => {
       if (window.__pixelJukeboxMeasurement && window.__pixelJukeboxRecommendations) return { recommendations: window.__pixelJukeboxRecommendations, measurement: window.__pixelJukeboxMeasurement };
-      const retry = document.querySelector('#ai-picks-retry');
-      return retry && !retry.hidden ? { error: document.querySelector('#ai-picks-message')?.textContent || '추천 실패' } : null;
+      const message = document.querySelector('#ai-picks-message')?.textContent;
+      return message ? { error: message } : null;
     })()`), `recommendations for ${seed.videoTitle}`, runTimeoutMs);
     } catch (error) {
       await reportLiveTimeout(browser, panel, seed, runStartedAt, error);
@@ -282,8 +282,8 @@ try {
       await evaluate(browser, panel, "window.__pixelJukeboxMeasurement = undefined; window.__pixelJukeboxRecommendations = undefined; document.querySelector('#ai-picks').click()", { userGesture: true });
       terminal = await waitForValue(() => evaluate(browser, panel, `(() => {
         if (window.__pixelJukeboxMeasurement && window.__pixelJukeboxRecommendations) return { recommendations: window.__pixelJukeboxRecommendations, measurement: window.__pixelJukeboxMeasurement };
-        const retry = document.querySelector('#ai-picks-retry');
-        return retry && !retry.hidden ? { error: document.querySelector('#ai-picks-message')?.textContent || '추천 실패' } : null;
+        const message = document.querySelector('#ai-picks-message')?.textContent;
+        return message ? { error: message } : null;
       })()`), `refreshed recommendations for ${seed.videoTitle}`, runTimeoutMs);
     }
     if (terminal.error) throw new Error(`추천 실패 ${seed.videoTitle}: ${terminal.error}`);

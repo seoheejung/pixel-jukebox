@@ -3,7 +3,7 @@ import { isAiErrorDetails, isAiProgressMessage, isAiRecommendationErrorMessage, 
 import type { AiErrorDetails, RecommendationErrorCode } from '../shared/ai';
 import type { RecommendationProgressStage } from '../shared/ai';
 import type { AiState } from '../shared/ai';
-import { recommendationTrack, MIN_RECOMMENDATIONS } from '../shared/recommendation';
+import { recommendationTrack } from '../shared/recommendation';
 import type { Recommendation } from '../shared/recommendation';
 import { adjacentTrack, playlistTrack, trackAfterEnded } from '../shared/playlist';
 import { applyDesign, defaultSettings, isDesignSettings } from '../shared/settings';
@@ -50,10 +50,8 @@ const similarVibesOpenPlaylist = document.querySelector<HTMLButtonElement>('#sim
 let aiPicks: HTMLButtonElement;
 const aiPicksMessage = document.querySelector<HTMLParagraphElement>('#ai-picks-message')!;
 const aiPicksList = document.querySelector<HTMLDivElement>('#ai-picks-list')!;
-const aiPicksSource = document.querySelector<HTMLParagraphElement>('#ai-picks-source')!;
 const aiPicksLoading = document.querySelector<HTMLElement>('#ai-picks-loading')!;
 const aiPicksProgress = document.querySelector<HTMLElement>('#ai-picks-progress')!;
-const aiPicksRetry = document.querySelector<HTMLButtonElement>('#ai-picks-retry')!;
 const menuView = document.querySelector<HTMLElement>('#menu-view')!;
 const playerRoot = document.querySelector<HTMLElement>('#player')!;
 const openWindowButton = document.querySelector<HTMLButtonElement>('#open-window');
@@ -297,13 +295,8 @@ const progressText: Record<RecommendationProgressStage, string> = {
 };
 
 function renderRecommendationStatus() {
-  const requested = recommendationLoading || currentRecommendations.length > 0 || Boolean(aiPicksMessage.textContent);
-  const source = requested ? recommendationSource : selectedRecommendationTrack();
-  aiPicksSource.hidden = !source;
-  aiPicksSource.textContent = source ? `${requested ? 'Based on' : 'Selected'} · ${source.channelTitle} — ${source.videoTitle}` : '';
   aiPicksLoading.hidden = !recommendationLoading;
   aiPicksProgress.textContent = progressText[recommendationStage];
-  aiPicksRetry.hidden = recommendationLoading || !aiPicksMessage.textContent;
   document.querySelector<HTMLElement>('[data-view="ai-picks"]')?.setAttribute('aria-busy', String(recommendationLoading));
 }
 
@@ -378,7 +371,7 @@ const continueClose = continuePage.querySelector<HTMLButtonElement>('#continue-c
 const continueToggle = playerRoot.querySelector<HTMLButtonElement>('.mini-disc')!;
 
 function continueItems(): HTMLButtonElement[] {
-  return [...continuePage.querySelectorAll<HTMLButtonElement>('#similar-vibes-source-trigger, #similar-vibes-open-playlist, #ai-picks, #ai-picks-retry, .ai-pick-add')]
+  return [...continuePage.querySelectorAll<HTMLButtonElement>('#similar-vibes-source-trigger, #similar-vibes-open-playlist, #ai-picks, .ai-pick-add')]
     .filter((button) => !button.disabled && !button.closest('[hidden], [inert]'));
 }
 
@@ -682,8 +675,7 @@ function connect() {
           if (message.measurement) window.__pixelJukeboxMeasurement = structuredClone(message.measurement);
           window.__pixelJukeboxRecommendations = structuredClone(message.recommendations);
         }
-        aiPicksMessage.textContent = currentRecommendations.length < MIN_RECOMMENDATIONS
-          ? `${currentRecommendations.length} verified tracks keep the vibe going. Try More Like This for a new sequence.` : '';
+        aiPicksMessage.textContent = '';
         renderRecommendations(currentRecommendations);
         renderPlayer();
         return;
@@ -834,7 +826,6 @@ similarVibesSourceList.addEventListener('focusout', (event) => {
 });
 similarVibesOpenPlaylist.addEventListener('click', () => showScreen('playlist'));
 aiPicks.addEventListener('click', requestRecommendations);
-aiPicksRetry.addEventListener('click', requestRecommendations);
 openWindowButton?.addEventListener('click', () => {
   void chrome.windows.create({
     url: `${chrome.runtime.getURL('sidepanel.html')}?window=1`,

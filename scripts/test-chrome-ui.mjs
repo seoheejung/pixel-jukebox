@@ -292,7 +292,7 @@ try {
   await until(() => evaluate(browser, panel, "document.querySelector('#similar-vibes-connect').hidden && !document.querySelector('#ai-picks').hidden"), 'Inline Similar Vibes connection');
   assert.equal(await screen(), 'now-playing', 'Inline connection must not navigate to Settings or replace Now Playing');
   assert.equal(await evaluate(browser, panel, "document.querySelector('#continue-drawer').classList.contains('is-open') && document.querySelector('#similar-vibes-key').value === ''"), true, 'Successful inline connection must keep the drawer open and clear its input');
-  assert.equal(await evaluate(browser, panel, "Boolean(document.querySelector('#ai-picks').parentElement.classList.contains('lcd-content') && (document.querySelector('#ai-picks').compareDocumentPosition(document.querySelector('#ai-picks-list')) & Node.DOCUMENT_POSITION_FOLLOWING))"), true, 'GET PICKS must sit at the top of Similar Vibes content before the list');
+  assert.equal(await evaluate(browser, panel, "Boolean(document.querySelector('#ai-picks').parentElement.classList.contains('similar-vibes-controls') && (document.querySelector('#ai-picks').compareDocumentPosition(document.querySelector('#ai-picks-list')) & Node.DOCUMENT_POSITION_FOLLOWING))"), true, 'GET PICKS must share the reference row before the list');
   assert.equal(await evaluate(browser, panel, "window.__uiMessages.filter((message) => message.type === 'AI_RECOMMEND').length"), recommendationRequestsBeforeConnect, 'Connecting must wait for an explicit GET PICKS action');
   const { data: readyShot } = await browser.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }, panel);
   await writeFile(resolve(output, 'gameboy-similar-vibes-ready.png'), readyShot, 'base64');
@@ -430,7 +430,7 @@ try {
   assert.equal(await screen(), 'now-playing', 'LP continuation must keep Now Playing visible');
   assert.equal(await evaluate(browser, panel, "document.querySelector('#continue-drawer').classList.contains('is-open')"), true, 'LP must open the continuation drawer');
   assert.equal(await evaluate(browser, panel, "document.querySelector('#player').dataset.playbackState"), 'playing', 'Opening continuation must not pause playback');
-  assert.equal(await evaluate(browser, panel, `document.querySelector('#similar-vibes-source-trigger').dataset.videoId === ${JSON.stringify(sourceChoice.sourceVideoId)} && document.querySelector('#player').dataset.videoId === ${JSON.stringify(sourceChoice.playing)} && document.querySelector('#ai-picks-source').textContent.startsWith('Selected') && window.__uiMessages.filter((message) => message.type === 'CORE_EDIT').length === ${sourceChoice.coreEdits}`), true, 'Similar Vibes must select a non-playing Playlist source without playback or queue edits');
+  assert.equal(await evaluate(browser, panel, `document.querySelector('#similar-vibes-source-trigger').dataset.videoId === ${JSON.stringify(sourceChoice.sourceVideoId)} && document.querySelector('#player').dataset.videoId === ${JSON.stringify(sourceChoice.playing)} && window.__uiMessages.filter((message) => message.type === 'CORE_EDIT').length === ${sourceChoice.coreEdits}`), true, 'Similar Vibes must select a non-playing Playlist source without playback or queue edits');
   const recommendationDrawerLayout = await evaluate(browser, panel, `(() => {
     const drawerElement = document.querySelector('#continue-drawer');
     const queueElement = document.querySelector('.now-playing-queue:not(#continue-drawer)');
@@ -449,10 +449,20 @@ try {
     return requests.at(-1)?.sourceVideoId === ${JSON.stringify(sourceChoice.sourceVideoId)} && document.querySelector('#player').dataset.videoId === ${JSON.stringify(sourceChoice.playing)} && document.querySelector('#similar-vibes-source-trigger').disabled && document.querySelector('#continue-drawer .lcd-content').scrollTop === 0 && action.top >= content.top;
   })()`), true, 'GET PICKS must use the selected stored source, preserve playback, lock selection, and keep controls visible');
   assert.equal(await evaluate(browser, panel, "document.querySelector('#ai-picks-loading').hidden"), false, 'AI progress must be visible while searching');
-  assert.match(await evaluate(browser, panel, "document.querySelector('#ai-picks-source').textContent"), /Based on · .+ — .+/, 'Continuation must identify its seed track');
+  assert.equal(await evaluate(browser, panel, "document.querySelector('#ai-picks-source')"), null, 'Continuation must not duplicate the selected reference track');
   assert.equal(await evaluate(browser, panel, "getComputedStyle(document.querySelector('.pixel-loader i')).animationName"), 'pixel-search', 'Pixel loader must animate during search');
   await until(() => evaluate(browser, panel, "document.querySelector('#ai-picks-progress').textContent.includes('Arranging')"), 'Continuation selection progress');
   await until(() => evaluate(browser, panel, "document.querySelectorAll('.ai-pick-card').length === 6"), 'Six continuation songs');
+  assert.equal(await evaluate(browser, panel, `(() => {
+    const picker = document.querySelector('#similar-vibes-source-trigger').getBoundingClientRect();
+    const action = document.querySelector('#ai-picks').getBoundingClientRect();
+    const list = document.querySelector('#ai-picks-list');
+    const message = document.querySelector('#ai-picks-message');
+    return Math.abs(picker.top - action.top) < 1
+      && Math.abs(picker.bottom - action.bottom) < 1
+      && Boolean(list.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING)
+      && message.textContent === '';
+  })()`), true, 'Reference picker and More Like This must share one row with results before status copy');
   assert.equal(await evaluate(browser, panel, "document.querySelectorAll('.ai-pick-info, .ai-pick-back').length"), 0, 'Recommendation rows must not expose redundant info controls or duplicate backs');
   assert.equal(await evaluate(browser, panel, "document.querySelector('.ai-pick-type').textContent === 'MV' && getComputedStyle(document.querySelector('.ai-pick-face img')).display !== 'none'"), true, 'Recommendation rows must show thumbnail and video type');
   assert.equal(await evaluate(browser, panel, "getComputedStyle(document.querySelector('#ai-picks-loading')).display"), 'none', 'Completed AI loading indicator must not remain visible');
@@ -476,8 +486,8 @@ try {
   const recommendationsBeforeRetry = await evaluate(browser, panel, "window.__uiMessages.filter((message) => message.type === 'AI_RECOMMEND').length");
   await evaluate(browser, panel, "window.__emitUiMessage({ type: 'AI_RECOMMENDATION_ERROR', code: 'NO_CANDIDATES', details: { stage: 'discovery' } })");
   assert.equal(await evaluate(browser, panel, "getComputedStyle(document.querySelector('#ai-picks-loading')).display"), 'none', 'Failed AI loading indicator must be hidden');
-  assert.equal(await evaluate(browser, panel, "document.querySelector('#ai-picks-retry').hidden"), false, 'Failed recommendation must expose Retry');
-  await click('#ai-picks-retry');
+  assert.equal(await evaluate(browser, panel, "document.querySelector('#ai-picks-retry')"), null, 'Failed recommendation must not add a competing Retry action');
+  await click('#ai-picks');
   await until(() => evaluate(browser, panel, `window.__uiMessages.filter((message) => message.type === 'AI_RECOMMEND').length > ${recommendationsBeforeRetry}`), 'AI retry request');
   await browser.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] }, panel);
   assert.equal(await evaluate(browser, panel, "getComputedStyle(document.querySelector('.pixel-loader i')).animationName"), 'none', 'Reduced motion must stop the pixel loader');
