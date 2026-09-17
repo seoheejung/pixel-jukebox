@@ -15,7 +15,7 @@ D-pad, A/B, SELECT/START는 Demo 화면 안에서만 동작하며, 추천 결과
 | --- | --- | --- |
 | Web Demo | <https://seoheejung.github.io/pixel-jukebox/> | 심사자용 기본 실행 경로 |
 | Repository | <https://github.com/seoheejung/pixel-jukebox> | 전체 Extension 소스와 설치 방법 |
-| Player Bridge | <https://seoheejung.github.io/pixel-jukebox/player.html> | Extension이 재생 정보를 전달하는 HTTPS endpoint · 단독 실행 화면 아님 |
+| Player Bridge | <https://seoheejung.github.io/pixel-jukebox/player.html> | Extension과 YouTube IFrame Player를 연결하는 HTTPS Bridge · 단독 실행 화면 아님 |
 
 <p align="center">
   <img src="docs/images/Screenshot%202026-09-16%20003528.png" alt="Playlist 화면" width="30%" />
