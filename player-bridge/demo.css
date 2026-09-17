@@ -120,10 +120,6 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 .demo-menu button.is-selected::before { content: ">"; position: absolute; margin-left: -7px; color: var(--lcd); }
 .demo-menu span { font-size: 9px; font-weight: 900; }
 .demo-menu strong { font-size: 10px; }
-.demo-settings { margin: 0; border-top: 2px solid var(--lcd-ink); }
-.demo-settings div { display: flex; justify-content: space-between; gap: 12px; padding: 12px 4px; border-bottom: 1px solid #0f380f66; }
-.demo-settings dt, .demo-settings dd { margin: 0; font-size: 9px; font-weight: 900; }
-.settings-copy { margin: 16px 2px 0; font-size: 9px; font-weight: 700; line-height: 1.6; }
 .curating-title { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 11px; align-items: center; min-height: 52px; margin-bottom: 10px; }
 .curating-title .lcd-kicker { margin-bottom: 4px; }
 .curating-title strong { font-size: 10px; }
@@ -179,7 +175,8 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 .device-lower { position: relative; min-height: 88px; }
 .system-controls { position: absolute; top: 7px; left: 62px; display: flex; gap: 14px; }
 .system-controls > button { display: grid; justify-items: center; gap: 6px; min-width: 60px; padding: 0; border: 0; color: #30376d; background: transparent; font: 900 9px/1 "Courier New", monospace; transform: rotate(-25deg); cursor: pointer; }
-.system-controls > button:active { transform: translateY(2px) rotate(-25deg); }
+.system-controls > button:active:not(:disabled) { transform: translateY(2px) rotate(-25deg); }
+.system-controls > button:disabled { cursor: default; opacity: .45; }
 .system-controls i { display: block; width: 58px; height: 13px; border-radius: 9px; background: #b5b8be; box-shadow: inset 0 1px 1px #ffffff50; }
 .speaker { position: absolute; top: 12px; right: 8px; display: flex; justify-content: center; gap: 5px; width: 55px; transform: rotate(-24deg); }
 .speaker i { flex: 0 0 3px; width: 3px; height: 36px; border-radius: 4px; background: #b2b0aa; box-shadow: inset 1px 0 1px #48424c15; }

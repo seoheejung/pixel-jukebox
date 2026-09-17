@@ -146,7 +146,8 @@ try {
       && document.querySelectorAll('.action-control > button').length === 2
       && document.querySelectorAll('.system-controls > button').length === 2
       && document.querySelectorAll('.dpad > button').length === 4
-      && [...document.querySelectorAll('.action-control > button, .system-controls > button, .dpad > button')].every((button) => !button.disabled)
+      && [...document.querySelectorAll('.action-control > button, #demo-select, .dpad > button')].every((button) => !button.disabled)
+      && document.querySelector('#demo-start').disabled
       && document.querySelectorAll('.speaker i').length === 6;
   })()`), true, 'Demo console must match the Extension hardware structure and scale');
   assert.equal(await evaluate(desktop, undefined, intactKoreanWords), true, 'Desktop Korean words must not split across lines');
@@ -171,14 +172,11 @@ try {
     await writeFile(resolve(output, `web-demo-wrap-${name}.png`), data, 'base64');
   }
   await desktop.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
-  await evaluate(desktop, undefined, "document.querySelector('#demo').scrollIntoView({ block: 'start' }); document.querySelector('#demo-start').click()", { userGesture: true });
-  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#settings-panel').hidden && document.querySelector('#screen-state').textContent === 'DEMO'"), true, 'START must open Demo settings');
-  const { data: settingsShot } = await desktop.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
-  await writeFile(resolve(output, 'web-demo-controls-settings.png'), settingsShot, 'base64');
-  await evaluate(desktop, undefined, "document.querySelector('#demo-back').click()", { userGesture: true });
-  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#ready-panel').hidden"), true, 'B must return from Demo settings');
+  await evaluate(desktop, undefined, "document.querySelector('#demo').scrollIntoView({ block: 'start' }); document.querySelector('#dpad-up').click(); document.querySelector('#dpad-down').click()", { userGesture: true });
+  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#ready-panel').hidden && document.querySelector('#settings-panel') === null"), true, 'D-pad must not leave the reference track or expose a Demo-only settings screen');
   await evaluate(desktop, undefined, "document.querySelector('#demo-select').click()", { userGesture: true });
   assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#home-panel').hidden && document.querySelector('#screen-state').textContent === 'HOME'"), true, 'SELECT must open Home');
+  assert.equal(await evaluate(desktop, undefined, "document.querySelectorAll('.demo-menu button').length"), 2, 'Home must expose only Reference Track and Keep This Vibe');
   const { data: homeShot } = await desktop.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   await writeFile(resolve(output, 'web-demo-controls-home.png'), homeShot, 'base64');
   await evaluate(desktop, undefined, "document.querySelector('#dpad-up').click(); document.querySelector('#dpad-down').click()", { userGesture: true });
@@ -206,7 +204,7 @@ try {
 
   await desktop.send('Page.reload');
   await until(() => evaluate(desktop, undefined, "document.readyState === 'complete' && !document.querySelector('#results-panel').hidden"), 'same-session reload');
-  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#demo-button').disabled && document.querySelector('#session-message').textContent.includes('이미 Demo를 실행')"), true, 'Same session must restore the completed state without disabling screen navigation');
+  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#demo-button').disabled && document.querySelector('#session-message').textContent.includes('이미 1회 실행')"), true, 'Same session must restore the completed state without disabling screen navigation');
 
   const mobile = await page(390, 844);
   await mobile.send('Page.navigate', { url: `${origin}/` });
@@ -231,11 +229,11 @@ try {
   console.log('PASS: first run, same-session limit, and new-session run');
   console.log('PASS: eight documented E2E results, no local asset 404, no console error');
   console.log('PASS: verified result rows do not navigate to YouTube');
-  console.log('PASS: D-pad, A/B, SELECT, and START navigate only inside the Demo screen');
+  console.log('PASS: D-pad, A/B, and SELECT navigate only inside the Demo screen; START is disabled');
   console.log('PASS: Player Bridge is documented without a misleading launch link');
   console.log('PASS: existing player.html, player.css, and player.js remain available');
   console.log(`Screenshots: ${resolve(output, 'web-demo-{desktop,mobile-390}.png')}`);
-  console.log(`Control screenshots: ${resolve(output, 'web-demo-controls-{home,settings}.png')}`);
+  console.log(`Control screenshot: ${resolve(output, 'web-demo-controls-home.png')}`);
   console.log(`Section screenshots: ${resolve(output, 'web-demo-wrap-{problem-1191,demo-1526,workflow-1630,install-502}.png')}`);
 } finally {
   for (const connection of pages) connection.close();

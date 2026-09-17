@@ -35,7 +35,6 @@
   const readyPanel = document.querySelector('#ready-panel');
   const curatingPanel = document.querySelector('#curating-panel');
   const resultsPanel = document.querySelector('#results-panel');
-  const settingsPanel = document.querySelector('#settings-panel');
   const screenTitle = document.querySelector('#screen-title');
   const screenState = document.querySelector('#screen-state');
   const demoFooter = document.querySelector('#demo-footer');
@@ -43,7 +42,7 @@
   const sessionMessage = document.querySelector('#session-message');
 
   const controls = [demoButton, backButton, selectButton, startButton, dpadUp, dpadRight, dpadDown, dpadLeft];
-  const panels = [homePanel, readyPanel, curatingPanel, resultsPanel, settingsPanel];
+  const panels = [homePanel, readyPanel, curatingPanel, resultsPanel];
   if (!controls.every((control) => control instanceof HTMLButtonElement) || !panels.every((panel) => panel instanceof HTMLElement) || !(screenTitle instanceof HTMLElement) || !(screenState instanceof HTMLElement) || !(demoFooter instanceof HTMLElement) || !(progressMessage instanceof HTMLElement) || !(sessionMessage instanceof HTMLElement)) return;
 
   const menuItems = [...document.querySelectorAll('.demo-menu button')];
@@ -98,16 +97,10 @@
 
   function renderReady(remember = true) {
     showPanel(readyPanel, remember);
-    if (running) setScreen('KEEP THIS VIBE', 'CURATING', 'CURATING · SELECT HOME · START SETTINGS');
+    if (running) setScreen('KEEP THIS VIBE', 'CURATING', 'CURATING · SELECT HOME');
     else if (resultsReady) setScreen('KEEP THIS VIBE', 'COMPLETE', 'A VIEW RESULTS · SELECT HOME');
     else setScreen('KEEP THIS VIBE', 'READY', 'A KEEP THIS VIBE · WEB DEMO');
     demoButton.disabled = running;
-  }
-
-  function renderSettings(remember = true) {
-    showPanel(settingsPanel, remember);
-    setScreen('SETTINGS', 'DEMO', 'SELECT HOME · B BACK');
-    demoButton.disabled = false;
   }
 
   function renderResults(restored, remember = true) {
@@ -117,8 +110,8 @@
     demoButton.disabled = false;
     updateResultSelection();
     sessionMessage.textContent = restored
-      ? '이 브라우저 탭 세션에서는 이미 Demo를 실행했습니다. 새 탭 세션에서 다시 체험할 수 있습니다.'
-      : '큐레이션 완료. 같은 탭 세션의 두 번째 실행은 제한되며, 새 탭 세션에서 다시 체험할 수 있습니다.';
+      ? '이 탭 세션에서는 이미 1회 실행했습니다. 검증 결과만 다시 확인할 수 있으며, 새 탭 세션에서 다시 체험할 수 있습니다.'
+      : '큐레이션 완료. 이 탭 세션에서는 결과만 다시 확인할 수 있으며, 새 탭 세션에서 다시 체험할 수 있습니다.';
   }
 
   function setProgress(activeIndex) {
@@ -172,7 +165,6 @@
   function activateMenuItem() {
     const target = menuItems[menuIndex].dataset.demoTarget;
     if (target === 'reference') renderReady();
-    else if (target === 'settings') renderSettings();
     else startDemo();
   }
 
@@ -181,13 +173,12 @@
     else if (currentPanel === readyPanel) startDemo();
     else if (currentPanel === resultsPanel) {
       sessionMessage.textContent = 'Web Demo 결과는 표시 전용입니다. YouTube 재생이나 외부 이동은 발생하지 않습니다.';
-    } else if (currentPanel === settingsPanel) goBack();
+    }
   }
 
   function renderKnownPanel(panel) {
     if (panel === resultsPanel && resultsReady) renderResults(true, false);
     else if (panel === homePanel) renderHome(false);
-    else if (panel === settingsPanel) renderSettings(false);
     else renderReady(false);
   }
 
@@ -204,16 +195,11 @@
   function moveSelection(delta) {
     if (currentPanel === homePanel) updateMenuSelection(menuIndex + delta);
     else if (currentPanel === resultsPanel) updateResultSelection(resultIndex + delta);
-    else {
-      renderHome();
-      updateMenuSelection(menuIndex + delta);
-    }
   }
 
   demoButton.addEventListener('click', primaryAction);
   backButton.addEventListener('click', goBack);
   selectButton.addEventListener('click', () => renderHome());
-  startButton.addEventListener('click', () => renderSettings());
   dpadUp.addEventListener('click', () => moveSelection(-1));
   dpadDown.addEventListener('click', () => moveSelection(1));
   dpadLeft.addEventListener('click', goBack);
