@@ -7,9 +7,18 @@
 **공식 제출 서비스:** <https://seoheejung.github.io/pixel-jukebox/>
 
 Web Demo는 설치 없이 `KEEP THIS VIBE` 흐름을 체험하는 공식 제출 경로다.
-실제 OpenAI API 호출이나 YouTube 재생은 발생하지 않으며, 기존 Chrome Extension E2E에서 검증된 8곡 결과를 화면에 재현한다.
-D-pad, A/B, SELECT는 Demo 화면 안에서만 동작하며, START는 전체 Extension 전용으로 비활성화되어 있다. 추천 결과는 표시 전용으로 외부 재생이나 페이지 이동이 발생하지 않는다.
-큐레이션 진행 재현은 동일 브라우저 탭 세션당 1회 실행할 수 있고, 완료 후에는 결과만 다시 볼 수 있다.
+
+실제 OpenAI API 호출이나 YouTube 재생은 발생하지 않으며,
+기존 Chrome Extension E2E에서 검증된 3개 기준곡별 추천 결과를 화면에 재현한다.
+
+Home에서는 `REFERENCE TRACK`과 `KEEP THIS VIBE`만 제공한다.
+D-pad와 A/B는 Demo 화면 안에서만 동작하며,
+START는 Web Demo에서 비활성화되고 전체 Extension에서만 사용할 수 있다.
+
+추천 결과는 표시 전용으로 YouTube 재생이나 외부 페이지 이동이 발생하지 않는다.
+
+큐레이션 진행 재현은 동일 브라우저 탭 세션당 1회 실행할 수 있다.
+완료 후에는 진행 애니메이션을 다시 실행하지 않고 검증된 추천 결과만 재열람한다.
 
 | 구분 | 주소 | 용도 |
 | --- | --- | --- |

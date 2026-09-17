@@ -74,7 +74,7 @@ const intactKoreanWords = `(() => {
   const checks = [
     ['.problem-lead', '뒤에도,'],
     ['#demo-title', '눌러보세요.'],
-    ['.demo-notes h3', '재현합니다.'],
+    ['.demo-notes h3', '체험하세요.'],
     ['.workflow-section .section-heading > p', '실제'],
     ['.workflow-grid li:nth-child(5) p', '확인'],
     ['.bridge-note span', '화면'],
@@ -172,8 +172,16 @@ try {
     await writeFile(resolve(output, `web-demo-wrap-${name}.png`), data, 'base64');
   }
   await desktop.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
-  await evaluate(desktop, undefined, "document.querySelector('#demo').scrollIntoView({ block: 'start' }); document.querySelector('#dpad-up').click(); document.querySelector('#dpad-down').click()", { userGesture: true });
-  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#ready-panel').hidden && document.querySelector('#settings-panel') === null"), true, 'D-pad must not leave the reference track or expose a Demo-only settings screen');
+  await evaluate(desktop, undefined, "document.querySelector('#demo').scrollIntoView({ block: 'start' }); document.querySelector('#dpad-down').click()", { userGesture: true });
+  assert.equal(await evaluate(desktop, undefined, `(() => {
+    const selected = document.querySelector('.reference-options .is-selected');
+    return !document.querySelector('#ready-panel').hidden
+      && document.querySelectorAll('.reference-options button').length === 3
+      && selected?.dataset.referenceId === 'newjeans'
+      && document.querySelector('#demo-reference-copy').textContent.includes('NewJeans')
+      && document.querySelector('#demo-result-copy').textContent.startsWith('5 ')
+      && document.querySelector('#settings-panel') === null;
+  })()`), true, 'D-pad must select a verified reference fixture without exposing a Demo-only settings screen');
   await evaluate(desktop, undefined, "document.querySelector('#demo-select').click()", { userGesture: true });
   assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#home-panel').hidden && document.querySelector('#screen-state').textContent === 'HOME'"), true, 'SELECT must open Home');
   assert.equal(await evaluate(desktop, undefined, "document.querySelectorAll('.demo-menu button').length"), 2, 'Home must expose only Reference Track and Keep This Vibe');
@@ -182,20 +190,20 @@ try {
   await evaluate(desktop, undefined, "document.querySelector('#dpad-up').click(); document.querySelector('#dpad-down').click()", { userGesture: true });
   assert.equal(await evaluate(desktop, undefined, "document.querySelector('.demo-menu button.is-selected')?.dataset.demoTarget === 'vibe'"), true, 'D-pad must move the Home selection');
   await evaluate(desktop, undefined, "document.querySelector('#dpad-right').click()", { userGesture: true });
-  await until(() => evaluate(desktop, undefined, "!document.querySelector('#results-panel').hidden && document.querySelectorAll('.result-list li').length === 8"), 'desktop demo results', 10000);
+  await until(() => evaluate(desktop, undefined, "!document.querySelector('#results-panel').hidden && document.querySelectorAll('.result-list li').length === 5"), 'NewJeans demo results', 10000);
   assert.equal(await evaluate(desktop, undefined, `(() => {
     const before = location.href;
     const firstResult = document.querySelector('.result-row');
     firstResult?.click();
     return document.querySelectorAll('.result-list a').length === 0
-      && document.querySelectorAll('.result-row[data-e2e-video-id]').length === 8
+      && document.querySelectorAll('.result-row[data-e2e-video-id]').length === 5
       && location.href === before
       && document.querySelector('#demo-footer')?.textContent === 'VERIFIED RESULTS · NO PLAYBACK';
   })()`), true, 'Verified results must not navigate to YouTube');
   await evaluate(desktop, undefined, "document.querySelector('#dpad-down').click()", { userGesture: true });
-  assert.equal(await evaluate(desktop, undefined, "document.querySelector('.result-row.is-selected')?.dataset.e2eVideoId === 'A-Tod1_tZdU'"), true, 'D-pad must move through verified results');
+  assert.equal(await evaluate(desktop, undefined, "document.querySelector('.result-row.is-selected')?.dataset.e2eVideoId === '11cta61wi0g'"), true, 'D-pad must move through the selected fixture results');
   await evaluate(desktop, undefined, "document.querySelector('#demo-back').click()", { userGesture: true });
-  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#ready-panel').hidden && document.querySelector('#screen-state').textContent === 'COMPLETE'"), true, 'B must return from results to the reference track');
+  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#ready-panel').hidden && document.querySelector('#screen-state').textContent === 'COMPLETE' && document.querySelector('.reference-options .is-selected')?.dataset.referenceId === 'newjeans' && [...document.querySelectorAll('.reference-options button')].every((button) => button.disabled)"), true, 'B must return to the locked reference track after the session run');
   await evaluate(desktop, undefined, "document.querySelector('#demo-button').click()", { userGesture: true });
   assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#results-panel').hidden && document.querySelector('#screen-state').textContent === 'COMPLETE'"), true, 'A must restore completed results without rerunning curation');
   assert.equal(await evaluate(desktop, undefined, "window.PixelJukeboxDemo.claimDemo(sessionStorage)"), false, 'Second run in one session must be rejected');
@@ -204,7 +212,7 @@ try {
 
   await desktop.send('Page.reload');
   await until(() => evaluate(desktop, undefined, "document.readyState === 'complete' && !document.querySelector('#results-panel').hidden"), 'same-session reload');
-  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#demo-button').disabled && document.querySelector('#session-message').textContent.includes('이미 1회 실행')"), true, 'Same session must restore the completed state without disabling screen navigation');
+  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#demo-button').disabled && document.querySelector('#session-message').textContent.includes('이미 1회 실행') && document.querySelectorAll('.result-row').length === 5 && document.querySelector('#demo-reference-copy').textContent.includes('NewJeans')"), true, 'Same session must restore the selected fixture without rerunning curation');
 
   const mobile = await page(390, 844);
   await mobile.send('Page.navigate', { url: `${origin}/` });
@@ -222,12 +230,19 @@ try {
   const { data: mobileShot } = await mobile.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
   await writeFile(resolve(output, 'web-demo-mobile-390.png'), mobileShot, 'base64');
 
+  const alternate = await page(390, 844);
+  await alternate.send('Page.navigate', { url: `${origin}/` });
+  await until(() => evaluate(alternate, undefined, "document.readyState === 'complete' && document.querySelector('#screen-state')?.textContent === 'READY'"), 'alternate demo ready');
+  await evaluate(alternate, undefined, "document.querySelector('#dpad-down').click(); document.querySelector('#dpad-down').click(); document.querySelector('#demo-button').click()", { userGesture: true });
+  await until(() => evaluate(alternate, undefined, "!document.querySelector('#results-panel').hidden && document.querySelectorAll('.result-row').length === 3"), 'Tyler demo results', 10000);
+  assert.equal(await evaluate(alternate, undefined, "document.querySelector('#demo-reference-copy').textContent.includes('Tyler, The Creator') && document.querySelector('.result-row')?.dataset.e2eVideoId === '-Y7zc0eO26k'"), true, 'A third tab session must render the Tyler verified fixture');
+
   assert.deepEqual(failedAssets, [], `Static assets failed: ${failedAssets.join(', ')}`);
   assert.deepEqual(browserErrors, [], `Browser errors: ${browserErrors.join(', ')}`);
   console.log('PASS: Web Demo renders at 1280px and 390px without horizontal overflow');
   console.log('PASS: Korean headings and descriptions keep words intact across line wraps');
   console.log('PASS: first run, same-session limit, and new-session run');
-  console.log('PASS: eight documented E2E results, no local asset 404, no console error');
+  console.log('PASS: three selectable documented E2E fixtures, no local asset 404, no console error');
   console.log('PASS: verified result rows do not navigate to YouTube');
   console.log('PASS: D-pad, A/B, and SELECT navigate only inside the Demo screen; START is disabled');
   console.log('PASS: Player Bridge is documented without a misleading launch link');

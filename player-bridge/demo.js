@@ -2,6 +2,40 @@
   'use strict';
 
   const storageKey = 'pixel-jukebox-web-demo-completed-v1';
+  const referenceStorageKey = 'pixel-jukebox-web-demo-reference-v1';
+  const fixtures = [
+    {
+      id: 'radiohead', artist: 'Radiohead', title: 'No Surprises',
+      recommendations: [
+        { artist: 'Radiohead', title: 'Let Down', type: 'MV', videoId: '6hUpJ94q0c8' },
+        { artist: 'The National', title: 'I Need My Girl', type: 'MV', videoId: 'A-Tod1_tZdU' },
+        { artist: 'James Blake', title: 'Retrograde', type: 'MV', videoId: '4texipD7faM' },
+        { artist: 'Ólafur Arnalds', title: 're:member', type: 'MV', videoId: 'oAhO5eegMfY' },
+        { artist: 'Iron & Wine', title: 'Flightless Bird, American Mouth', type: 'PERFORMANCE', videoId: '68nVcK58qO8' },
+        { artist: 'Tracy Chapman', title: 'Fast Car', type: 'MV', videoId: 'AIOAlaACuv4' },
+        { artist: 'Mac DeMarco', title: 'Chamber of Reflection', type: 'MV', videoId: 'kz9jhG963no' },
+        { artist: 'Fleet Foxes', title: 'Tiger Mountain Peasant Song', type: 'MV', videoId: 'z7xPjk1ldjg' },
+      ],
+    },
+    {
+      id: 'newjeans', artist: 'NewJeans', title: 'Ditto',
+      recommendations: [
+        { artist: 'NewJeans', title: 'ASAP', type: 'MV', videoId: 'dJdqn5v4Dkw' },
+        { artist: 'NewJeans', title: 'Hype Boy', type: 'MV', videoId: '11cta61wi0g' },
+        { artist: 'Loona', title: 'PTT (Paint The Town)', type: 'MV', videoId: 'pze6vPP0xNo' },
+        { artist: 'Sunmi', title: 'Tail', type: 'MV', videoId: '6_vDL6_aVm8' },
+        { artist: 'aespa', title: 'Next Level', type: 'MV', videoId: 'IMpXNQ-MLT4' },
+      ],
+    },
+    {
+      id: 'tyler', artist: 'Tyler, The Creator', title: 'SEE YOU AGAIN',
+      recommendations: [
+        { artist: 'Kali Uchis', title: 'I Wish You Roses', type: 'MV', videoId: '-Y7zc0eO26k' },
+        { artist: 'Tyler, The Creator', title: "I Ain't Got Time!", type: 'AUDIO', videoId: 'drfS9adBK8o' },
+        { artist: 'Lil Uzi Vert', title: '20 Min', type: 'LYRIC', videoId: 'CTV-sZ4r1t0' },
+      ],
+    },
+  ];
 
   function hasCompleted(storage) {
     try {
@@ -21,7 +55,26 @@
     }
   }
 
-  window.PixelJukeboxDemo = Object.freeze({ storageKey, hasCompleted, claimDemo });
+  function savedReference(storage) {
+    try {
+      const id = storage.getItem(referenceStorageKey);
+      return fixtures.some((fixture) => fixture.id === id) ? id : fixtures[0].id;
+    } catch {
+      return fixtures[0].id;
+    }
+  }
+
+  function rememberReference(storage, id) {
+    if (!fixtures.some((fixture) => fixture.id === id)) return false;
+    try {
+      storage.setItem(referenceStorageKey, id);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  window.PixelJukeboxDemo = Object.freeze({ storageKey, referenceStorageKey, hasCompleted, claimDemo, savedReference, rememberReference });
 
   const demoButton = document.querySelector('#demo-button');
   const backButton = document.querySelector('#demo-back');
@@ -40,14 +93,19 @@
   const demoFooter = document.querySelector('#demo-footer');
   const progressMessage = document.querySelector('#progress-message');
   const sessionMessage = document.querySelector('#session-message');
+  const resultCount = document.querySelector('#result-count');
+  const resultList = document.querySelector('#result-list');
+  const referenceCopy = document.querySelector('#demo-reference-copy');
+  const resultCopy = document.querySelector('#demo-result-copy');
 
   const controls = [demoButton, backButton, selectButton, startButton, dpadUp, dpadRight, dpadDown, dpadLeft];
   const panels = [homePanel, readyPanel, curatingPanel, resultsPanel];
-  if (!controls.every((control) => control instanceof HTMLButtonElement) || !panels.every((panel) => panel instanceof HTMLElement) || !(screenTitle instanceof HTMLElement) || !(screenState instanceof HTMLElement) || !(demoFooter instanceof HTMLElement) || !(progressMessage instanceof HTMLElement) || !(sessionMessage instanceof HTMLElement)) return;
+  const copies = [screenTitle, screenState, demoFooter, progressMessage, sessionMessage, resultCount, resultList, referenceCopy, resultCopy];
+  if (!controls.every((control) => control instanceof HTMLButtonElement) || !panels.every((panel) => panel instanceof HTMLElement) || !copies.every((copy) => copy instanceof HTMLElement)) return;
 
   const menuItems = [...document.querySelectorAll('.demo-menu button')];
-  const resultRows = [...document.querySelectorAll('.result-row')];
-  if (!menuItems.every((item) => item instanceof HTMLButtonElement) || !resultRows.every((row) => row instanceof HTMLElement)) return;
+  const referenceButtons = [...document.querySelectorAll('.reference-options button')];
+  if (!menuItems.every((item) => item instanceof HTMLButtonElement) || !referenceButtons.every((item) => item instanceof HTMLButtonElement) || referenceButtons.length !== fixtures.length) return;
 
   const progress = [
     ['discovery', '분위기에 맞는 곡을 찾는 중…'],
@@ -61,6 +119,11 @@
   let resultIndex = 0;
   let running = false;
   let resultsReady = hasCompleted(window.sessionStorage);
+  let referenceIndex = Math.max(0, fixtures.findIndex((fixture) => fixture.id === savedReference(window.sessionStorage)));
+
+  function selectedFixture() {
+    return fixtures[referenceIndex];
+  }
 
   function showPanel(panel, remember = true) {
     if (remember && panel !== currentPanel && panelHistory.at(-1) !== currentPanel) panelHistory.push(currentPanel);
@@ -82,10 +145,59 @@
     }
   }
 
+  function updateReferenceSelection(next = referenceIndex, persist = true) {
+    if ((running || resultsReady) && next !== referenceIndex) return;
+    referenceIndex = (next + fixtures.length) % fixtures.length;
+    const fixture = selectedFixture();
+    for (const [index, button] of referenceButtons.entries()) {
+      button.classList.toggle('is-selected', index === referenceIndex);
+      button.setAttribute('aria-selected', String(index === referenceIndex));
+      button.tabIndex = index === referenceIndex ? 0 : -1;
+      button.disabled = running || resultsReady;
+    }
+    referenceCopy.textContent = `${fixture.artist} — ${fixture.title}`;
+    resultCopy.textContent = `${fixture.recommendations.length} verified recommendations`;
+    if (persist) rememberReference(window.sessionStorage, fixture.id);
+  }
+
+  function resultRows() {
+    return [...resultList.querySelectorAll('.result-row')];
+  }
+
   function updateResultSelection(next = resultIndex) {
-    resultIndex = (next + resultRows.length) % resultRows.length;
-    for (const [index, row] of resultRows.entries()) row.classList.toggle('is-selected', index === resultIndex);
-    resultRows[resultIndex].scrollIntoView({ block: 'nearest' });
+    const rows = resultRows();
+    if (!rows.length) return;
+    resultIndex = (next + rows.length) % rows.length;
+    for (const [index, row] of rows.entries()) row.classList.toggle('is-selected', index === resultIndex);
+    rows[resultIndex].scrollIntoView({ block: 'nearest' });
+  }
+
+  function renderFixtureResults() {
+    const fixture = selectedFixture();
+    resultCount.textContent = `${fixture.recommendations.length} TRACKS VERIFIED`;
+    resultIndex = 0;
+    resultList.replaceChildren(...fixture.recommendations.map((recommendation, index) => {
+      const row = document.createElement('li');
+      row.className = 'result-row';
+      row.dataset.e2eVideoId = recommendation.videoId;
+      const order = document.createElement('span');
+      order.textContent = String(index + 1).padStart(2, '0');
+      const track = document.createElement('span');
+      const title = document.createElement('strong');
+      title.textContent = recommendation.title;
+      const artist = document.createElement('small');
+      artist.textContent = recommendation.artist;
+      track.append(title, artist);
+      const type = document.createElement('i');
+      type.textContent = recommendation.type;
+      row.append(order, track, type);
+      row.addEventListener('click', () => {
+        updateResultSelection(index);
+        sessionMessage.textContent = 'Web Demo 결과는 표시 전용입니다. YouTube 재생이나 외부 이동은 발생하지 않습니다.';
+      });
+      return row;
+    }));
+    updateResultSelection();
   }
 
   function renderHome(remember = true) {
@@ -97,21 +209,23 @@
 
   function renderReady(remember = true) {
     showPanel(readyPanel, remember);
+    updateReferenceSelection(referenceIndex, false);
     if (running) setScreen('KEEP THIS VIBE', 'CURATING', 'CURATING · SELECT HOME');
     else if (resultsReady) setScreen('KEEP THIS VIBE', 'COMPLETE', 'A VIEW RESULTS · SELECT HOME');
-    else setScreen('KEEP THIS VIBE', 'READY', 'A KEEP THIS VIBE · WEB DEMO');
+    else setScreen('KEEP THIS VIBE', 'READY', '↑↓ CHOOSE · A KEEP THIS VIBE');
     demoButton.disabled = running;
   }
 
   function renderResults(restored, remember = true) {
     resultsReady = true;
+    updateReferenceSelection(referenceIndex, false);
+    renderFixtureResults();
     showPanel(resultsPanel, remember);
     setScreen('KEEP THIS VIBE', 'COMPLETE', 'VERIFIED RESULTS · NO PLAYBACK');
     demoButton.disabled = false;
-    updateResultSelection();
     sessionMessage.textContent = restored
-      ? '이 탭 세션에서는 이미 1회 실행했습니다. 검증 결과만 다시 확인할 수 있으며, 새 탭 세션에서 다시 체험할 수 있습니다.'
-      : '큐레이션 완료. 이 탭 세션에서는 결과만 다시 확인할 수 있으며, 새 탭 세션에서 다시 체험할 수 있습니다.';
+      ? '이 탭 세션에서는 이미 1회 실행했습니다. 선택한 기준곡의 검증 결과만 다시 확인할 수 있습니다.'
+      : '큐레이션 완료. 이 탭 세션에서는 선택한 기준곡의 검증 결과만 다시 확인할 수 있습니다.';
   }
 
   function setProgress(activeIndex) {
@@ -154,10 +268,12 @@
       renderResults(true);
       return;
     }
+    rememberReference(window.sessionStorage, selectedFixture().id);
     running = true;
+    updateReferenceSelection(referenceIndex, false);
     demoButton.disabled = true;
     setScreen('KEEP THIS VIBE', 'CURATING', 'CURATING · PLEASE WAIT');
-    sessionMessage.textContent = '검증된 E2E 진행 상태를 재현하고 있습니다. OpenAI 네트워크 요청은 발생하지 않습니다.';
+    sessionMessage.textContent = `${selectedFixture().artist} — ${selectedFixture().title} 기준의 검증된 E2E 흐름을 재현하고 있습니다.`;
     showPanel(curatingPanel);
     runProgress(0);
   }
@@ -194,6 +310,7 @@
 
   function moveSelection(delta) {
     if (currentPanel === homePanel) updateMenuSelection(menuIndex + delta);
+    else if (currentPanel === readyPanel) updateReferenceSelection(referenceIndex + delta);
     else if (currentPanel === resultsPanel) updateResultSelection(resultIndex + delta);
   }
 
@@ -208,14 +325,10 @@
     updateMenuSelection(index);
     activateMenuItem();
   });
-  for (const [index, row] of resultRows.entries()) row.addEventListener('click', () => {
-    updateResultSelection(index);
-    sessionMessage.textContent = 'Web Demo 결과는 표시 전용입니다. YouTube 재생이나 외부 이동은 발생하지 않습니다.';
-  });
+  for (const [index, button] of referenceButtons.entries()) button.addEventListener('click', () => updateReferenceSelection(index));
 
+  updateMenuSelection();
+  updateReferenceSelection(referenceIndex, false);
   if (resultsReady) renderResults(true, false);
-  else {
-    updateMenuSelection();
-    renderReady(false);
-  }
+  else renderReady(false);
 })();

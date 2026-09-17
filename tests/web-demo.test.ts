@@ -12,8 +12,11 @@ function demoApi() {
   const window = {} as {
     PixelJukeboxDemo?: {
       storageKey: string;
+      referenceStorageKey: string;
       hasCompleted(storage: Storage): boolean;
       claimDemo(storage: Storage): boolean;
+      savedReference(storage: Storage): string;
+      rememberReference(storage: Storage, id: string): boolean;
     };
   };
   const context = vm.createContext({ window, document: { querySelector: () => null }, HTMLButtonElement: class {} });
@@ -71,15 +74,16 @@ describe('GitHub Pages web demo', () => {
     expect(html).toContain('<strong aria-hidden="true">SELECT</strong>');
     expect(html).toContain('<strong aria-hidden="true">START</strong>');
     expect(html).toContain('id="home-panel"');
-    expect(html).toContain('id="settings-panel"');
+    expect(html).not.toContain('id="settings-panel"');
+    expect(html).toContain('id="demo-start" type="button" aria-label="Settings는 전체 Extension에서 사용 가능" title="FULL EXTENSION ONLY" disabled');
     expect(html).toContain('class="speaker"');
     expect(html).not.toContain('class="screen-label"');
   });
 
-  it('uses eight documented E2E results without YouTube navigation', () => {
+  it('uses three documented E2E fixtures without YouTube navigation', () => {
     expect(html).toContain('openai-e2e-2026-09-15T12-52-13-346Z.md');
-    expect(html).toContain('Radiohead — No Surprises');
-    expect([...html.matchAll(/data-e2e-video-id="([\w-]+)"/g)].map((match) => match[1])).toEqual([
+    expect([...html.matchAll(/data-reference-id="([\w-]+)"/g)].map((match) => match[1])).toEqual(['radiohead', 'newjeans', 'tyler']);
+    expect([...script.matchAll(/videoId: '([\w-]+)'/g)].map((match) => match[1])).toEqual([
       '6hUpJ94q0c8',
       'A-Tod1_tZdU',
       '4texipD7faM',
@@ -88,11 +92,23 @@ describe('GitHub Pages web demo', () => {
       'AIOAlaACuv4',
       'kz9jhG963no',
       'z7xPjk1ldjg',
+      'dJdqn5v4Dkw',
+      '11cta61wi0g',
+      'pze6vPP0xNo',
+      '6_vDL6_aVm8',
+      'IMpXNQ-MLT4',
+      '-Y7zc0eO26k',
+      'drfS9adBK8o',
+      'CTV-sZ4r1t0',
     ]);
     expect(html).not.toContain('href="https://www.youtube.com/watch');
     expect(html).not.toContain('OPEN YOUTUBE');
     expect(html).not.toContain('REPLAYED INSTANTLY');
-    expect(html).toContain('VERIFIED FIXTURE');
+    expect(html).not.toContain('72.47s');
+    expect(html).not.toContain('VERIFIED FIXTURE');
+    expect(html).toContain('E2E VERIFIED RESULT');
+    expect(html).toContain('VERIFIED FLOW');
+    expect(html).toContain('3 REFERENCE TRACKS');
     expect(script).toContain('VERIFIED RESULTS · NO PLAYBACK');
     expect(html).toContain('OpenAI API 호출이나 YouTube 재생은 발생하지 않으며');
   });
@@ -105,5 +121,10 @@ describe('GitHub Pages web demo', () => {
     expect(api.claimDemo(firstSession)).toBe(false);
     expect(api.hasCompleted(firstSession)).toBe(true);
     expect(api.claimDemo(sessionStorage())).toBe(true);
+    const referenceSession = sessionStorage();
+    expect(api.savedReference(referenceSession)).toBe('radiohead');
+    expect(api.rememberReference(referenceSession, 'newjeans')).toBe(true);
+    expect(api.savedReference(referenceSession)).toBe('newjeans');
+    expect(api.rememberReference(referenceSession, 'unknown')).toBe(false);
   });
 });
