@@ -109,8 +109,14 @@ describe('GitHub Pages web demo', () => {
     expect(html).toContain('E2E VERIFIED RESULT');
     expect(html).toContain('VERIFIED FLOW');
     expect(html).toContain('3 REFERENCE TRACKS');
+    expect(html).toContain('기준곡 하나를 선택해 큐레이션 흐름을 체험할 수 있습니다. 탭 세션당 1회 실행됩니다.');
     expect(script).toContain('VERIFIED RESULTS · NO PLAYBACK');
+    expect(script).toContain('다른 기준곡을 체험하려면 새 탭에서 Web Demo를 열어주세요.');
     expect(html).toContain('OpenAI API 호출이나 YouTube 재생은 발생하지 않으며');
+    expect(readme).toContain('Radiohead — No Surprises: 8곡');
+    expect(readme).toContain('NewJeans — Ditto: 5곡');
+    expect(readme).toContain('Tyler, The Creator — SEE YOU AGAIN: 3곡');
+    expect(readme).toContain('선택한 기준곡에 따라 8 / 5 / 3개의 검증 결과를 표시한다.');
   });
 
   it('allows one run per session and a new run in a new session', () => {

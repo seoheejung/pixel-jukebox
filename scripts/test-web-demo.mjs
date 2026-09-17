@@ -212,7 +212,7 @@ try {
 
   await desktop.send('Page.reload');
   await until(() => evaluate(desktop, undefined, "document.readyState === 'complete' && !document.querySelector('#results-panel').hidden"), 'same-session reload');
-  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#demo-button').disabled && document.querySelector('#session-message').textContent.includes('이미 1회 실행') && document.querySelectorAll('.result-row').length === 5 && document.querySelector('#demo-reference-copy').textContent.includes('NewJeans')"), true, 'Same session must restore the selected fixture without rerunning curation');
+  assert.equal(await evaluate(desktop, undefined, "!document.querySelector('#demo-button').disabled && document.querySelector('#session-message').textContent.includes('다른 기준곡을 체험하려면 새 탭') && document.querySelectorAll('.result-row').length === 5 && document.querySelector('#demo-reference-copy').textContent.includes('NewJeans')"), true, 'Same session must restore the selected fixture without rerunning curation');
 
   const mobile = await page(390, 844);
   await mobile.send('Page.navigate', { url: `${origin}/` });

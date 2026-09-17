@@ -9,7 +9,15 @@
 Web Demo는 설치 없이 `KEEP THIS VIBE` 흐름을 체험하는 공식 제출 경로다.
 
 실제 OpenAI API 호출이나 YouTube 재생은 발생하지 않으며,
-기존 Chrome Extension E2E에서 검증된 3개 기준곡별 추천 결과를 화면에 재현한다.
+기존 Chrome Extension E2E에서 검증된 3개 기준곡의 결과를 재현한다.
+
+- Radiohead — No Surprises: 8곡
+- NewJeans — Ditto: 5곡
+- Tyler, The Creator — SEE YOU AGAIN: 3곡
+
+기준곡을 선택한 뒤 `KEEP THIS VIBE`를 실행하면
+해당 기준곡의 실제 E2E 검증 결과를 확인할 수 있다.
+선택한 기준곡에 따라 8 / 5 / 3개의 검증 결과를 표시한다.
 
 Home에서는 `REFERENCE TRACK`과 `KEEP THIS VIBE`만 제공한다.
 D-pad와 A/B는 Demo 화면 안에서만 동작하며,

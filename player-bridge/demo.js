@@ -216,16 +216,14 @@
     demoButton.disabled = running;
   }
 
-  function renderResults(restored, remember = true) {
+  function renderResults(_restored, remember = true) {
     resultsReady = true;
     updateReferenceSelection(referenceIndex, false);
     renderFixtureResults();
     showPanel(resultsPanel, remember);
     setScreen('KEEP THIS VIBE', 'COMPLETE', 'VERIFIED RESULTS · NO PLAYBACK');
     demoButton.disabled = false;
-    sessionMessage.textContent = restored
-      ? '이 탭 세션에서는 이미 1회 실행했습니다. 선택한 기준곡의 검증 결과만 다시 확인할 수 있습니다.'
-      : '큐레이션 완료. 이 탭 세션에서는 선택한 기준곡의 검증 결과만 다시 확인할 수 있습니다.';
+    sessionMessage.textContent = '이 탭에서는 선택한 기준곡의 검증 결과를 다시 확인할 수 있습니다. 다른 기준곡을 체험하려면 새 탭에서 Web Demo를 열어주세요.';
   }
 
   function setProgress(activeIndex) {
