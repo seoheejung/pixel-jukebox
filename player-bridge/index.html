@@ -212,23 +212,28 @@
             <a class="button button-primary" href="./PixelJukebox-Setup-1.0.0.exe" download>DOWNLOAD FOR WINDOWS ↓</a>
             <a class="button button-quiet" href="https://github.com/seoheejung/pixel-jukebox">SOURCE CODE ↗</a>
           </div>
-          <p class="installer-summary">설치 도우미가 Extension 파일과 Player Bridge 설정을 자동으로 준비하고 설치 폴더를 엽니다. Chrome 확장 관리 화면은 주소창에서 직접 여세요.</p>
+          <p class="installer-summary">설치 도우미가 검증된 Extension build와 Player Bridge 설정을 설치 폴더에 배치합니다. 처음 설치와 업데이트의 Chrome 단계는 아래에서 구분해 안내합니다.</p>
           <aside class="installer-warning" aria-label="Windows 설치 파일 안내">
             <strong>WINDOWS SECURITY</strong>
             <span>현재 설치 파일은 코드 서명되지 않아 Windows에서 ‘알 수 없는 게시자’ 경고가 표시될 수 있습니다.</span>
             <details>
               <summary>INSTALLER DETAILS</summary>
-              <code>SHA-256 · 49E92D28F65FD69C84E5D2500C05AACE3F90D7D47365E56F5A95C53DAF1BF9ED</code>
+              <code>SHA-256 · E72297FD57EC131F15CA0D467E595B2E10941DE4EADBA217E9FC9C573279ECE8</code>
               <a href="./SHA256SUMS.txt" download>SHA256SUMS.txt ↓</a>
             </details>
           </aside>
         </div>
         <div class="install-guide">
-          <p class="note-label">CHROME · 3 STEPS</p>
+          <p class="note-label">FIRST INSTALL · 3 STEPS</p>
           <ol class="install-steps">
             <li><span>01</span><p>Chrome 주소창에 <code>chrome://extensions/</code> 입력</p></li>
             <li><span>02</span><p><strong>개발자 모드</strong> 켜기</p></li>
-            <li><span>03</span><p><strong>압축해제된 확장 프로그램을 로드합니다</strong> → 열린 Pixel Jukebox 폴더 선택</p></li>
+            <li><span>03</span><p><strong>압축해제된 확장 프로그램을 로드합니다</strong> → 열린 <code>extension</code> 폴더 선택</p></li>
+          </ol>
+          <p class="note-label">UPDATE</p>
+          <ol class="install-steps">
+            <li><span>01</span><p>새 버전 <strong>PixelJukebox-Setup-1.0.0.exe</strong> 실행</p></li>
+            <li><span>02</span><p><code>chrome://extensions/</code>에서 기존 <strong>Pixel Jukebox</strong> 카드의 <strong>새로고침</strong>만 누르기</p></li>
           </ol>
           <p class="ai-install-note"><strong>KEEP THIS VIBE 사용 시에만</strong><span>Settings에서 OpenAI API Key를 입력하고 CONNECT합니다.</span></p>
         </div>

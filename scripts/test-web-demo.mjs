@@ -174,6 +174,8 @@ try {
     return document.querySelector('a[href="./player.html"]') === null
       && installer?.hasAttribute('download')
       && extensionsUrl?.textContent === 'chrome://extensions/'
+      && document.querySelectorAll('.install-steps').length === 2
+      && document.querySelector('.install-section')?.textContent.includes('새로고침')
       && warning?.textContent.includes('코드 서명되지 않아');
   })()`), true, 'The Windows installer must be the primary full-Extension path with a signing warning');
   assert.equal(await evaluate(desktop, undefined, "window.PixelJukeboxDemo.hasCompleted(sessionStorage)"), false, 'First session must be ready');

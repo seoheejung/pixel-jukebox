@@ -61,8 +61,10 @@ describe('GitHub Pages web demo', () => {
     expect(readme).toContain('Windows용 `PixelJukebox-Setup-1.0.0.exe`는 실제 YouTube Player와 OpenAI 연동을 포함한 전체 Extension을 추가로 확인할 때 사용하는 선택 설치 도우미다.');
     expect(readme).toContain('설치 파일: [PixelJukebox-Setup-1.0.0.exe 다운로드](https://seoheejung.github.io/pixel-jukebox/PixelJukebox-Setup-1.0.0.exe)');
     expect(readme).toContain('설치 도우미가 자동으로 처리하는 항목:');
-    expect(readme).toContain('설치 후 Chrome에서 다음 두 단계만 완료한다.');
-    expect(readme).toContain('Chrome 보안 정책상 개발자 모드 활성화와 압축해제된 Extension 로드는 설치 도우미가 대신할 수 없다.');
+    expect(readme).toContain('#### 처음 설치');
+    expect(readme).toContain('#### 업데이트');
+    expect(readme).toContain('Pixel Jukebox 카드의 새로고침 버튼만 누른다.');
+    expect(readme).toContain('Chrome 보안 정책상 처음 설치의 개발자 모드 활성화와 압축해제된 Extension 로드는 설치 도우미가 대신할 수 없다.');
     expect(readme).toContain('Player Bridge URL은 Extension과 YouTube IFrame Player를 연결하는 HTTPS Bridge다.');
     expect(readme).toContain('검증 실패 Candidate를 제외하고 검증된 결과만 유지');
     expect(readme).not.toContain('## 빠른 실행');
@@ -83,10 +85,12 @@ describe('GitHub Pages web demo', () => {
   it('presents the Windows installer and final end-user flow without build steps', () => {
     expect(html).toContain('href="./PixelJukebox-Setup-1.0.0.exe" download');
     expect(html).toContain('DOWNLOAD FOR WINDOWS ↓');
-    expect(html).toContain('CHROME · 3 STEPS');
+    expect(html).toContain('FIRST INSTALL · 3 STEPS');
+    expect(html).toContain('UPDATE');
     expect(html).toContain('<code>chrome://extensions/</code>');
     expect(html).toContain('개발자 모드');
     expect(html).toContain('압축해제된 확장 프로그램을 로드합니다');
+    expect(html).toContain('Pixel Jukebox</strong> 카드의 <strong>새로고침</strong>만 누르기');
     expect(html).toContain('현재 설치 파일은 코드 서명되지 않아');
     expect(html).toContain('Chrome Web Store 정식 배포 시');
     expect(html).toContain('ADD TO CHROME');

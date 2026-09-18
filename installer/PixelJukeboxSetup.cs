@@ -36,9 +36,9 @@ namespace PixelJukebox.Setup
                 Application.SetCompatibleTextRenderingDefault(false);
 
                 string installDirectory = GetInstallDirectory();
-                InstallPayload(installDirectory);
+                bool isUpdate = InstallPayload(installDirectory);
                 OpenInstallDirectory(installDirectory);
-                ShowInstructions(installDirectory);
+                ShowInstructions(installDirectory, isUpdate);
                 return 0;
             }
             catch (Exception error)
@@ -115,7 +115,7 @@ namespace PixelJukebox.Setup
             return payload;
         }
 
-        private static void InstallPayload(string installDirectory)
+        private static bool InstallPayload(string installDirectory)
         {
             VerifyPayload();
 
@@ -158,6 +158,8 @@ namespace PixelJukebox.Setup
                 {
                     Directory.Delete(backupDirectory, true);
                 }
+
+                return hadPreviousInstall;
             }
             finally
             {
@@ -214,22 +216,20 @@ namespace PixelJukebox.Setup
             });
         }
 
-        private static void ShowInstructions(string installDirectory)
+        private static void ShowInstructions(string installDirectory, bool isUpdate)
         {
-            bool chromeOpened = false;
-            string chromeStep = chromeOpened
-                ? "Chrome 확장 프로그램 화면을 열었습니다."
-                : "Chrome을 찾지 못했거나 화면을 열 수 없습니다. Chrome에서 chrome://extensions/를 직접 여세요.";
-
-            string message =
-                "Extension 파일 설치가 완료되었습니다.\n\n" +
-                chromeStep + "\n" +
-                "화면이 보이지 않으면 Chrome 주소창에 chrome://extensions/를 입력하세요.\n" +
-                "설치 폴더도 함께 열었습니다.\n\n" +
-                "1. 개발자 모드를 켜세요.\n" +
-                "2. '압축해제된 확장 프로그램을 로드합니다'를 누르세요.\n" +
-                "3. 다음 폴더를 선택하세요.\n" + installDirectory + "\n" +
-                "4. AI 기능 사용 시 Settings에서 API Key를 CONNECT 하세요.";
+            string message = isUpdate
+                ? "Pixel Jukebox 업데이트가 완료되었습니다.\n\n" +
+                  "기존 Extension 폴더를 새 버전으로 교체했습니다.\n" +
+                  "Chrome 주소창에 chrome://extensions/를 입력한 뒤 Pixel Jukebox 카드의 새로고침 버튼을 누르세요.\n" +
+                  "업데이트에서는 '압축해제된 확장 프로그램을 로드합니다'나 폴더 선택이 필요하지 않습니다.\n\n" +
+                  "설치 폴더를 열었습니다.\n" + installDirectory
+                : "Pixel Jukebox 설치가 완료되었습니다.\n\n" +
+                  "처음 설치할 때만 Chrome 주소창에 chrome://extensions/를 입력하세요.\n" +
+                  "1. 개발자 모드를 켭니다.\n" +
+                  "2. '압축해제된 확장 프로그램을 로드합니다'를 누릅니다.\n" +
+                  "3. 열린 extension 폴더를 선택합니다.\n" + installDirectory + "\n\n" +
+                  "KEEP THIS VIBE는 Settings에서 API Key를 CONNECT한 뒤 사용할 수 있습니다.";
 
             MessageBox.Show(
                 message,

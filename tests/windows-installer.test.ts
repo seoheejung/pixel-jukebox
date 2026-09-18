@@ -39,7 +39,7 @@ describe('Windows Extension installer', () => {
     expect(source).toContain('Directory.Move(backupDirectory, installDirectory)');
   });
 
-  it('opens the install folder and leaves Chrome internal-page navigation to the user', () => {
+  it('opens the install folder and gives separate first-install and update instructions', () => {
     expect(source).not.toContain('--new-window chrome://extensions/');
     expect(source).not.toContain('SetForegroundWindow');
     expect(source).not.toContain('GetForegroundWindow');
@@ -47,10 +47,14 @@ describe('Windows Extension installer', () => {
     expect(source).not.toContain('SendInput');
     expect(source).not.toContain('SendKeys.SendWait');
     expect(source).toContain('FileName = "explorer.exe"');
-    expect(source).toContain('화면이 보이지 않으면 Chrome 주소창에 chrome://extensions/를 입력하세요.');
-    expect(source).toContain('개발자 모드를 켜세요.');
+    expect(source).toContain('bool isUpdate = InstallPayload(installDirectory);');
+    expect(source).toContain('ShowInstructions(installDirectory, isUpdate);');
+    expect(source).toContain('처음 설치할 때만 Chrome 주소창에 chrome://extensions/를 입력하세요.');
+    expect(source).toContain('기존 Extension 폴더를 새 버전으로 교체했습니다.');
+    expect(source).toContain('Pixel Jukebox 카드의 새로고침 버튼을 누르세요.');
+    expect(source).toContain('업데이트에서는 \'압축해제된 확장 프로그램을 로드합니다\'나 폴더 선택이 필요하지 않습니다.');
     expect(source).toContain('압축해제된 확장 프로그램을 로드합니다');
-    expect(source).toContain('API Key를 CONNECT 하세요.');
+    expect(source).toContain('KEEP THIS VIBE는 Settings에서 API Key를 CONNECT한 뒤 사용할 수 있습니다.');
   });
 
   it('does not ship script-based browser automation', () => {

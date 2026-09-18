@@ -160,27 +160,31 @@ KEEP THIS VIBE
 
 설치 파일: [PixelJukebox-Setup-1.0.0.exe 다운로드](https://seoheejung.github.io/pixel-jukebox/PixelJukebox-Setup-1.0.0.exe)
 
-설치 파일을 내려받아 실행한다. 관리자 권한은 필요하지 않다.
-새 버전이 올라오면 더 높은 버전 번호의 설치 파일을 내려받아 실행하면 기존 Extension 폴더가 새 내장 build로 교체된다.
+설치 파일을 내려받아 실행한다. 관리자 권한은 필요하지 않다. 설치 도우미는 검증된 Extension build와 Player Bridge 설정을 `%LocalAppData%\Pixel Jukebox\extension`에 배치하고 해당 폴더를 연다.
 
 설치 도우미가 자동으로 처리하는 항목:
 
 - Extension 파일 설치
 - 제공된 HTTPS Player Bridge가 적용된 build 배치
 - 설치 위치 생성
-- 기존 버전 덮어쓰기
-- `chrome://extensions` 실행 안내
-- Pixel Jukebox Extension 폴더 열기
+- 기존 Extension 폴더를 백업 후 새 build로 교체
+- 설치 실패 시 기존 Extension 폴더 복구
+- 정확한 `extension` 설치 폴더 열기
 - 설치 안내 표시
 
-설치 후 Chrome에서 다음 두 단계만 완료한다.
+#### 처음 설치
 
-1. **개발자 모드**를 켠다.
-2. **압축해제된 확장 프로그램을 로드합니다**를 선택하고 설치 도우미가 연 Pixel Jukebox Extension 폴더를 선택한다.
+1. Chrome 주소창에 `chrome://extensions/`를 입력한다.
+2. **개발자 모드**를 켠다.
+3. **압축해제된 확장 프로그램을 로드합니다**를 선택하고 설치 도우미가 연 `extension` 폴더를 선택한다.
+
+#### 업데이트
+
+더 높은 버전 번호의 설치 파일을 내려받아 실행하면 기존 Extension 폴더가 새 내장 build로 교체된다. 그 뒤 `chrome://extensions/`에서 이미 등록된 **Pixel Jukebox 카드의 새로고침 버튼만 누른다.** 업데이트에서는 **압축해제된 확장 프로그램을 다시 로드하거나 폴더를 다시 선택하지 않는다.**
 
 `KEEP THIS VIBE`를 사용할 때만 Settings에서 OpenAI API Key를 입력하고 `CONNECT`를 누른다.
 
-Chrome 보안 정책상 개발자 모드 활성화와 압축해제된 Extension 로드는 설치 도우미가 대신할 수 없다.
+Chrome 보안 정책상 처음 설치의 개발자 모드 활성화와 압축해제된 Extension 로드는 설치 도우미가 대신할 수 없다.
 Core Player 재생에는 API Key가 필요하지 않다.
 
 Player Bridge URL은 Extension과 YouTube IFrame Player를 연결하는 HTTPS Bridge다.
@@ -192,7 +196,7 @@ Web Demo URL로 사용하지 않는다.
 <details>
 <summary>INSTALLER DETAILS</summary>
 
-- SHA-256: `49E92D28F65FD69C84E5D2500C05AACE3F90D7D47365E56F5A95C53DAF1BF9ED`
+- SHA-256: `E72297FD57EC131F15CA0D467E595B2E10941DE4EADBA217E9FC9C573279ECE8`
 - Checksum: [SHA256SUMS.txt](release/SHA256SUMS.txt)
 
 </details>
