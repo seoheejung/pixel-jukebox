@@ -164,13 +164,16 @@ KEEP THIS VIBE
 
 설치 도우미가 자동으로 처리하는 항목:
 
-- Extension 파일 설치
-- 제공된 HTTPS Player Bridge가 적용된 build 배치
+- GitHub `main`의 최신 Pixel Jukebox 소스 shallow clone
+- `npm ci` 및 제공된 HTTPS Player Bridge 설정 후 Extension build
+- 빌드된 `dist/`를 Pixel Jukebox Extension 폴더에 배치
 - 설치 위치 생성
 - 기존 버전 덮어쓰기
-- `chrome://extensions` 열기
 - Pixel Jukebox Extension 폴더 열기
 - 설치 안내 표시
+- 임시 clone 폴더 삭제
+
+설치 시 인터넷 연결, Git, Node.js 22.12.0 이상 및 npm이 필요하다. 설치 파일 자체는 Git 저장소를 내장하지 않으므로 같은 EXE를 다시 실행해도 실행 시점의 GitHub `main` 최신 커밋을 빌드한다.
 
 설치 후 Chrome에서 다음 두 단계만 완료한다.
 
@@ -191,7 +194,7 @@ Web Demo URL로 사용하지 않는다.
 <details>
 <summary>INSTALLER DETAILS</summary>
 
-- SHA-256: `CBCA6E8B375561CF20C8157F2BFEFED32BD9D14632A1940310B90BD3BC50EFB5`
+- SHA-256: `2D2C50BCA9BDC1E56ACB808808B422BED9FE8CABC77A101FFBD7C2EFCC5ADFEA`
 - Checksum: [SHA256SUMS.txt](release/SHA256SUMS.txt)
 
 </details>
