@@ -5,7 +5,7 @@ import type { RecommendationPromptContext } from './discovery';
 
 export function selectionBody(context: RecommendationPromptContext, candidates: Candidate[], correction?: string): Record<string, unknown> {
   return {
-    model: 'gpt-4.1-mini',
+    model: 'gpt-5.6-luna',
     store: false,
     input: [
       {

@@ -11,6 +11,7 @@ export const PORT = { panel: 'pixel-jukebox:panel' } as const;
 
 export const MESSAGE = {
   probe: 'PANEL_PROBE',
+  openWindow: 'OPEN_PLAYER_WINDOW',
   coreState: 'CORE_STATE',
   coreEdit: 'CORE_EDIT',
   coreError: 'CORE_ERROR',

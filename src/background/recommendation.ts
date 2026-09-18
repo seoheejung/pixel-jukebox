@@ -8,6 +8,7 @@ import { discoveryExtractionBody, discoveryResearchBody } from '../ai/prompts/di
 import type { RecommendationPromptContext } from '../ai/prompts/discovery';
 import { selectionBody } from '../ai/prompts/selection';
 import { youtubeResolverBody } from '../ai/prompts/youtube-resolver';
+import { singleRecommendationBody } from '../ai/prompts/single-recommendation';
 
 type RecommendationContext = RecommendationPromptContext;
 
@@ -32,6 +33,7 @@ const EMPTY_RESOLVER_DIAGNOSTICS: RecommendationResolverDiagnostics = {
   searchSourceEmpty: 0, urlExtractionFailure: 0, candidateMismatch: 0, videoTypeExcluded: 0,
   validationFailure: 0, supplementalSearchFailure: 0,
 };
+const SINGLE_REQUEST_MODE: boolean = true;
 
 function cacheKey(context: RecommendationContext): string {
   return `${context.current?.videoId ?? 'none'}|${context.playlist.map((track) => track.videoId).join(',')}`;
@@ -40,9 +42,9 @@ function cacheKey(context: RecommendationContext): string {
 function outputText(response: unknown): string {
   if (typeof response === 'object' && response !== null && 'output_text' in response && typeof response.output_text === 'string') return response.output_text;
   if (typeof response !== 'object' || response === null || !('output' in response) || !Array.isArray(response.output)) return '';
-  return response.output.flatMap((item) => typeof item === 'object' && item !== null && 'content' in item && Array.isArray(item.content) ? item.content : [])
-    .filter((item) => typeof item === 'object' && item !== null && item.type === 'output_text' && typeof item.text === 'string')
-    .map((item) => item.text as string).join('\n');
+    return response.output.flatMap((item) => typeof item === 'object' && item !== null && 'content' in item && Array.isArray(item.content) ? item.content : [])
+      .filter((item) => typeof item === 'object' && item !== null && typeof item.text === 'string' && (!('type' in item) || item.type === 'output_text' || item.type === 'text'))
+      .map((item) => item.text as string).join('\n');
 }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -73,6 +75,180 @@ function responseMeasurement(response: unknown, body: Record<string, unknown>, k
   };
 }
 
+function responseSourceVideoIds(response: unknown): Set<string> {
+  const ids = new Set<string>();
+  const add = (value: unknown) => {
+    if (typeof value !== 'string') return;
+    try {
+      const url = new URL(value);
+      const id = url.hostname === 'youtu.be' ? url.pathname.split('/')[1] : url.pathname === '/watch' ? url.searchParams.get('v') : null;
+      if (id && /^[A-Za-z0-9_-]{11}$/u.test(id)) ids.add(id);
+    } catch { /* Ignore non-URL search sources */ }
+  };
+  const payload = record(response);
+  const output = Array.isArray(payload?.output) ? payload.output : [];
+  for (const item of output) {
+    const entry = record(item);
+    const action = record(entry?.action);
+    const sources = Array.isArray(action?.sources) ? action.sources : [];
+    for (const source of sources) add(record(source)?.url);
+    const content = Array.isArray(entry?.content) ? entry.content : [];
+    for (const part of content) {
+      const annotationValue = record(part)?.annotations;
+      const annotations: unknown[] = Array.isArray(annotationValue) ? annotationValue : [];
+      for (const annotation of annotations) add(record(annotation)?.url);
+    }
+  }
+  return ids;
+}
+
+const SINGLE_PRIMARY_COUNT = 10;
+const SINGLE_BACKUP_COUNT = 2;
+
+function singleRecommendations(text: string, context: RecommendationContext, searchedVideoIds: Set<string>): { candidates: Candidate[]; sources: ReturnType<typeof parseYouTubeResults> } {
+  const excluded = new Set(excludedTracks(context.current, context.playlist, [...context.recent]).map((item) => `${item.artist.trim().toLocaleLowerCase()}\u0000${item.title.trim().toLocaleLowerCase()}`));
+  const excludedVideoIds = new Set([
+    ...(context.current ? [context.current.videoId] : []),
+    ...context.playlist.map((track) => track.videoId),
+    ...context.recent.map((track) => track.videoId),
+  ]);
+  const parsed: Array<{ number: number; artist: string; title: string; url: string }> = [];
+  const lines: string[] = [];
+  const seen = new Set<string>();
+  const seenNumbers = new Set<number>();
+  let primaryNumber = 0;
+  let backupNumber = 0;
+  let sawTrackLine = false;
+  for (const rawLine of text.split(/\r?\n/u)) {
+    const line = rawLine.trim().replace(/^[-*]\s*/u, '').replace(/^`+|`+$/gu, '').trim();
+    const fields = line.split('|').map((field) => field.trim());
+    if ((fields.length !== 4 && fields.length !== 5) || fields[0]?.toLocaleUpperCase() !== 'TRACK') continue;
+    sawTrackLine = true;
+    const position = fields[1]!.toLocaleUpperCase();
+    const combined = fields.length === 4 ? fields[2]! : '';
+    const split = /^(.*?)\s+[—–]\s+(.+)$/u.exec(combined) ?? /^(.*?)\s+-\s+(.+)$/u.exec(combined);
+    const artist = (fields.length === 5 ? fields[2] : split?.[1])?.trim() ?? '';
+    const title = (fields.length === 5 ? fields[3] : split?.[2])?.trim() ?? '';
+    const urlMatch = /https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)\/[^\s)\]>"']+/iu.exec(fields.at(-1) ?? '');
+    const sourceUrl = urlMatch?.[0]?.replace(/[.,;:)]+$/u, '');
+    if (!sourceUrl) continue;
+    let sourceVideoId: string | null = null;
+    try {
+      const source = new URL(sourceUrl);
+      sourceVideoId = source.hostname === 'youtu.be' ? source.pathname.split('/')[1] ?? null : source.pathname === '/watch' ? source.searchParams.get('v') : null;
+    } catch { continue; }
+    if (!sourceVideoId || excludedVideoIds.has(sourceVideoId)) continue;
+    const key = `${artist.toLocaleLowerCase()}\u0000${title.toLocaleLowerCase()}`;
+    if (!artist || !title || excluded.has(key) || seen.has(key)) continue;
+    const explicitNumber = /^\d{1,2}$/u.test(position) ? Number(position) : null;
+    if (explicitNumber === null && position !== 'PRIMARY' && position !== 'BACKUP') continue;
+    const number = explicitNumber ?? (position === 'BACKUP' ? SINGLE_PRIMARY_COUNT + (++backupNumber) : ++primaryNumber);
+    if (!Number.isInteger(number) || number < 1 || number > SINGLE_PRIMARY_COUNT + SINGLE_BACKUP_COUNT) continue;
+    if (seenNumbers.has(number)) continue;
+    parsed.push({ number, artist, title, url: sourceUrl });
+    seenNumbers.add(number);
+    seen.add(key);
+    if (parsed.length === SINGLE_PRIMARY_COUNT + SINGLE_BACKUP_COUNT) break;
+  }
+  parsed.sort((left, right) => left.number - right.number);
+  const modelCandidates: Candidate[] = parsed.map(({ number, artist, title, url }) => {
+    const candidateId = `C${String(number).padStart(2, '0')}`;
+    lines.push(`YOUTUBE|${candidateId}|OFFICIAL_OTHER|${artist}|${title}|${url}`);
+    return { candidateId, artist, title };
+  });
+  if (modelCandidates.length === 0) {
+    throw new AiDiagnosticError(sawTrackLine ? 'NO_CANDIDATES' : 'INVALID_RESPONSE', {
+      stage: 'discovery', ...(sawTrackLine ? {} : { message: 'The recommendation response did not contain readable TRACK lines.' }),
+    });
+  }
+  const parsedSources = parseYouTubeResults({ output_text: lines.join('\n') }, modelCandidates);
+  const sources = searchedVideoIds.size > 0 ? parsedSources.filter((source) => searchedVideoIds.has(source.videoId)) : parsedSources;
+  const sourceCandidateIds = new Set(sources.map((source) => source.candidateId));
+  const candidates = modelCandidates.filter((candidate) => sourceCandidateIds.has(candidate.candidateId));
+  const usedVideoIds = new Set(sources.map((source) => source.videoId));
+  const fallbackCandidates: Candidate[] = [];
+  const fallbackLines: string[] = [];
+  let fallbackNumber = modelCandidates.length + 1;
+  for (const videoId of searchedVideoIds) {
+    if (usedVideoIds.has(videoId) || excludedVideoIds.has(videoId) || candidates.length + fallbackCandidates.length >= SINGLE_PRIMARY_COUNT + SINGLE_BACKUP_COUNT) continue;
+    const candidateId = `C${String(fallbackNumber).padStart(2, '0')}`;
+    const artist = `Web source ${String(fallbackNumber).padStart(2, '0')}`;
+    const title = `Verified result ${String(fallbackNumber).padStart(2, '0')}`;
+    fallbackCandidates.push({ candidateId, artist, title });
+    fallbackLines.push(`YOUTUBE|${candidateId}|OFFICIAL_OTHER|${artist}|${title}|https://www.youtube.com/watch?v=${videoId}`);
+    usedVideoIds.add(videoId);
+    fallbackNumber += 1;
+  }
+  if (fallbackCandidates.length > 0) {
+    sources.push(...parseYouTubeResults({ output_text: fallbackLines.join('\n') }, fallbackCandidates));
+    candidates.push(...fallbackCandidates);
+  }
+  if (sources.length === 0) throw new AiDiagnosticError('NO_CANDIDATES', { stage: 'youtube-search' });
+  return { candidates, sources };
+}
+
+async function runSingleRecommendation(
+  ai: Pick<AiService, 'response'>,
+  request: typeof fetch,
+  context: RecommendationContext,
+  options: RecommendationRunOptions,
+): Promise<RecommendationResult> {
+  const startedAt = performance.now();
+  const measurements: RecommendationRequestMeasurement[] = [];
+  const stageCounts: Record<RecommendationDropMeasurement['stage'], RecommendationDropMeasurement> = {
+    discovery: { stage: 'discovery', inputCount: 0, outputCount: 0, dropCount: 0, attempts: 1 },
+    selection: { stage: 'selection', inputCount: 0, outputCount: 0, dropCount: 0, attempts: 0 },
+    resolver: { stage: 'resolver', inputCount: 0, outputCount: 0, dropCount: 0, attempts: 1 },
+    oembed: { stage: 'oembed', inputCount: 0, outputCount: 0, dropCount: 0, attempts: 1 },
+  };
+  const resolverDiagnostics: RecommendationResolverDiagnostics = { ...EMPTY_RESOLVER_DIAGNOSTICS };
+  const live: RecommendationLiveMeasurement = {
+    startedAt: Date.now(), updatedAt: Date.now(), currentStage: 'discovery', lastCompletedStage: null,
+    stageCounts: Object.values(stageCounts), stageTimings: [], requests: measurements,
+    resolver: { targetCount: SINGLE_PRIMARY_COUNT + SINGLE_BACKUP_COUNT, processedCount: 0, successCount: 0, failedCount: 0, supplementalSearches: 0, currentCandidateIndex: null },
+  };
+  const progress = (stage: RecommendationProgressStage, completed = false) => {
+    live.currentStage = stage;
+    if (completed) live.lastCompletedStage = stage;
+    live.updatedAt = Date.now();
+    live.stageCounts = Object.values(stageCounts).map((item) => ({ ...item }));
+    options.progress?.(stage, structuredClone(live));
+  };
+  progress('discovery');
+  const body = singleRecommendationBody(context);
+  const requestStartedAt = performance.now();
+  const response = await ai.response(body, 'discovery');
+  measurements.push({ ...responseMeasurement(response, body, 'single-recommendation', 'discovery', performance.now() - requestStartedAt), startedAt: Date.now(), completedAt: Date.now(), success: true, timeout: false });
+  const parsed = singleRecommendations(outputText(response), context, responseSourceVideoIds(response));
+  stageCounts.discovery.inputCount = SINGLE_PRIMARY_COUNT + SINGLE_BACKUP_COUNT;
+  stageCounts.discovery.outputCount = parsed.candidates.length;
+  stageCounts.discovery.dropCount = Math.max(0, SINGLE_PRIMARY_COUNT + SINGLE_BACKUP_COUNT - parsed.candidates.length);
+  progress('discovery', true);
+  progress('metadata');
+  live.resolver.targetCount = parsed.sources.length;
+  const resolved = await resolveRecommendations(parsed.candidates, parsed.sources, request, { acceptMetadataIdentity: true });
+  const recommendations = resolved.slice(0, SINGLE_PRIMARY_COUNT);
+  stageCounts.resolver.inputCount = parsed.sources.length;
+  stageCounts.resolver.outputCount = recommendations.length;
+  stageCounts.resolver.dropCount = Math.max(0, parsed.sources.length - recommendations.length);
+  stageCounts.oembed.inputCount = parsed.sources.length;
+  stageCounts.oembed.outputCount = recommendations.length;
+  stageCounts.oembed.dropCount = Math.max(0, parsed.sources.length - recommendations.length);
+  live.resolver.processedCount = parsed.sources.length;
+  live.resolver.successCount = recommendations.length;
+  live.resolver.failedCount = Math.max(0, parsed.sources.length - recommendations.length);
+  progress('metadata', true);
+  if (recommendations.length === 0) throw new AiDiagnosticError('YOUTUBE_METADATA_FAILED', { stage: 'metadata' });
+  const measurement: RecommendationMeasurement = {
+    cacheHit: false, totalDurationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+    candidateCount: parsed.candidates.length, selectedCount: recommendations.length,
+    youtubeSourceCount: parsed.sources.length, recommendationCount: recommendations.length,
+    stageCounts: Object.values(stageCounts), resolverDiagnostics, requests: measurements,
+  };
+  const accepted = new Set(recommendations.map((item) => item.candidateId));
+  return { candidates: parsed.candidates.filter((item) => accepted.has(item.candidateId)), recommendations, measurement };
+}
+
 export function createRecommendationService(ai: Pick<AiService, 'response'>, request: typeof fetch = fetch) {
   const cache = new Map<string, RecommendationResult>();
   let recentRecommendations: Recommendation[] = [];
@@ -96,6 +272,14 @@ export function createRecommendationService(ai: Pick<AiService, 'response'>, req
             resolverDiagnostics: cached.measurement?.resolverDiagnostics ?? EMPTY_RESOLVER_DIAGNOSTICS,
             requests: [],
           },
+        };
+      }
+      if (SINGLE_REQUEST_MODE) {
+        const single = await runSingleRecommendation(ai, request, { ...context, recent: [...context.recent, ...recentRecommendations] }, options);
+        cache.set(key, single);
+        recentRecommendations = [...single.recommendations, ...recentRecommendations].slice(0, 20);
+        return {
+          candidates: [...single.candidates], recommendations: [...single.recommendations], ...(single.measurement ? { measurement: single.measurement } : {}),
         };
       }
       const measurements: RecommendationRequestMeasurement[] = [];

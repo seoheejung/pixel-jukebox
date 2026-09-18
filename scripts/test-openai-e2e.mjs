@@ -11,10 +11,10 @@ const runTimeoutMs = 15 * 60 * 1000;
 const pricing = {
   asOf: '2026-09-15',
   source: 'https://developers.openai.com/api/docs/pricing',
-  model: 'gpt-4.1-mini',
-  inputPerMillion: 0.40,
-  cachedInputPerMillion: 0.10,
-  outputPerMillion: 1.60,
+  model: 'gpt-5.6-luna',
+  inputPerMillion: 0.20,
+  cachedInputPerMillion: 0.02,
+  outputPerMillion: 1.20,
   webSearchPerCall: 0.01,
   searchContentTokensPerCall: 8000,
 };
@@ -91,17 +91,22 @@ function resultReport(result) {
   const recommendationRows = result.recommendations.map((item, index) =>
     `| ${index + 1} | ${markdown(item.artist)} | ${markdown(item.title)} | ${item.videoType} | [YouTube](${item.videoUrl}) | ☐ | ☐ |`,
   ).join('\n');
-  const candidatePass = measurement.candidateCount >= 20 && measurement.candidateCount <= 30;
-  const selectionPass = measurement.selectedCount >= Math.min(12, measurement.candidateCount) && measurement.selectedCount <= 20;
-  const finalRange = measurement.recommendationCount >= 12 && measurement.recommendationCount <= 20;
+  const primaryCount = Math.min(10, measurement.candidateCount);
+  const backupCount = Math.max(0, measurement.candidateCount - primaryCount);
+  const requestCount = measurement.requests.length;
+  const selectionRequests = measurement.requests.filter((request) => request.stage === 'selection').length;
+  const retryRequests = measurement.requests.filter((request) => /retry|individual|reserve/u.test(request.kind)).length;
+  const oneShotPass = requestCount === 1 && selectionRequests === 0 && retryRequests === 0;
   return `## ${markdown(result.seed.channelTitle)} — ${markdown(result.seed.videoTitle)}
 
 - 실행 결과: ${result.recommendations.length > 0 ? 'PASS' : 'FAIL'}
 - 전체 응답시간: ${(measurement.totalDurationMs / 1000).toFixed(2)}초
-- Discovery 후보: ${measurement.candidateCount} (${candidatePass ? '목표 범위 통과' : '목표 20–30 미달'})
-- Selection: ${measurement.selectedCount} (${selectionPass ? '검증 통과' : '목표 범위 미달'})
-- YouTube 출처 발견: ${measurement.youtubeSourceCount}
-- Metadata 검증 최종 추천: ${measurement.recommendationCount} (${finalRange ? '목표 범위 통과' : '부분 결과'})
+- Responses API 요청: ${requestCount} (${oneShotPass ? '1회·재시도 없음' : '구조 기준 미달'})
+- Web Search tool 호출: ${measurement.requests.reduce((sum, request) => sum + request.webSearchCalls, 0)}
+- TRACK 반환: ${measurement.candidateCount} (Primary ${primaryCount} · Backup ${backupCount})
+- 실제 YouTube source 연결: ${measurement.youtubeSourceCount}
+- URL/videoId + oEmbed 통과: ${measurement.recommendationCount}
+- Selection 요청: ${selectionRequests} · 추가 검색/Retry 요청: ${retryRequests}
 - Artist: ${summary.uniqueArtists}명 · 한 Artist 최대 ${summary.maximumArtistRepeats}곡
 - 중복 videoId: ${summary.duplicateVideoIds} · 기준곡 재추천: ${summary.sourceRepeated ? '있음' : '없음'}
 - 영상 유형: ${typeCounts}

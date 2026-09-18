@@ -23,6 +23,8 @@ export function createAudioControls(root: HTMLElement, iframe: HTMLIFrameElement
   const copyDiagnostics = document.createElement('button');
   copyDiagnostics.id = 'copy-skip-diagnostics';
   copyDiagnostics.type = 'button';
+  copyDiagnostics.hidden = true;
+  copyDiagnostics.setAttribute('aria-hidden', 'true');
   copyDiagnostics.textContent = 'Copy skip diagnostics';
   skip.after(copyDiagnostics);
   copyDiagnostics.addEventListener('click', async () => {

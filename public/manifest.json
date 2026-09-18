@@ -10,10 +10,11 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "permissions": ["storage", "debugger"],
+  "permissions": ["storage", "debugger", "sidePanel"],
   "content_scripts": [{ "matches": ["https://www.youtube.com/embed/*"], "js": ["youtube-controls-v3.js"], "all_frames": true, "run_at": "document_idle" }],
   "optional_host_permissions": ["https://api.openai.com/*", "https://www.youtube.com/*"],
   "background": { "service_worker": "background.js", "type": "module" },
+  "side_panel": { "default_path": "sidepanel.html" },
   "action": {
     "default_title": "Pixel Jukebox 열기",
     "default_icon": {

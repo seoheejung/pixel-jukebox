@@ -14,6 +14,14 @@ function safeText(value: unknown, key: string): string | undefined {
   return value.replace(new RegExp(escaped, 'g'), '[REDACTED]').replace(/Bearer\s+\S+/gi, 'Bearer [REDACTED]').replace(/sk-[A-Za-z0-9_-]+/g, '[REDACTED]').replace(/[\r\n\t]+/g, ' ').slice(0, 300);
 }
 
+function hasPartialOutput(value: Record<string, unknown>): boolean {
+  if (!Array.isArray(value.output)) return false;
+  return value.output.some((item) => {
+    if (typeof item !== 'object' || item === null || !('content' in item) || !Array.isArray(item.content)) return false;
+    return item.content.some((part: unknown) => typeof part === 'object' && part !== null && 'text' in part && typeof part.text === 'string' && part.text.trim().length > 0);
+  });
+}
+
 async function failure(response: Response, key: string, stage: RecommendationStage): Promise<AiDiagnosticError> {
   let payload: unknown;
   try { payload = await response.json(); } catch { payload = undefined; }
@@ -154,6 +162,7 @@ export function createAiService(options: AiServicesOptions) {
           const record = payload as Record<string, unknown>;
           const embedded = record.error && typeof record.error === 'object' ? record.error as Record<string, unknown> : {};
           const incomplete = record.incomplete_details && typeof record.incomplete_details === 'object' ? record.incomplete_details as Record<string, unknown> : {};
+          if (payload.status === 'incomplete' && incomplete.reason === 'max_output_tokens' && hasPartialOutput(record)) return payload;
           const optional = {
             apiCode: safeText(embedded.code, key), apiType: safeText(embedded.type, key), param: safeText(embedded.param, key),
             message: safeText(payload.status === 'failed' ? embedded.message : incomplete.reason, key), requestId: safeText(response.headers.get('x-request-id'), key),

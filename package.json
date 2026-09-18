@@ -17,7 +17,6 @@
     "chrome:stop": "node scripts/stop-chrome.mjs",
     "test:chrome:bridge": "node scripts/test-chrome-player-bridge.mjs",
     "test:chrome:audio": "node scripts/test-chrome-audio.mjs",
-    "test:chrome:audio:popup": "node scripts/test-chrome-audio.mjs --popup",
     "test:chrome:ui": "node scripts/test-chrome-ui.mjs",
     "test:openai:e2e": "node scripts/test-openai-e2e.mjs",
     "test:live:fixture": "node scripts/test-live-measurement.mjs"

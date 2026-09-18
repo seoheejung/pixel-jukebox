@@ -22,6 +22,11 @@ function luminance(hex: string): number {
   return channels[0]! * 0.2126 + channels[1]! * 0.7152 + channels[2]! * 0.0722;
 }
 
+function shade(hex: string, factor: number): string {
+  const channels = [1, 3, 5].map((index) => Math.max(0, Math.min(255, Math.round(parseInt(hex.slice(index, index + 2), 16) * factor))));
+  return `#${channels.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`;
+}
+
 export function contrast(first: string, second: string): number {
   const a = luminance(first), b = luminance(second);
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
@@ -36,5 +41,6 @@ export function applyDesign(document: Document, settings: DesignSettings) {
   style.setProperty('--color-shell', settings.shell);
   style.setProperty('--color-screen', settings.screen);
   style.setProperty('--color-ab', settings.button);
+  style.setProperty('--color-ab-dark', shade(settings.button, .72));
   style.setProperty('--color-accent-text', contrast(settings.button, '#2e2230') >= 4.5 ? '#2e2230' : '#ffffff');
 }

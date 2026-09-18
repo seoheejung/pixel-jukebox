@@ -152,7 +152,7 @@ function inferVideoType(title: string, channelTitle: string): VideoType {
   return 'OFFICIAL_OTHER';
 }
 
-export async function resolveRecommendations(candidates: Candidate[], sources: YouTubeResult[], request: typeof fetch): Promise<Recommendation[]> {
+export async function resolveRecommendations(candidates: Candidate[], sources: YouTubeResult[], request: typeof fetch, options: { acceptMetadataIdentity?: boolean } = {}): Promise<Recommendation[]> {
   const allowed = new Map(candidates.map((candidate) => [candidate.candidateId, candidate]));
   let metadataFailures = 0;
   const resolved = await Promise.all(candidates.slice(0, MAX_RECOMMENDATIONS).map(async (candidate): Promise<Recommendation | null> => {
@@ -171,10 +171,13 @@ export async function resolveRecommendations(candidates: Candidate[], sources: Y
           typeof data.author_name !== 'string' || !data.author_name.trim() || data.author_name.length > 200 || data.provider_name !== 'YouTube') { metadataFailures++; continue; }
         const videoTitle = data.title.trim();
         const channelTitle = data.author_name.trim();
-        if (isExcludedRecording(videoTitle) || !includesVariant(videoTitle, candidate.title) ||
-          (!includesVariant(videoTitle, candidate.artist) && !includesVariant(channelTitle, candidate.artist))) continue;
+        if (isExcludedRecording(videoTitle)) continue;
+        const matchesCandidate = includesVariant(videoTitle, candidate.title) &&
+          (includesVariant(videoTitle, candidate.artist) || includesVariant(channelTitle, candidate.artist));
+        if (!matchesCandidate && !options.acceptMetadataIdentity) continue;
         return {
           ...candidate,
+          ...(matchesCandidate ? {} : { artist: channelTitle, title: videoTitle }),
           videoId: source.videoId,
           videoUrl: source.videoUrl,
           videoType: source.videoType ?? inferVideoType(videoTitle, channelTitle),

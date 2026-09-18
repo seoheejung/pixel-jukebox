@@ -221,6 +221,11 @@ body { max-height: 600px; overflow: auto; }
 .standalone-window .embedded-video { height: auto; overflow: hidden; }
 .standalone-window .embedded-video iframe { width: 100%; height: auto; aspect-ratio: 16 / 9; }
 .standalone-window .home-screen .lcd-content { grid-template-rows: repeat(4, minmax(42px, auto)); align-content: start; }
+.side-panel, .side-panel body { width: 100%; min-width: 360px; min-height: 100%; }
+.side-panel body { display: grid; min-height: 100dvh; max-height: none; align-items: start; justify-items: center; padding-block: 8px; background: #f1f0e9; }
+.side-panel main { width: min(100%, 400px); max-width: 400px; padding: 8px; container-type: inline-size; }
+.side-panel .game-boy { width: 100%; min-height: 570px; }
+.side-panel .screen-bezel { height: clamp(300px, calc((100cqw - 32px) * 9 / 16 + 118px), 344px); }
 main { width: 100%; max-width: 360px; padding: 6px; }
 .game-boy { min-height: 570px; padding: 12px 12px 16px; overflow: clip; border-radius: 18px 18px 38px 18px; background: var(--color-shell); box-shadow: inset 2px 2px #ffffff85, inset -2px -3px #77746f35, 0 5px 14px #34322e35; }
 .game-boy header { margin: 1px 3px 9px; }
@@ -245,6 +250,14 @@ main { width: 100%; max-width: 360px; padding: 6px; }
 .empty-player-link button { min-height: 24px; padding: 3px 6px; border: 1px solid var(--color-screen-ink); border-radius: 2px; background: var(--color-screen-ink); color: var(--color-screen); box-shadow: none; font: 700 8px/1 ui-monospace, monospace; }
 .empty-player-link p { min-height: 0; margin: 0; font: 8px/1.2 ui-monospace, monospace; }
 .empty-player-link p:empty { display: none; }
+#player.is-empty .embedded-video { display: none; }
+#player.is-empty #video-view { grid-template-rows: auto; }
+#player.is-empty .screen-bezel { height: auto; }
+#player.is-empty .now-playing { min-height: 136px; }
+.side-panel #player.is-empty .screen-bezel { height: clamp(300px, calc((100cqw - 32px) * 9 / 16 + 118px), 344px); }
+.side-panel #player.is-empty #video-view { height: 100%; align-content: center; }
+#player:not(.is-empty) #video-view { grid-template-rows: auto minmax(0, 1fr); }
+#player:not(.is-empty) .embedded-video, #player:not(.is-empty) .embedded-video iframe { height: auto; aspect-ratio: 16 / 9; }
 .track-controls { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
 .track-controls button { min-height: 23px; padding: 2px 4px; border: 1px solid var(--color-screen-ink); border-radius: 2px; background: transparent; color: inherit; box-shadow: none; font: 700 7px/1 ui-monospace, monospace; }
 .track-controls button[aria-pressed='true'] { background: var(--color-screen-ink); color: var(--color-screen); }
@@ -455,19 +468,13 @@ input { border: 1px solid var(--color-screen-ink); border-radius: 2px; backgroun
 .recommendation-drawer #ai-picks-message { font: 10px/1.5 ui-monospace, monospace; }
 .recommendation-drawer button.is-selected { outline: 1px solid var(--color-screen-ink); outline-offset: 1px; }
 
-/* Porcelain shell and restrained glass */
-html {
-  background:
-    radial-gradient(circle at 18% 7%, #ffffff52, transparent 42%),
-    linear-gradient(145deg, color-mix(in srgb, var(--color-shell) 96%, white), color-mix(in srgb, var(--color-shell) 96%, #9e9b91));
-}
-body { background: transparent; }
+/* Side-panel canvas and porcelain shell */
+html, body { background: #f1f0e9; }
 .game-boy {
   isolation: isolate;
   border: 0;
   border-radius: 26px 26px 44px 26px;
-  background: linear-gradient(135deg, #ffffff38, #ffffff0a 60%, #ffffff1c), color-mix(in srgb, var(--color-shell) 94%, transparent);
-  backdrop-filter: blur(8px) saturate(1.04);
+  background: var(--color-shell);
   box-shadow: 7px 9px 20px #39333f14, -5px -5px 16px #ffffff5c, inset 1px 1px 2px #ffffff65, inset -1px -1px 2px #39333f0b;
 }
 .screen-bezel { border: 0; background: color-mix(in srgb, #34353d 86%, var(--color-shell)); box-shadow: inset 1px 2px 4px #18182235, 0 1px 2px #ffffff50; }
@@ -567,3 +574,82 @@ body { background: transparent; }
 .audio-connection[hidden] { display: none; }
 #audio-connection-message { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .audio-connection #audio-connect { flex: none; min-height: 20px; padding: 3px; color: var(--color-screen-ink); background: var(--color-screen); border: 1px solid currentColor; border-radius: 2px; font: inherit; }
+
+/* Fixed hardware canvas */
+html, body { width: 100%; min-width: 0; }
+.side-panel body, .standalone-window body { display: block; min-height: 0; max-height: none; overflow-x: hidden; padding: 0; background: #f1f0e9; }
+html.side-panel, html.side-panel body { background: #f1f0e9 !important; }
+html.standalone-window, html.standalone-window body { background: #f1f0e9 !important; }
+.side-panel main, .standalone-window main {
+  width: min(480px, 100vw);
+  max-width: none;
+  height: min(720px, 150vw);
+  min-height: 0;
+  margin: 0 auto;
+  padding: 0;
+  zoom: normal;
+}
+.side-panel .game-boy, .standalone-window .game-boy {
+  width: 480px;
+  height: 720px;
+  min-height: 720px;
+  padding: 15px 14px 24px;
+  transform: scale(min(1, calc(100vw / 480px)));
+  transform-origin: top left;
+}
+.side-panel .screen-bezel,
+.standalone-window .screen-bezel,
+.side-panel #player.is-empty .screen-bezel {
+  width: 100%;
+  height: 420px;
+  min-height: 420px;
+  max-height: 420px;
+}
+.side-panel #player,
+.standalone-window #player { container-type: normal; }
+.side-panel #video-view,
+.standalone-window #video-view { min-height: 0; }
+.side-panel #player.is-empty #video-view,
+.standalone-window #player.is-empty #video-view { height: 100%; align-content: end; }
+.side-panel #player:not(.is-empty) .embedded-video,
+.standalone-window #player:not(.is-empty) .embedded-video { min-height: 0; height: auto; overflow: hidden; aspect-ratio: 16 / 9; }
+.side-panel #player:not(.is-empty) .embedded-video iframe,
+.standalone-window #player:not(.is-empty) .embedded-video iframe { display: block; box-sizing: content-box; width: 100%; height: 100%; min-height: 0; aspect-ratio: auto; }
+
+@media (max-width: 400px) {
+  .side-panel .lcd-header, .side-panel .lcd-footer { font-size: 11px; }
+  .side-panel .menu-list > button, .side-panel .playlist-play { font-size: 14px; }
+  .side-panel .menu-list button small { font-size: 10px; }
+  .side-panel .lcd-content label { font-size: 11px; }
+  .side-panel .lcd-content p, .side-panel .lcd-menu #video-message, .side-panel .lcd-menu #ai-message, .side-panel .lcd-menu #ai-picks-message { font-size: 12px; }
+}
+
+/* Side Panel readable type */
+.side-panel .lcd-header, .side-panel .lcd-footer { font-size: 12px; }
+.side-panel .menu-list > button, .side-panel .playlist-play { font-size: 15px; }
+.side-panel .menu-list button small { font-size: 11px; }
+.side-panel .lcd-content label { font-size: 11px; }
+.side-panel .lcd-content p, .side-panel .lcd-menu #video-message, .side-panel .lcd-menu #ai-message, .side-panel .lcd-menu #ai-picks-message { font-size: 12px; }
+.side-panel .now-playing-queue header strong { font-size: 11px; }
+.side-panel .now-playing-queue-track span { font-size: 11px; }
+.side-panel .now-playing-queue-track small { font-size: 9px; }
+.side-panel .control-deck { padding-inline: 22px; }
+.side-panel .lower-deck .system-controls { left: 125px; }
+
+/* Side-panel LCD readability */
+.side-panel .lcd-menu, .side-panel .now-playing-queue { font-size: 14px; }
+.side-panel .lcd-header, .side-panel .lcd-footer { font-size: 14px; line-height: 1.3; }
+.side-panel .menu-list > button, .side-panel .playlist-play { min-height: 46px; padding: 10px 11px; font-size: 17px; line-height: 1.35; }
+.side-panel .menu-list button small { font-size: 12px; }
+.side-panel .lcd-content label { font-size: 13px; }
+.side-panel .lcd-content p, .side-panel .lcd-menu #video-message, .side-panel .lcd-menu #ai-message, .side-panel .lcd-menu #ai-picks-message { font-size: 14px; line-height: 1.45; }
+.side-panel .lcd-menu input:not([type='color']) { font-size: 14px; }
+.side-panel .lcd-menu button:not(.playlist-play):not(.playlist-remove) { font-size: 13px; }
+.side-panel .playlist-channel { font-size: 12px; }
+.side-panel .playlist-remove { min-height: 42px; font-size: 22px; }
+.side-panel #similar-vibes-source-trigger { font-size: 14px; line-height: 1.35; }
+.side-panel .similar-vibes-source-option { font-size: 14px; line-height: 1.35; }
+.side-panel .now-playing-queue header strong { font-size: 14px; }
+.side-panel .now-playing-queue-track span { font-size: 14px; }
+.side-panel .now-playing-queue-track small { font-size: 11px; }
+#copy-skip-diagnostics { display: none !important; }

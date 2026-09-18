@@ -21,7 +21,7 @@ export const MESSAGE_AI = {
 
 export type RecommendationStage = 'connection' | 'discovery' | 'selection' | 'youtube-search' | 'metadata';
 export type RecommendationProgressStage = Exclude<RecommendationStage, 'connection'>;
-export type RecommendationRequestKind = 'discovery-research' | 'candidate-extraction' | 'selection' | 'selection-retry' | 'youtube-search' | 'youtube-search-individual' | 'youtube-search-reserve';
+export type RecommendationRequestKind = 'single-recommendation' | 'discovery-research' | 'candidate-extraction' | 'selection' | 'selection-retry' | 'youtube-search' | 'youtube-search-individual' | 'youtube-search-reserve';
 export type RecommendationErrorCode = 'NO_TRACK' | 'NO_CANDIDATES' | 'INVALID_SELECTION' | 'PERMISSION_DENIED' | 'NOT_CONFIGURED' | 'AUTH_ERROR' | 'RATE_LIMIT' | 'USAGE_ERROR' | 'OPENAI_REQUEST_FAILED' | 'BAD_REQUEST' | 'NOT_FOUND' | 'SERVER_ERROR' | 'NETWORK_ERROR' | 'INVALID_RESPONSE' | 'YOUTUBE_SOURCE_EMPTY' | 'YOUTUBE_METADATA_FAILED' | 'FAILED';
 
 export interface RecommendationRequestMeasurement {
@@ -122,7 +122,7 @@ function isNonNegativeInteger(value: unknown): value is number {
 }
 
 function isRecommendationRequestMeasurement(value: unknown): value is RecommendationRequestMeasurement {
-  if (!isRecord(value) || !['discovery-research', 'candidate-extraction', 'selection', 'selection-retry', 'youtube-search', 'youtube-search-individual', 'youtube-search-reserve'].includes(value.kind as string) ||
+  if (!isRecord(value) || !['single-recommendation', 'discovery-research', 'candidate-extraction', 'selection', 'selection-retry', 'youtube-search', 'youtube-search-individual', 'youtube-search-reserve'].includes(value.kind as string) ||
     !['discovery', 'selection', 'youtube-search'].includes(value.stage as string) || typeof value.model !== 'string' || value.model.length > 100 ||
     (value.serviceTier !== undefined && (typeof value.serviceTier !== 'string' || value.serviceTier.length > 100))) return false;
   return ['durationMs', 'inputTokens', 'cachedInputTokens', 'outputTokens', 'totalTokens', 'webSearchCalls'].every((key) => isNonNegativeInteger(value[key])) &&

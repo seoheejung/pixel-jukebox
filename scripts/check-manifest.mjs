@@ -5,7 +5,7 @@ import { readBridgeConfig, renderBridgeAsset } from './bridge-config.mjs';
 const manifest = JSON.parse(readFileSync('public/manifest.json', 'utf8'));
 assert.equal(manifest.manifest_version, 3);
 assert.equal(manifest.minimum_chrome_version, '140');
-assert.deepEqual(manifest.permissions, ['storage', 'debugger']);
+assert.deepEqual(manifest.permissions, ['storage', 'debugger', 'sidePanel']);
 assert.deepEqual(manifest.content_scripts, [{ matches: ['https://www.youtube.com/embed/*'], js: ['youtube-controls-v3.js'], all_frames: true, run_at: 'document_idle' }]);
 assert.equal(manifest.host_permissions, undefined);
 assert.deepEqual(manifest.optional_host_permissions, ['https://api.openai.com/*', 'https://www.youtube.com/*']);
@@ -25,7 +25,7 @@ for (const [size, icon] of Object.entries(expectedIcons)) {
   assert.equal(data.readUInt32BE(16), Number(size));
   assert.equal(data.readUInt32BE(20), Number(size));
 }
-assert.equal(manifest.side_panel, undefined);
+assert.deepEqual(manifest.side_panel, { default_path: 'sidepanel.html' });
 assert.equal(manifest.content_security_policy.extension_pages, "script-src 'self'; object-src 'self'; frame-src __PLAYER_BRIDGE_ORIGIN__; img-src 'self' https://i.ytimg.com data:");
 console.log('PASS: source manifest and minimum permissions');
 

@@ -61,49 +61,46 @@ Pixel Jukebox는 현재 곡과 Playlist 흐름을 기준으로 다음에 이어 
 - Playlist 추가·삭제·순서 변경과 이전·다음·반복 재생
 - 음량·음소거, 사용자 설정 복구
 - D-pad, A/B, SELECT/START와 키보드 조작
-- Popup, 반응형 독립 창, Document Picture-in-Picture
+- 재생을 유지하는 Chrome Side Panel, Document Picture-in-Picture
 - 본체·LCD·버튼 색상 설정
 
 ### KEEP THIS VIBE
 
 - 현재 곡을 중심으로 분위기·시대감·질감·감정선이 이어지는 후보 탐색
-- Discovery에서 20–30곡 탐색, Selection에서 12–20곡 구성을 목표로 함
-- OpenAI Web Search와 Structured Outputs 기반 큐레이션
+- OpenAI에 한 번만 요청해 10곡의 주 추천과 2곡의 백업 추천을 함께 조사
+- Web Search 결과를 `TRACK|순번|Artist|Track|YouTube URL` line protocol로 반환
 - 실제 YouTube 출처와 oEmbed Metadata로 곡·Artist 일치 여부 검증
-- 검증된 결과만 추천 순서대로 표시하고 Playlist에 바로 추가
-- Cache와 동일 Panel의 동시 중복 실행 차단, `MORE LIKE THIS` 재탐색, 검증 실패 Candidate를 제외하고 검증된 결과만 유지
+- URL 정규화·YouTube host/video ID·중복·oEmbed를 애플리케이션에서 병렬 검증
+- 검증에 통과한 순서대로 최대 10곡만 표시하고, 실패한 주 추천은 백업 추천으로 보완
+- 추가 OpenAI 재시도 없이 Cache와 동일 Panel의 중복 실행 차단, `MORE LIKE THIS` 재탐색 지원
+- 검증 실패 Candidate를 제외하고 검증된 결과만 유지한다.
 
 ## AI 활용 방식
 
 ```text
 Current Track + Playlist + Recent Recommendations
                          ↓
-                 Research Discovery
+             OpenAI Responses API + Web Search
                          ↓
-                 Candidate Extraction
+             10 primary + 2 backup TRACK lines
                          ↓
-                 Candidate Validation
+                 Application Validation
                          ↓
-                      Selection
+                 YouTube URL Normalization
                          ↓
-                   YouTube Resolver
-                         ↓
-                 oEmbed Metadata Validation
+                 Parallel oEmbed Validation
                          ↓
                   KEEP THIS VIBE
 ```
 
-OpenAI Responses API와 Web Search로 후보를 조사하고, 검증된 Candidate 안에서 Playlist 흐름을 구성한다. AI가 생성한 YouTube URL을 그대로 사용하지 않고 실제 검색 출처와 YouTube Metadata를 재검증한다.
+OpenAI Responses API 요청은 한 번만 실행한다. 모델이 현재 곡·Playlist·최근 추천을 분석하고 Web Search로 조사한 뒤, 순서가 있는 12개 TRACK line(주 추천 10개와 백업 2개)을 반환한다. 애플리케이션은 모델의 URL을 신뢰하지 않고 URL 파싱, YouTube 출처 확인, 중복 제거, oEmbed Metadata 검증을 수행한다. 검증 통과 결과의 앞 10곡만 KEEP THIS VIBE에 표시하며, 이 과정에서 OpenAI를 다시 호출하지 않는다.
 
 ## 전체 구조
 
 ```mermaid
 flowchart TD
-    Icon["확장 아이콘"] --> Popup["Popup LCD"]
-    Popup -->|닫기| Stop["재생 종료"]
-    Popup -->|Settings · Open Window| Window["반응형 독립 창 LCD"]
-    Popup --> UI["Player · Playlist · KEEP THIS VIBE · Settings"]
-    Window --> UI
+    Icon["확장 아이콘"] --> Panel["지속되는 Chrome Side Panel"]
+    Panel --> UI["Player · Playlist · KEEP THIS VIBE · Settings"]
     UI <--> Bridge["HTTPS Player Bridge"]
     Bridge <--> YouTube["YouTube IFrame Player"]
     UI <--> Worker["Extension Service Worker"]
@@ -122,7 +119,7 @@ flowchart TD
 | Build · Test | Vite · Vitest |
 | Player | GitHub Pages Player Bridge · YouTube IFrame Player API |
 | Storage | `chrome.storage.local` · `chrome.storage.session` · UI `localStorage` |
-| AI | OpenAI Responses API · Web Search · Structured Outputs |
+| AI | OpenAI Responses API 1회 · Web Search · TRACK line protocol |
 
 ## 최종 사용자 UX
 
@@ -194,7 +191,7 @@ Web Demo URL로 사용하지 않는다.
 <details>
 <summary>INSTALLER DETAILS</summary>
 
-- SHA-256: `06856B5E020A1EE792C8E2DC11EF46AA80F39AAC4F67FBCEEC987C8CB868BB0C`
+- SHA-256: `CBCA6E8B375561CF20C8157F2BFEFED32BD9D14632A1940310B90BD3BC50EFB5`
 - Checksum: [SHA256SUMS.txt](release/SHA256SUMS.txt)
 
 </details>
@@ -240,7 +237,7 @@ npm run build
 
 5. `chrome://extensions`에서 **개발자 모드**를 활성화한다.
 6. **압축해제된 확장 프로그램을 로드합니다**를 선택하고 빌드된 `dist/` 디렉터리를 연다.
-7. Pixel Jukebox 아이콘을 눌러 Popup을 실행한다.
+7. Pixel Jukebox 아이콘을 눌러 Side Panel을 연다. 다른 탭으로 이동해도 재생은 계속된다. 별도 창이 필요하면 **Settings → Open Window**를 사용한다. 이때 Side Panel은 닫히고 독립 플레이어 창으로 전환되며, 창을 닫으면 원래 탭으로 돌아간다.
 
 코드를 변경한 뒤에는 다시 빌드하고 확장을 새로고침한다.
 `bridge.config.local.json`은 빌드 전 필요한 로컬 설정이며 Git에 포함되지 않는다.
@@ -294,7 +291,6 @@ UI와 Audio fixture는 각각 격리된 Chrome을 실행해 검증한다.
 ```sh
 npm run test:chrome:ui
 npm run test:chrome:audio
-npm run test:chrome:audio:popup
 ```
 
 Player Bridge fixture는 공용 테스트 프로필을 먼저 연 뒤 실행하고 종료한다.

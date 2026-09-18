@@ -13,14 +13,17 @@ export function recommendationContext(context: RecommendationPromptContext): str
   const current = context.current
     ? `Supplied title: ${context.current.videoTitle}\nSupplied channel: ${context.current.channelTitle}\nSecondary reference URL: ${context.current.videoUrl}`
     : 'No selected reference track';
-  const playlist = context.playlist.map((track) => `${track.channelTitle} — ${track.videoTitle}`).join('\n') || 'Empty';
+  const playlist = context.playlist
+    .filter((track) => track.videoId !== context.current?.videoId)
+    .map((track) => `${track.channelTitle} — ${track.videoTitle}`)
+    .join('\n') || 'Empty';
   const recent = context.recent.map((item) => `${item.artist} — ${item.title}`).join('\n') || 'Empty';
   return `Current track:\n${current}\n\nPlaylist context:\n${playlist}\n\nRecent recommendations:\n${recent}`;
 }
 
 export function discoveryResearchBody(context: RecommendationPromptContext): Record<string, unknown> {
   return {
-    model: 'gpt-4.1-mini',
+    model: 'gpt-5.6-luna',
     store: false,
     tools: [{ type: 'web_search' }],
     tool_choice: 'required',
@@ -36,7 +39,7 @@ export function discoveryResearchBody(context: RecommendationPromptContext): Rec
 
 export function discoveryExtractionBody(context: RecommendationPromptContext, research: string): Record<string, unknown> {
   return {
-    model: 'gpt-4.1-mini',
+    model: 'gpt-5.6-luna',
     store: false,
     input: [
       {

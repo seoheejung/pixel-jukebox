@@ -130,6 +130,19 @@ describe('Phase 3 API key boundary', () => {
     await expect(incomplete.response({}, 'selection')).rejects.toMatchObject({ message: 'INVALID_RESPONSE', details: { stage: 'selection', message: 'max_output_tokens', requestId: 'req_incomplete' } });
   });
 
+  it('returns usable TRACK output when only the backup tail reached the output limit', async () => {
+    const partial = {
+      status: 'incomplete',
+      incomplete_details: { reason: 'max_output_tokens' },
+      output: [{ type: 'message', content: [{ type: 'output_text', text: 'TRACK|PRIMARY|Artist|Track|https://www.youtube.com/watch?v=dQw4w9WgXcQ' }] }],
+    };
+    const ai = createAiService({
+      session: area({ [OPENAI_API_KEY]: 'secret' }), local: area(), containsPermission: async () => true, requestPermission: async () => true,
+      request: async () => new Response(JSON.stringify(partial)),
+    });
+    await expect(ai.response({}, 'discovery')).resolves.toEqual(partial);
+  });
+
   it('rejects key-bearing runtime payloads', () => {
     expect(isAiMessage({ type: MESSAGE_AI.save, persist: true })).toBe(true);
     expect(isAiMessage({ type: MESSAGE_AI.save, persist: true, key: 'blocked' })).toBe(false);

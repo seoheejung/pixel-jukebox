@@ -110,94 +110,99 @@ describe('YouTube recommendation resolver', () => {
     });
   });
 
-  it('retries Selection once with the same Candidate Set and caches resolved results', async () => {
-    const response = vi.fn()
-      .mockResolvedValueOnce(output('Evidence for the supported track.'))
-      .mockResolvedValueOnce(output('CANDIDATE|C01|Rick Astley|Never Gonna Give You Up'))
-      .mockResolvedValueOnce(output('{broken'))
-      .mockResolvedValueOnce(output('{"recommendations":[{"candidateId":"C01"}]}'))
-      .mockResolvedValueOnce(output(youtubeLine(candidate)));
+  it('requests a complete recommendation set once and caches resolved results', async () => {
+    const response = vi.fn().mockResolvedValueOnce(measuredOutput(`TRACK|01|${candidate.artist}|${candidate.title}|https://www.youtube.com/watch?v=${videoId}`, true));
     const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(metadata)));
     const service = createRecommendationService({ response }, request);
     const context = { current: trackFromVideoId('4Ygvv_Ae3dg'), playlist: [], recent: [] };
     const result = await service.run(context);
-    expect(result.recommendations[0]).toMatchObject({ candidateId: 'C01', videoId, videoType: 'MV' });
+    expect(result.recommendations[0]).toMatchObject({ candidateId: 'C01', videoId, videoType: 'OFFICIAL_OTHER' });
     const cached = await service.run(context);
     expect(cached).toMatchObject({ candidates: result.candidates, recommendations: result.recommendations, measurement: { cacheHit: true, requests: [] } });
-    expect(response).toHaveBeenCalledTimes(5);
+    expect(response).toHaveBeenCalledTimes(1);
     expect(request).toHaveBeenCalledTimes(1);
 
-    const discovery = response.mock.calls[0]?.[0] as { tool_choice?: string; input?: Array<{ content: string }> };
+    const discovery = response.mock.calls[0]?.[0] as {
+      tool_choice?: string;
+      input?: Array<{ content: string }>;
+      text?: unknown;
+      tools?: Array<{ type?: string; search_context_size?: string; filters?: { allowed_domains?: string[] } }>;
+      max_tool_calls?: number;
+      reasoning?: { effort?: string };
+    };
     expect(discovery.tool_choice).toBe('required');
-    expect(discovery.input?.[0]?.content).toContain('current track as the strongest anchor');
-    expect(discovery.input?.[0]?.content).toContain('if this played next, would the flow break');
-    expect(discovery.input?.[0]?.content).toContain('20 to 30');
-    const extraction = response.mock.calls[1]?.[0] as { tools?: unknown; text?: unknown; input?: Array<{ content: string }> };
-    expect(extraction.tools).toBeUndefined();
-    expect(extraction.text).toBeUndefined();
-    expect(extraction.input?.[0]?.content).toContain('CANDIDATE|C01|Artist|Track');
-    const firstSelection = response.mock.calls[2]?.[0] as { input?: Array<{ content: string }>; text: { format: { schema: { properties: { recommendations: { minItems: number; maxItems: number } } } } } };
-    const retriedSelection = response.mock.calls[3]?.[0] as typeof firstSelection;
-    expect(firstSelection.text.format.schema.properties.recommendations.maxItems).toBe(20);
-    expect(firstSelection.text.format.schema.properties.recommendations.minItems).toBe(1);
-    expect(retriedSelection.input?.[1]).toEqual(firstSelection.input?.[1]);
-    expect(retriedSelection.input?.[2]?.content).toContain('identical Candidate Set');
-    const youtube = response.mock.calls[4]?.[0] as { input?: Array<{ content: string }> };
-    expect(youtube.input?.[0]?.content).toContain('YOUTUBE|C03|MV|Artist|Track|');
-    expect(youtube.input?.[0]?.content).toContain('official MV; official performance or live clip');
+    expect(discovery.input?.[0]?.content).toContain('In one response');
+    expect(discovery.input?.[0]?.content).toContain('10 primary');
+    expect(discovery.text).toBeUndefined();
+    expect(discovery.tools?.[0]?.type).toBe('web_search');
+    expect(discovery.tools?.[0]?.search_context_size).toBe('low');
+    expect(discovery.tools?.[0]?.filters?.allowed_domains).toEqual(['www.youtube.com']);
+    expect(discovery.max_tool_calls).toBe(6);
+    expect(discovery.reasoning?.effort).toBe('low');
+  });
+
+  it('accepts the labeled Artist — Title TRACK format returned by the Responses API', async () => {
+    const response = vi.fn().mockResolvedValueOnce(output(`TRACK | PRIMARY | ${candidate.artist} — ${candidate.title} | https://www.youtube.com/watch?v=${videoId}`));
+    const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(metadata)));
+    const result = await createRecommendationService({ response }, request).run({ current: trackFromVideoId('4Ygvv_Ae3dg'), playlist: [], recent: [] });
+    expect(result.recommendations).toMatchObject([{ candidateId: 'C01', artist: candidate.artist, title: candidate.title, videoId }]);
+  });
+
+  it('uses a verified Web Search source when the model returned an uncited URL', async () => {
+    const uncitedId = 'M7lc1UVf-VE';
+    const response = vi.fn().mockResolvedValueOnce({
+      output: [
+        { type: 'web_search_call', action: { sources: [{ url: `https://www.youtube.com/watch?v=${videoId}` }] } },
+        { type: 'message', content: [{ type: 'output_text', text: `TRACK|PRIMARY|Wrong Artist|Wrong Title|https://www.youtube.com/watch?v=${uncitedId}` }] },
+      ],
+    });
+    const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(metadata)));
+    const result = await createRecommendationService({ response }, request).run({ current: trackFromVideoId('4Ygvv_Ae3dg'), playlist: [], recent: [] });
+    expect(result.recommendations).toMatchObject([{ videoId, artist: 'Rick Astley', title: metadata.title }]);
   });
 
   it('keeps valid partial results when another selected candidate cannot resolve', async () => {
     const second: Candidate = { candidateId: 'C02', artist: 'Second Artist', title: 'Second Song' };
-    const response = vi.fn()
-      .mockResolvedValueOnce(output('Evidence for two tracks.'))
-      .mockResolvedValueOnce(output('CANDIDATE|C01|Rick Astley|Never Gonna Give You Up\nCANDIDATE|C02|Second Artist|Second Song'))
-      .mockResolvedValueOnce(output('{"recommendations":[{"candidateId":"C01"},{"candidateId":"C02"}]}'))
-      .mockResolvedValueOnce(output(youtubeLine(candidate)))
-      .mockResolvedValueOnce(output('No exact official video.'));
+    const response = vi.fn().mockResolvedValueOnce(output([
+      `TRACK|01|${candidate.artist}|${candidate.title}|https://www.youtube.com/watch?v=${videoId}`,
+      `TRACK|02|${second.artist}|${second.title}|https://www.youtube.com/watch?v=M7lc1UVf-VE`,
+    ].join('\n')));
     const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(metadata)));
     const result = await createRecommendationService({ response }, request).run({ current: trackFromVideoId('4Ygvv_Ae3dg'), playlist: [], recent: [] });
     expect(result.recommendations).toHaveLength(1);
     expect(result.recommendations[0]?.candidateId).toBe('C01');
-    expect(response).toHaveBeenCalledTimes(5);
-    expect(response.mock.calls[4]?.[0]).toMatchObject({ input: expect.arrayContaining([expect.objectContaining({ role: 'user', content: JSON.stringify([second]) })]) });
+    expect(response).toHaveBeenCalledTimes(1);
   });
 
   it('measures each live Responses call without retaining response content', async () => {
-    const response = vi.fn()
-      .mockResolvedValueOnce(measuredOutput('Evidence for the supported track.', true))
-      .mockResolvedValueOnce(measuredOutput('CANDIDATE|C01|Rick Astley|Never Gonna Give You Up'))
-      .mockResolvedValueOnce(measuredOutput('{"recommendations":[{"candidateId":"C01"}]}'))
-      .mockResolvedValueOnce(measuredOutput(youtubeLine(candidate), true));
+    const response = vi.fn().mockResolvedValueOnce(measuredOutput(`TRACK|01|${candidate.artist}|${candidate.title}|https://www.youtube.com/watch?v=${videoId}`, true));
     const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(metadata)));
     const result = await createRecommendationService({ response }, request).run({ current: trackFromVideoId('4Ygvv_Ae3dg'), playlist: [], recent: [] }, { refresh: true });
     expect(result.measurement).toMatchObject({
       cacheHit: false, candidateCount: 1, selectedCount: 1, youtubeSourceCount: 1, recommendationCount: 1,
       stageCounts: [
-        { stage: 'discovery', inputCount: 0, outputCount: 1, dropCount: 0, attempts: 1 },
-        { stage: 'selection', inputCount: 1, outputCount: 1, dropCount: 0, attempts: 1 },
+        { stage: 'discovery', inputCount: 12, outputCount: 1, dropCount: 11, attempts: 1 },
+        { stage: 'selection', inputCount: 0, outputCount: 0, dropCount: 0, attempts: 0 },
         { stage: 'resolver', inputCount: 1, outputCount: 1, dropCount: 0, attempts: 1 },
         { stage: 'oembed', inputCount: 1, outputCount: 1, dropCount: 0, attempts: 1 },
       ],
       resolverDiagnostics: { searchSourceEmpty: 0, urlExtractionFailure: 0, candidateMismatch: 0, videoTypeExcluded: 0, validationFailure: 0, supplementalSearchFailure: 0 },
     });
-    expect(result.measurement?.requests).toHaveLength(4);
+    expect(result.measurement?.requests).toHaveLength(1);
     expect(result.measurement?.requests[0]).toMatchObject({
-      kind: 'discovery-research', stage: 'discovery', model: 'gpt-4.1-mini-2025-04-14', serviceTier: 'default',
+      kind: 'single-recommendation', stage: 'discovery', model: 'gpt-4.1-mini-2025-04-14', serviceTier: 'default',
       inputTokens: 100, cachedInputTokens: 20, outputTokens: 30, totalTokens: 130, webSearchCalls: 1,
     });
-    expect(result.measurement?.requests.map((item) => item.kind)).toEqual(['discovery-research', 'candidate-extraction', 'selection', 'youtube-search']);
-    expect(JSON.stringify(result.measurement)).not.toContain('Evidence for the supported track.');
+    expect(result.measurement?.requests.map((item) => item.kind)).toEqual(['single-recommendation']);
     expect(JSON.stringify(result.measurement)).not.toContain('Never Gonna Give You Up');
   });
 
-  it('fails Discovery without retry when no valid Candidate line exists', async () => {
+  it('fails Discovery without retry when no valid TRACK line exists', async () => {
     const response = vi.fn()
-      .mockResolvedValueOnce(output('No supported public tracks.'))
-      .mockResolvedValueOnce(output('No candidates.'));
+      .mockResolvedValueOnce(output('No valid tracks found.'));
     await expect(createRecommendationService({ response }).run({ current: trackFromVideoId('4Ygvv_Ae3dg'), playlist: [], recent: [] }))
-      .rejects.toMatchObject({ message: 'NO_CANDIDATES', details: { stage: 'discovery' } });
-    expect(response).toHaveBeenCalledTimes(2);
+      .rejects.toMatchObject({ message: 'INVALID_RESPONSE', details: { stage: 'discovery' } });
+    expect(response).toHaveBeenCalledTimes(1);
   });
 
   it('excludes the current track, Playlist, and Recent Recommendations before Selection', async () => {
@@ -208,16 +213,12 @@ describe('YouTube recommendation resolver', () => {
       videoUrl: 'https://www.youtube.com/watch?v=ysz5S6PUM-U', videoType: 'MV' as const,
       thumbnail: 'https://i.ytimg.com/vi/ysz5S6PUM-U/hqdefault.jpg', channelTitle: 'Recent Artist',
     }];
-    const response = vi.fn()
-      .mockResolvedValueOnce(output('Supported candidates.'))
-      .mockResolvedValueOnce(output([
-        'CANDIDATE|C01|Seed Artist|Seed Song',
-        'CANDIDATE|C02|Queued Artist|Queued Song',
-        'CANDIDATE|C03|Recent Artist|Recent Song',
-        'CANDIDATE|C04|Rick Astley|Never Gonna Give You Up',
-      ].join('\n')))
-      .mockResolvedValueOnce(output('{"recommendations":[{"candidateId":"C04"}]}'))
-      .mockResolvedValueOnce(output('YOUTUBE|C04|MV|Rick Astley|Never Gonna Give You Up|https://www.youtube.com/watch?v=dQw4w9WgXcQ'));
+    const response = vi.fn().mockResolvedValueOnce(output([
+      'TRACK|01|Wrong Artist|Wrong Current|https://www.youtube.com/watch?v=4Ygvv_Ae3dg',
+      'TRACK|02|Wrong Artist|Wrong Playlist|https://www.youtube.com/watch?v=M7lc1UVf-VE',
+      'TRACK|03|Wrong Artist|Wrong Recent|https://www.youtube.com/watch?v=ysz5S6PUM-U',
+      `TRACK|04|${candidate.artist}|${candidate.title}|https://www.youtube.com/watch?v=${videoId}`,
+    ].join('\n')));
     const request = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(metadata)));
     const result = await createRecommendationService({ response }, request).run({ current, playlist: [playlistTrack(queued)], recent });
     expect(result.candidates).toEqual([{ candidateId: 'C04', artist: 'Rick Astley', title: 'Never Gonna Give You Up' }]);

@@ -3,7 +3,7 @@ import type { Candidate } from '../../shared/recommendation';
 export function youtubeResolverBody(candidates: Candidate[], individual = false): Record<string, unknown> {
   const scope = individual ? 'the supplied track' : 'each supplied track';
   return {
-    model: 'gpt-4.1-mini',
+    model: 'gpt-5.6-luna',
     store: false,
     tools: [{ type: 'web_search' }],
     tool_choice: 'required',

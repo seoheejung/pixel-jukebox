@@ -221,6 +221,16 @@ try {
   assert.equal(await evaluate(browser, panel, "document.querySelector('.screen-label') === null && !document.querySelector('#menu-view').classList.contains('toolbox')"), true, 'LCD must not retain the legacy label or toolbox card styling');
   const bezelPadding = await evaluate(browser, panel, `(() => { const style = getComputedStyle(document.querySelector('.screen-bezel')); return [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft]; })()`);
   assert.equal(new Set(bezelPadding).size, 1, `LCD bezel padding must be equal: ${JSON.stringify(bezelPadding)}`);
+  await evaluate(browser, panel, "window.__emitUiMessage({ type: 'CORE_STATE', state: { playlist: [], settings: { shell: '#d9d7cc', screen: '#9bbc0f', button: '#a13b6d' } } })");
+  await click('[data-open="now-playing"]');
+  assert.equal(await evaluate(browser, panel, `(() => {
+    const input = document.querySelector('#empty-player-link');
+    const video = document.querySelector('.embedded-video');
+    const details = document.querySelector('.now-playing');
+    return !input.hidden && video.getClientRects().length === 0 && details.getBoundingClientRect().height >= 136;
+  })()`), true, 'An empty Playlist must show only the compact YouTube link input, without a blank video frame');
+  await click('#button-b');
+  assert.equal(await screen(), 'home', 'B must return from an empty Now Playing screen');
 
   await click('#dpad-down');
   await click('#button-a');
@@ -229,6 +239,7 @@ try {
   assert.equal(await screen(), 'home', 'Physical B must return Home');
   await click('#button-start');
   assert.equal(await screen(), 'settings', 'Physical START must open Settings');
+  assert.equal(await evaluate(browser, panel, "Boolean(document.querySelector('#open-window'))"), true, 'Settings must offer the optional standalone player window');
   assert.equal(await evaluate(browser, panel, "document.querySelector('[data-open=\"pip\"]') === null && document.querySelector('[data-view=\"pip\"]') === null"), true, 'Unverified Mini Player affordances must not be exposed');
   await key('Home');
   assert.equal(await screen(), 'home', 'Keyboard Home must act as SELECT');
@@ -341,10 +352,12 @@ try {
   assert.equal(await evaluate(browser, panel, "document.querySelector('#player').dataset.playbackState"), 'playing', 'Queue selection must keep the chosen track playing');
 
   await click('#button-select');
-  await until(() => evaluate(browser, panel, "document.querySelector('#player').dataset.playbackState === 'paused'"), 'Menu entry pause');
-  assert.equal(await evaluate(browser, panel, "document.querySelector('.power-light').classList.contains('is-playing')"), false, 'POWER light must turn off when playback pauses');
+  assert.equal(await evaluate(browser, panel, "document.querySelector('#player').dataset.playbackState"), 'playing', 'Menu entry must keep the current track playing');
+  assert.equal(await evaluate(browser, panel, "document.querySelector('.power-light').classList.contains('is-playing')"), true, 'POWER light must stay on while music continues');
   await click('[data-open="now-playing"]');
-  assert.equal(await evaluate(browser, panel, "document.querySelector('#player').dataset.playbackState"), 'paused', 'Returning to Now Playing must stay paused');
+  assert.equal(await evaluate(browser, panel, "document.querySelector('#player').dataset.playbackState"), 'playing', 'Returning to Now Playing must preserve playback');
+  await click('#button-a');
+  await until(() => evaluate(browser, panel, "document.querySelector('#player').dataset.playbackState === 'paused'"), 'A pauses playback');
   await click('#button-a');
   await until(() => evaluate(browser, panel, "document.querySelector('#player').dataset.playbackState === 'playing'"), 'A resumes playback');
   assert.equal(await evaluate(browser, panel, "document.querySelector('.power-light').getAttribute('aria-label')"), 'Music playing', 'POWER light status must be accessible');
@@ -396,6 +409,7 @@ try {
   await click('#button-select');
   await click('[data-open="playlist"]');
   await click('#button-b');
+  assert.equal(await evaluate(browser, panel, "document.querySelector('#player').dataset.playbackState"), 'playing', 'B must return to the menu without stopping music');
   await click('[data-open="now-playing"]');
   const frameIdentityAfter = await evaluate(browser, panel, `document.querySelector('iframe')?.dataset.testIdentity ?? null`);
   assert.equal(frameIdentityAfter, frameIdentityBefore, 'Player iframe identity must survive screen switches');
@@ -531,48 +545,34 @@ try {
     }
     console.log(`PASS ${width}px: no horizontal overflow, all 8 controls and 4 LCD screens visible`);
   }
-  await evaluate(browser, panel, "document.documentElement.classList.add('standalone-window')");
   await click('#button-select');
   await click('[data-open="now-playing"]');
-  const standaloneSize = () => evaluate(browser, panel, `(() => {
-    window.dispatchEvent(new Event('resize'));
-    const scale = Number(getComputedStyle(document.documentElement).getPropertyValue('--window-scale')) || 1;
-    const gameBoy = document.querySelector('.game-boy').getBoundingClientRect();
-    const lcd = document.querySelector('.screen-bezel').getBoundingClientRect();
-    const video = document.querySelector('.embedded-video').getBoundingClientRect();
-    return { gameBoy: { width: gameBoy.width / scale, bottom: gameBoy.bottom }, lcd: { width: lcd.width, height: lcd.height }, video: { width: video.width, height: video.height } };
-  })()`);
   await browser.send('Emulation.setDeviceMetricsOverride', { width: 380, height: 650, deviceScaleFactor: 1, mobile: false }, panel);
-  const standaloneMinimum = await standaloneSize();
-  const { data: standaloneMinimumShot } = await browser.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }, panel);
-  await writeFile(resolve(output, 'gameboy-now-playing-standalone-380x650.png'), standaloneMinimumShot, 'base64');
+  const { data: tabMinimumShot } = await browser.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }, panel);
+  await writeFile(resolve(output, 'gameboy-now-playing-side-panel-380x650.png'), tabMinimumShot, 'base64');
   await browser.send('Emulation.setDeviceMetricsOverride', { width: 720, height: 940, deviceScaleFactor: 1, mobile: false }, panel);
-  const standaloneExpanded = await standaloneSize();
-  const { data: standaloneExpandedShot } = await browser.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }, panel);
-  await writeFile(resolve(output, 'gameboy-now-playing-standalone-720x940.png'), standaloneExpandedShot, 'base64');
-  assert.ok(standaloneExpanded.gameBoy.width > standaloneMinimum.gameBoy.width, `Standalone player must grow beyond its 360px minimum: ${JSON.stringify({ standaloneMinimum, standaloneExpanded })}`);
-  assert.ok(standaloneExpanded.gameBoy.width <= 640 && standaloneExpanded.gameBoy.bottom <= 940, `Standalone player must stay bounded: ${JSON.stringify(standaloneExpanded)}`);
-  assert.ok(standaloneExpanded.lcd.height > standaloneMinimum.lcd.height && standaloneExpanded.video.height > standaloneMinimum.video.height, `Standalone LCD and video must consume added height: ${JSON.stringify({ standaloneMinimum, standaloneExpanded })}`);
+  const { data: tabExpandedShot } = await browser.send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }, panel);
+  await writeFile(resolve(output, 'gameboy-now-playing-side-panel-720x940.png'), tabExpandedShot, 'base64');
   for (const [width, height] of [[360, 600], [720, 480], [1280, 720], [1920, 1080]]) {
     await browser.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false }, panel);
     await evaluate(browser, panel, 'window.scrollTo(0, 0)');
     const layout = await evaluate(browser, panel, `(() => {
-      window.dispatchEvent(new Event('resize'));
-      const scale = Number(getComputedStyle(document.documentElement).getPropertyValue('--window-scale')) || 1;
       const rect = selector => document.querySelector(selector).getBoundingClientRect();
       const lcd = rect('.screen-bezel');
       const video = rect('.embedded-video iframe');
       const info = rect('.now-playing');
+      const shell = rect('.game-boy');
       return {
         overflow: document.documentElement.scrollWidth > innerWidth,
-        scale,
-        deckWidth: rect('.control-deck').width / scale,
-        lcdWidth: lcd.width / scale,
+        deckWidth: rect('.control-deck').width,
+        lcdWidth: lcd.width,
         hardwareFits: rect('.dpad').left >= lcd.left && rect('.dpad').right < rect('.action-buttons').left && rect('.action-buttons').right <= lcd.right && rect('.system-controls').right < rect('.speaker').left,
         buttonWidth: rect('#button-a').width,
-        shellBottom: rect('.game-boy').bottom,
+        shellWidth: shell.width,
+        shellCenter: (shell.left + shell.right) / 2,
+        shellTop: shell.top,
         ratio: video.width / video.height,
-        fillsWidth: Math.abs(video.width - (rect('.embedded-video').width - 6 * scale)) < 1,
+        fillsWidth: video.width <= rect('.embedded-video').width + 1 && video.width >= rect('.embedded-video').width - 7,
         infoVisible: info.top >= video.bottom && info.bottom <= lcd.bottom,
         bottom: rect('.lower-deck').bottom,
         scrollHeight: document.documentElement.scrollHeight,
@@ -581,9 +581,7 @@ try {
     assert.ok(!layout.overflow && Math.abs(layout.deckWidth - layout.lcdWidth) < 1 && layout.hardwareFits, `Hardware must use the LCD width without overlap at ${width}x${height}: ${JSON.stringify(layout)}`);
     assert.ok(Math.abs(layout.ratio - 16 / 9) < 0.02 && layout.fillsWidth && layout.infoVisible, `Video and metadata at ${width}x${height}: ${JSON.stringify(layout)}`);
     assert.ok(layout.bottom <= layout.scrollHeight, `Controls must be reachable at ${width}x${height}`);
-    if (layout.scale > 1 || (width === 360 && height === 600)) assert.ok(layout.bottom <= height, `Controls must fit at ${width}x${height}`);
-    if (width === 1920) assert.ok(layout.scale > 1 && layout.buttonWidth > 60, 'Large windows must enlarge hardware controls with the video');
-    if (width === 1920) assert.ok(layout.shellBottom <= height && height - layout.shellBottom < 24, 'Large windows must fill the available height with a small bottom margin');
+    if (width === 1920) assert.ok(Math.abs(layout.shellWidth - 480) < 1 && Math.abs(layout.shellCenter - width / 2) < 2 && layout.shellTop === 0, `A wide Side Panel must retain the fixed hardware canvas: ${JSON.stringify(layout)}`);
     const screenGeometry = () => evaluate(browser, panel, `(() => {
       const shell = document.querySelector('.game-boy').getBoundingClientRect();
       const lcd = document.querySelector('#lcd-screen').getBoundingClientRect();
@@ -598,7 +596,7 @@ try {
       assert.deepEqual(await screenGeometry(), playingGeometry, `${width}x${height}: ${view} must preserve the shell, LCD and control positions`);
     }
   }
-  console.log('PASS responsive: bounded controls, 16:9 video and visible metadata at 360x600, 720x480, 1280x720, 1920x1080');
+  console.log('PASS responsive: centered Side Panel player, bounded controls, 16:9 video and visible metadata at 360x600, 720x480, 1280x720, 1920x1080');
   await browser.send('Emulation.setDeviceMetricsOverride', { width: 640, height: 560, deviceScaleFactor: 1, mobile: false }, panel);
   await evaluate(browser, panel, 'window.dispatchEvent(new Event("resize"))');
   for (const view of ['playlist', 'ai-picks']) {
@@ -630,13 +628,21 @@ try {
   await evaluate(browser, panel, "window.__emitUiMessage({ type: 'CORE_STATE', state: { playlist: [], settings: { shell: '#e0dfd0', screen: '#9bbc0f', button: '#a13b6d' } } })");
   assert.equal(await evaluate(browser, panel, "document.querySelector('#similar-vibes-source-trigger').disabled && document.querySelector('#ai-picks').disabled && !document.querySelector('#similar-vibes-empty').hidden && !document.querySelector('#similar-vibes-open-playlist').hidden"), true, 'Empty Playlist must disable source and GET PICKS and offer Playlist navigation');
   assert.equal(await evaluate(browser, panel, "!document.querySelector('#empty-player-link').hidden"), true, 'Empty Playlist must show a YouTube link input in Now Playing');
+  await browser.send('Emulation.setDeviceMetricsOverride', { width: 520, height: 720, deviceScaleFactor: 1, mobile: false }, panel);
+  const standaloneBounds = await evaluate(browser, panel, `(() => {
+    document.documentElement.classList.remove('side-panel');
+    document.documentElement.classList.add('standalone-window');
+    const shell = document.querySelector('.game-boy').getBoundingClientRect();
+    return { top: shell.top, bottom: shell.bottom, height: shell.height, viewport: innerHeight };
+  })()`);
+  assert.ok(standaloneBounds.bottom <= standaloneBounds.viewport && standaloneBounds.viewport - standaloneBounds.bottom <= 24, `Standalone window must fit its content without a large lower gap: ${JSON.stringify(standaloneBounds)}`);
   console.log('PASS navigation: SELECT/Home, A/Enter, B/Escape, START, D-pad, body focus and form isolation');
   console.log('PASS actions: Enter submits Playlist link, saves Appearance, connects OpenAI; B restores unsaved Appearance');
-  console.log('PASS playback: menu entry pauses; Now Playing stays paused until A resumes');
+  console.log('PASS playback: menu and B navigation preserve music; A controls pause and resume');
   console.log('PASS persistence: player iframe DOM identity survived screen switches');
   console.log(`Queue screenshot: ${resolve(output, 'gameboy-now-playing-queue.png')}`);
   console.log(`Screenshots: ${resolve(output, 'gameboy-{home,playlist,ai-picks,settings}-{360,390,480}.png')}`);
-  console.log(`Standalone screenshots: ${resolve(output, 'gameboy-now-playing-standalone-{380x650,720x940}.png')}`);
+  console.log(`Side Panel screenshots: ${resolve(output, 'gameboy-now-playing-side-panel-{380x650,720x940}.png')}`);
 } finally {
   if (browser) {
     try {

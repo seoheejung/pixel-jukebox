@@ -8,7 +8,6 @@ import { readBridgeConfig } from './bridge-config.mjs';
 const bridgeUrl = readBridgeConfig().url;
 
 const output = resolve('.chrome-test');
-const usePopup = process.argv.includes('--popup');
 await mkdir(output, { recursive: true });
 const port = 12000 + (process.pid % 30000);
 const child = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', [
@@ -52,19 +51,8 @@ try {
     }, event.sessionId) : browser.send('Fetch.failRequest', { requestId, errorReason: 'BlockedByClient' }, event.sessionId);
     void operation.catch(error => failures.push(error.message));
   });
-  if (usePopup) await browser.send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
   const { id } = await browser.send('Extensions.loadUnpacked', { path: resolve('dist') });
-  let targetId;
-  let popupWorker;
-  if (usePopup) {
-    const workerInfo = await until(async () => (await browser.send('Target.getTargets')).targetInfos.find(target => target.type === 'service_worker' && target.url === `chrome-extension://${id}/background.js`), 'Extension worker');
-    const worker = await attach(browser, workerInfo.targetId);
-    popupWorker = worker;
-    await evaluate(browser, worker, "chrome.runtime.onMessage.addListener((m,s)=>{if(m?.type==='PIXEL_JUKEBOX_SKIP_AD')globalThis.__skipSender={sameExtension:s.id===chrome.runtime.id,origin:s.origin,hasDocument:!!s.documentId,frameId:s.frameId??null,hasTab:!!s.tab};})");
-    await evaluate(browser, worker, 'chrome.action.openPopup()');
-    const popup = await until(async () => (await browser.send('Target.getTargets')).targetInfos.find(target => target.url === `chrome-extension://${id}/sidepanel.html`), 'Actual action popup');
-    targetId = popup.targetId;
-  } else ({ targetId } = await browser.send('Target.createTarget', { url: 'about:blank' }));
+  const { targetId } = await browser.send('Target.createTarget', { url: 'about:blank' });
   const panel = await attach(browser, targetId);
   await browser.send('Page.enable', {}, panel);
   await configure(panel);
@@ -86,7 +74,13 @@ try {
   const youtubeTarget = targetInfos.find(target => target.type === 'iframe' && target.url.startsWith(youtubeUrl));
   assert.ok(youtubeTarget, 'Embedded YouTube fixture target');
   const embedded = await attach(browser, youtubeTarget.targetId);
-  await evaluate(browser, panel, "document.querySelector('[data-open=\"now-playing\"]').click()");
+  await evaluate(browser, panel, `(() => {
+    document.querySelector('[data-open="playlist"]').click();
+    const input = document.querySelector('#video-url');
+    input.value = 'https://youtu.be/dQw4w9WgXcQ';
+    document.querySelector('#add-video').click();
+  })()`);
+  await until(() => evaluate(browser, panel, "document.querySelector('#player').dataset.videoId === 'dQw4w9WgXcQ'"), 'Fixture track load');
   assert.equal(await evaluate(browser, panel, "getComputedStyle(document.querySelector('.audio-connection')).display"), 'none', 'Connected player must not show the connection notice');
   const connectionLayout = await evaluate(browser, panel, `(() => {
     const notice = document.querySelector('.audio-connection');
@@ -114,12 +108,7 @@ try {
   await new Promise(resolveWait => setTimeout(resolveWait, 600));
   assert.equal(await video("Number(document.body.dataset.clicks || 0)"), 0, 'Visible disabled ads must not be skipped');
   await video("document.querySelector('button').disabled=false");
-  try {
-    await until(() => video("document.body.dataset.clicks === '1'"), 'Skippable ad auto click');
-  } catch (error) {
-    if (popupWorker) console.log('Popup sender diagnostics:', await evaluate(browser, popupWorker, 'globalThis.__skipSender'));
-    throw error;
-  }
+  await until(() => video("document.body.dataset.clicks === '1'"), 'Skippable ad auto click');
   assert.equal(await evaluate(browser, panel, "document.querySelector('#auto-skip-ads small').textContent"), 'ON', 'Trusted input is available');
   await evaluate(browser, panel, "document.querySelector('#auto-skip-ads').click()");
   await video("document.querySelector('#movie_player').classList.add('ad-showing')");
@@ -263,7 +252,7 @@ try {
   assert.deepEqual(failures, []);
   console.log('PASS real extension injection: volume, mute/unmute, persistence, replaced media, message origin checks');
   console.log('PASS ad fixture: visible enabled Skip only, disabled/hidden ignored, toggle OFF/ON, unrelated page untouched');
-  console.log(`PASS host: ${usePopup ? 'actual chrome.action popup' : 'extension page in tab'}`);
+  console.log('PASS host: extension page fixture');
 } finally {
   if (browser) { try { await browser.send('Browser.close'); } catch {} browser.close(); }
   if (child.exitCode === null) child.kill();

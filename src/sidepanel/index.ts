@@ -54,22 +54,12 @@ const aiPicksLoading = document.querySelector<HTMLElement>('#ai-picks-loading')!
 const aiPicksProgress = document.querySelector<HTMLElement>('#ai-picks-progress')!;
 const menuView = document.querySelector<HTMLElement>('#menu-view')!;
 const playerRoot = document.querySelector<HTMLElement>('#player')!;
+const openWindowButton = document.querySelector<HTMLButtonElement>('#open-window');
 const standaloneWindow = new URLSearchParams(location.search).get('window') === '1';
 document.documentElement.classList.toggle('standalone-window', standaloneWindow);
-function resizeStandaloneWindow() {
-  if (!document.documentElement.classList.contains('standalone-window')) return;
-  const shell = document.querySelector<HTMLElement>('.game-boy');
-  if (!shell) return;
-  const scale = Math.max(1, Math.min(window.innerWidth / 640, window.innerHeight / (shell.offsetHeight + 16)));
-  document.documentElement.style.setProperty('--window-scale', String(scale));
-}
-window.addEventListener('resize', resizeStandaloneWindow);
-const windowShell = document.querySelector<HTMLElement>('.game-boy');
-if (windowShell) {
-  new ResizeObserver(() => requestAnimationFrame(resizeStandaloneWindow)).observe(windowShell);
-}
-resizeStandaloneWindow();
+document.documentElement.classList.toggle('side-panel', !standaloneWindow);
 if (standaloneWindow) {
+  openWindowButton?.remove();
   const lifecycleCopy = document.querySelector<HTMLElement>('.game-boy header p');
   if (lifecycleCopy) lifecycleCopy.textContent = 'WINDOW PLAYER · STAYS OPEN';
 }
@@ -100,7 +90,7 @@ let navigation: ScreenState = initialScreenState();
 const errorMessages: Record<RecommendationErrorCode, string> = {
   NO_TRACK: 'Choose an available Playlist track.', NO_CANDIDATES: 'No matching tracks found. Try again.', INVALID_SELECTION: 'The recommendation format was invalid.',
   PERMISSION_DENIED: 'Allow OpenAI access, then try again.', NOT_CONFIGURED: 'Connect an OpenAI API key, then try again.',
-  AUTH_ERROR: 'OpenAI authentication failed. Check your API key.', RATE_LIMIT: 'Too many requests. Try again shortly.',
+  AUTH_ERROR: 'OpenAI API key is invalid or expired. Check it and connect again.', RATE_LIMIT: 'Too many requests. Try again shortly.',
   USAGE_ERROR: 'Check your OpenAI usage limit or billing status.', BAD_REQUEST: 'Check the OpenAI request settings.', NOT_FOUND: 'The requested OpenAI resource was not found.',
   SERVER_ERROR: 'OpenAI returned a server error. Try again shortly.', NETWORK_ERROR: 'Check your network connection or request timeout.',
   INVALID_RESPONSE: 'Could not read the OpenAI response. Try again.', YOUTUBE_SOURCE_EMPTY: 'No YouTube search results were found.',
@@ -110,10 +100,7 @@ const errorMessages: Record<RecommendationErrorCode, string> = {
 function errorText(code: RecommendationErrorCode, details?: AiErrorDetails): string {
   const stageNames = { connection: 'connection', discovery: 'discovery', selection: 'selection', 'youtube-search': 'YouTube search', metadata: 'video verification' };
   const stage = details?.stage ? `Stage: ${stageNames[details.stage]}` : '';
-  const status = details?.status ? `HTTP ${details.status}` : '';
-  const api = [details?.apiCode, details?.apiType, details?.param ? `Field: ${details.param}` : ''].filter(Boolean).join(' / ');
-  const trace = details?.requestId ? `Request ID: ${details.requestId}` : '';
-  return [errorMessages[code], stage, status, api, details?.message, trace].filter(Boolean).join(' · ');
+  return [errorMessages[code], stage].filter(Boolean).join(' · ');
 }
 
 function send(message: object) {
@@ -266,12 +253,14 @@ function syncRecommendationSource() {
   if (recommendationLoading || !options.length) setSourcePicker(false);
   else if (focusedId) similarVibesSourceList.querySelector<HTMLButtonElement>(`[data-video-id="${focusedId}"]`)?.focus({ preventScroll: true });
   similarVibesEmpty.hidden = playlist.length > 0;
-  similarVibesOpenPlaylist.hidden = playlist.length > 0;
+  similarVibesOpenPlaylist.hidden = false;
+  similarVibesOpenPlaylist.textContent = 'OPEN PLAYLIST';
 }
 
 function renderPlayer() {
   const inPlaylist = Boolean(snapshot.track && coreState.playlist.some((track) => track.videoId === snapshot.track?.videoId));
   player.render(snapshot, draftSettings, { previous: inPlaylist && coreState.playlist.length > 1, next: inPlaylist && coreState.playlist.length > 1, repeatOne });
+  playerRoot.classList.toggle('is-empty', !snapshot.track);
   const isPlaying = snapshot.track?.playbackState === 'playing';
   powerLight.classList.toggle('is-playing', isPlaying);
   powerLight.setAttribute('aria-label', isPlaying ? 'Music playing' : 'Playback stopped');
@@ -398,6 +387,7 @@ function setContinueDrawer(open: boolean) {
   continueDrawer.toggleAttribute('inert', !open);
   continueDrawer.setAttribute('aria-hidden', String(!open));
   continueToggle.setAttribute('aria-expanded', String(open));
+  if (!open && continuePage.parentElement !== menuView) menuView.append(continuePage);
   renderContinueSelection();
   if (restoreFocus) continueToggle.focus();
 }
@@ -485,7 +475,6 @@ function renderScreen() {
 
 function showScreen(screen: ScreenId) {
   setSourcePicker(false);
-  if (screen !== 'now-playing' && navigation.screen === 'now-playing' && (snapshot.track?.playbackState === 'playing' || snapshot.track?.playbackState === 'buffering')) player.command('pause');
   discardAppearancePreview();
   if (screen !== 'now-playing' && nowPlayingQueueOpen) setNowPlayingQueue(false);
   if (screen !== 'now-playing') restoreContinuePage();
@@ -497,7 +486,6 @@ function goBack() {
   if (sourcePickerOpen) { setSourcePicker(false); similarVibesSourceTrigger.focus({ preventScroll: true }); return; }
   if (navigation.screen === 'now-playing' && continueDrawerOpen) { setContinueDrawer(false); continueToggle.focus(); return; }
   if (navigation.screen === 'now-playing' && nowPlayingQueueOpen) { setNowPlayingQueue(false); nowPlayingQueueToggle.focus(); return; }
-  if (navigation.screen === 'now-playing' && (snapshot.track?.playbackState === 'playing' || snapshot.track?.playbackState === 'buffering')) player.command('pause');
   discardAppearancePreview();
   navigation = backScreen(navigation);
   renderScreen();
@@ -603,7 +591,7 @@ function previewDesign() {
 }
 
 function renderRecommendations(recommendations: Recommendation[]) {
-  aiPicksList.replaceChildren(...recommendations.map((recommendation) => {
+  aiPicksList.replaceChildren(...recommendations.map((recommendation, index) => {
     const card = document.createElement('article');
     card.className = 'ai-pick-card';
     const inner = document.createElement('div');
@@ -616,25 +604,28 @@ function renderRecommendations(recommendations: Recommendation[]) {
     image.src = recommendation.thumbnail || (recommendation.videoId ? `https://i.ytimg.com/vi/${recommendation.videoId}/hqdefault.jpg` : '');
     const meta = document.createElement('div');
     meta.className = 'ai-pick-meta';
-    const title = document.createElement('h3');
-    title.className = 'ai-pick-title';
-    title.textContent = recommendation.title;
     const artist = document.createElement('p');
-    artist.className = 'ai-pick-artist';
+    artist.className = 'ai-pick-title';
     artist.textContent = recommendation.channelTitle && recommendation.channelTitle !== recommendation.artist
       ? `${recommendation.artist} · ${recommendation.channelTitle}`
       : recommendation.artist || recommendation.channelTitle;
-    const videoType = document.createElement('p');
-    videoType.className = 'ai-pick-type';
-    videoType.textContent = recommendation.videoType;
-    meta.append(title, artist, videoType);
+    const title = document.createElement('p');
+    title.className = 'ai-pick-artist';
+    title.textContent = recommendation.title;
+    const source = document.createElement('p');
+    source.className = 'ai-pick-type';
+    source.textContent = `PICK ${String(index + 1).padStart(2, '0')} · YOUTUBE`;
+    meta.append(artist, title, source);
     const track = recommendationTrack(recommendation);
     const added = Boolean(track && coreState.playlist.some((item) => item.videoId === track.videoId));
     const makeAdd = () => {
       const add = document.createElement('button');
       add.type = 'button'; add.className = 'ai-pick-add'; add.textContent = added ? '✓' : '+'; add.disabled = !track || added;
       add.setAttribute('aria-label', `Add ${recommendation.title} to playlist`);
-      add.addEventListener('click', () => { if (track) loadTrack(track, true, true); });
+      add.addEventListener('click', () => {
+        if (!track) return;
+        send({ type: MESSAGE.coreEdit, change: { kind: 'add', track: playlistTrackFor(track) } });
+      });
       return add;
     };
     front.append(image, meta, makeAdd());
@@ -734,7 +725,7 @@ function connect() {
 
 function openVideoFromInput(input: HTMLInputElement = videoUrl, message: HTMLElement = videoMessage) {
   const id = videoIdFromUrl(input.value.trim());
-  if (!id) { message.textContent = 'INVALID LINK.'; return; }
+  if (!id) { message.textContent = 'YouTube 동영상 링크를 확인해 주세요. youtube.com 또는 youtu.be 링크만 재생할 수 있습니다.'; return; }
   const track = trackFromVideoId(id);
   message.textContent = '';
   input.value = '';
@@ -833,6 +824,16 @@ similarVibesSourceList.addEventListener('focusout', (event) => {
 });
 similarVibesOpenPlaylist.addEventListener('click', () => showScreen('playlist'));
 aiPicks.addEventListener('click', requestRecommendations);
+openWindowButton?.addEventListener('click', () => {
+  openWindowButton.disabled = true;
+  void chrome.runtime.sendMessage({ type: MESSAGE.openWindow }).then((result: unknown) => {
+    if (!result || typeof result !== 'object' || (result as { ok?: unknown }).ok !== true) {
+      videoMessage.textContent = 'WINDOW COULD NOT OPEN.';
+      return;
+    }
+    window.close();
+  }).catch(() => { videoMessage.textContent = 'WINDOW COULD NOT OPEN.'; }).finally(() => { openWindowButton.disabled = false; });
+});
 renderDesign(coreState.settings);
 renderPlayer();
 renderScreen();

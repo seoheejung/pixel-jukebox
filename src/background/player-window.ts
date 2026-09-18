@@ -1,20 +1,20 @@
-interface PlayerWindow {
-  id?: number | undefined;
-  tabs?: Array<{ url?: string | undefined }> | undefined;
-}
-
 export interface PlayerWindowHost {
-  getAll(info: { populate: boolean }): Promise<PlayerWindow[]>;
-  update(windowId: number, updateInfo: { focused: boolean }): Promise<unknown>;
-  create(createData: { url: string; type: 'popup'; width: number; height: number }): Promise<unknown>;
+  tabs: { query(queryInfo: { active: boolean; lastFocusedWindow: boolean }): Promise<Array<{ id?: number | undefined }>> };
+  sidePanel: { setOptions(options: { tabId?: number; enabled: boolean }): Promise<void> };
+  windows: {
+    create(options: { url: string; type: 'popup'; width: number; height: number }): Promise<{ id?: number | undefined } | undefined>;
+    update?(windowId: number, updateInfo: { focused: boolean }): Promise<unknown>;
+  };
 }
 
-export async function openOrFocusPlayerWindow(windows: PlayerWindowHost, playerUrl: string): Promise<void> {
-  const existing = (await windows.getAll({ populate: true }))
-    .find((window) => window.tabs?.some((tab) => tab.url === playerUrl));
-  if (existing?.id !== undefined) {
-    await windows.update(existing.id, { focused: true });
-    return;
-  }
-  await windows.create({ url: playerUrl, type: 'popup', width: 430, height: 720 });
+export async function focusStandalonePlayerWindow(host: PlayerWindowHost, windowId: number): Promise<void> {
+  await host.windows.update?.(windowId, { focused: true });
+}
+
+export async function openStandalonePlayerWindow(host: PlayerWindowHost, playerUrl: string): Promise<number | undefined> {
+  const [activeTab] = await host.tabs.query({ active: true, lastFocusedWindow: true });
+  await host.sidePanel.setOptions({ enabled: false });
+  if (activeTab?.id !== undefined) await host.sidePanel.setOptions({ tabId: activeTab.id, enabled: false });
+  const created = await host.windows.create({ url: playerUrl, type: 'popup', width: 520, height: 760 });
+  return created?.id;
 }

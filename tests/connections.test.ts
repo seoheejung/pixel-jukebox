@@ -6,7 +6,7 @@ import { defaultSettings } from '../src/shared/settings';
 import { createConnections, isPanelSender } from '../src/background/connections';
 
 describe('Side Panel message boundaries', () => {
-  it('accepts only the popup entry and its standalone-window mode', () => {
+  it('accepts the Side Panel and optional standalone player entry', () => {
     const panel = 'chrome-extension://extension-id/sidepanel.html';
     expect(isPanelSender(panel, panel)).toBe(true);
     expect(isPanelSender(panel, `${panel}?window=1`)).toBe(true);
