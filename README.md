@@ -124,14 +124,88 @@ flowchart TD
 | Storage | `chrome.storage.local` · `chrome.storage.session` · UI `localStorage` |
 | AI | OpenAI Responses API · Web Search · Structured Outputs |
 
-## 전체 Extension 직접 실행 (선택)
+## 최종 사용자 UX
+
+Chrome Web Store 정식 배포 시 목표로 하는 최종 사용자 흐름이다.
+
+```text
+Chrome Web Store
+        ↓
+ADD TO CHROME
+        ↓
+Pixel Jukebox 실행
+        ↓
+YouTube URL 입력
+        ↓
+바로 재생
+```
+
+AI 기능을 사용할 때만 다음 과정이 추가된다.
+
+```text
+AI 사용 시
+        ↓
+API Key 입력
+        ↓
+CONNECT
+        ↓
+KEEP THIS VIBE
+```
+
+## 전체 Extension 설치
 
 > Web Demo가 공식 제출 경로다.
-> 아래 절차는 실제 YouTube 재생과 OpenAI 연동까지 포함한 전체 Chrome Extension을 직접 확인하려는 경우에만 필요하다.
+> Windows용 `PixelJukebox-Setup.exe`는 실제 YouTube Player와 OpenAI 연동을 포함한 전체 Extension을 추가로 확인할 때 사용하는 선택 설치 도우미다.
 >
 > 제공된 Player Bridge를 사용할 경우 별도 Fork나 Bridge 배포는 필요하지 않다.
 
-1. [Pixel Jukebox Repository](https://github.com/seoheejung/pixel-jukebox)를 clone하고 Node.js 22.12.0 이상을 준비한다.
+### Windows — 권장
+
+설치 파일: [PixelJukebox-Setup.exe](release/PixelJukebox-Setup.exe)
+
+설치 파일을 내려받아 실행한다. 관리자 권한은 필요하지 않다.
+
+설치 도우미가 자동으로 처리하는 항목:
+
+- Extension 파일 설치
+- 제공된 HTTPS Player Bridge가 적용된 build 배치
+- 설치 위치 생성
+- 기존 버전 덮어쓰기
+- `chrome://extensions` 열기
+- Pixel Jukebox Extension 폴더 열기
+- 설치 안내 표시
+
+설치 후 Chrome에서 다음 두 단계만 완료한다.
+
+1. **개발자 모드**를 켠다.
+2. **압축해제된 확장 프로그램을 로드합니다**를 선택하고 설치 도우미가 연 Pixel Jukebox Extension 폴더를 선택한다.
+
+`KEEP THIS VIBE`를 사용할 때만 Settings에서 OpenAI API Key를 입력하고 `CONNECT`를 누른다.
+
+Chrome 보안 정책상 개발자 모드 활성화와 압축해제된 Extension 로드는 설치 도우미가 대신할 수 없다.
+Core Player 재생에는 API Key가 필요하지 않다.
+
+Player Bridge URL은 Extension과 YouTube IFrame Player를 연결하는 HTTPS Bridge다.
+브라우저에서 `player.html`만 직접 열면 재생 정보가 전달되지 않아 빈 화면으로 보이는 것이 정상이며,
+Web Demo URL로 사용하지 않는다.
+
+현재 설치 파일은 코드 서명되지 않아 Windows에서 **알 수 없는 게시자** 경고가 표시될 수 있다.
+
+<details>
+<summary>INSTALLER DETAILS</summary>
+
+- SHA-256: `3EF7D119495B3302D834193F0C36F00D1F4210CD112BF916BBE0179833BC434A`
+- Checksum: [SHA256SUMS.txt](release/SHA256SUMS.txt)
+
+</details>
+
+### 소스에서 직접 빌드 — 개발자용
+
+Node.js 22.12.0 이상이 필요하다.
+
+#### Extension 빌드
+
+1. [Pixel Jukebox Repository](https://github.com/seoheejung/pixel-jukebox)를 clone한다.
 2. 저장소 루트에서 의존성을 설치한다.
 
 ```sh
@@ -164,43 +238,26 @@ Copy-Item bridge.config.example.json bridge.config.local.json
 npm run build
 ```
 
-5. Chrome `chrome://extensions`에서 개발자 모드를 켜고 **압축해제된 확장 프로그램을 로드합니다**로 `dist/`를 선택한다.
-6. YouTube URL을 입력해 재생한다.
-7. `KEEP THIS VIBE`를 사용하려면 Settings에서 OpenAI API Key를 입력하고 `CONNECT`를 누른다. Core Player 재생에는 API Key가 필요하지 않다.
-
-`bridge.config.local.json`은 빌드 전 필요한 로컬 설정이며 Git에 포함되지 않는다.
-
-Player Bridge URL은 Extension과 YouTube IFrame Player를 연결하는 HTTPS Bridge다.
-브라우저에서 `player.html`만 직접 열면 재생 정보가 전달되지 않아 빈 화면으로 보이는 것이 정상이며,
-Web Demo URL로 사용하지 않는다.
-
-## 전체 Extension 설치 및 실행
-
-Node.js 22.12.0 이상이 필요하다.
-
-### Extension 빌드
-
-`bridge.config.local.json` 설정을 완료한 뒤 빌드한다.
-
-```sh
-npm ci
-npm run build
-```
-
-1. `chrome://extensions`에서 **개발자 모드**를 활성화한다.
-2. **압축해제된 확장 프로그램을 로드합니다**를 선택한다.
-3. 빌드된 `dist/` 디렉터리를 연다.
-4. Pixel Jukebox 아이콘을 눌러 Popup을 실행한다.
+5. `chrome://extensions`에서 **개발자 모드**를 활성화한다.
+6. **압축해제된 확장 프로그램을 로드합니다**를 선택하고 빌드된 `dist/` 디렉터리를 연다.
+7. Pixel Jukebox 아이콘을 눌러 Popup을 실행한다.
 
 코드를 변경한 뒤에는 다시 빌드하고 확장을 새로고침한다.
+`bridge.config.local.json`은 빌드 전 필요한 로컬 설정이며 Git에 포함되지 않는다.
 
-### KEEP THIS VIBE 설정
+Windows 설치 파일은 다음 명령으로 최신 Extension build를 포함해 다시 생성할 수 있다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-windows-installer.ps1
+```
+
+#### KEEP THIS VIBE 설정
 
 Settings의 OpenAI 화면에서 `CONNECT`를 눌러 필요한 host 권한을 승인하고 API Key를 등록한다. 현재 UI에서 Key는 `chrome.storage.session`에만 저장되며 Chrome 세션이 끝나면 제거된다.
 
 API Key 조회와 OpenAI 호출은 Service Worker에서만 처리한다. Key를 소스, Git, 로그, Runtime 메시지 또는 Player 프레임에 포함하지 않는다.
 
-### 자체 GitHub Pages와 Player Bridge 배포
+#### 자체 GitHub Pages와 Player Bridge 배포
 
 제공된 서비스를 대신 자신의 Pages와 Bridge를 사용하려는 경우 저장소를 Fork하고 GitHub Pages에 `player-bridge/`를 배포한다. 이 디렉터리의 `index.html`은 Web Demo, `player.html`은 Extension 전용 Player Bridge다.
 

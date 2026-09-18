@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - player-bridge/**
+      - release/**
       - .github/workflows/deploy-player-bridge.yml
   workflow_dispatch:
 
@@ -34,9 +35,17 @@ jobs:
           test -f player-bridge/player.html
           test -f player-bridge/player.css
           test -f player-bridge/player.js
+          test -f release/PixelJukebox-Setup.exe
+          test -f release/SHA256SUMS.txt
+      - name: Prepare Pages bundle
+        run: |
+          mkdir pages-bundle
+          cp -R player-bridge/. pages-bundle/
+          cp release/PixelJukebox-Setup.exe pages-bundle/
+          cp release/SHA256SUMS.txt pages-bundle/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: player-bridge
+          path: pages-bundle
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

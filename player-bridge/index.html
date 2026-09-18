@@ -206,25 +206,53 @@
       <section class="install-section" id="install" aria-labelledby="install-title">
         <div class="install-copy">
           <p class="section-number">05 / RUN THE FULL EXTENSION</p>
-          <h2 id="install-title">전체 기능은 Chrome에서.</h2>
-          <p>Web Demo가 공식 제출 경로입니다. 아래 설치는 실제 YouTube Player와 OpenAI 연동을 포함한 전체 Extension을 추가로 확인하려는 사용자를 위한 방법입니다.</p>
+          <h2 id="install-title">전체 기능은 Windows에서.</h2>
+          <p>실제 YouTube 재생과 실시간 KEEP THIS VIBE를 사용하려면 Windows 설치 도우미를 실행하세요.</p>
           <div class="install-links">
-            <a class="button button-primary" href="https://github.com/seoheejung/pixel-jukebox">REPOSITORY ↗</a>
+            <a class="button button-primary" href="./PixelJukebox-Setup.exe" download>DOWNLOAD FOR WINDOWS ↓</a>
+            <a class="button button-quiet" href="https://github.com/seoheejung/pixel-jukebox">SOURCE CODE ↗</a>
           </div>
-          <div class="bridge-note">
-            <strong>PLAYER BRIDGE · EXTENSION ONLY</strong>
-            <code>https://seoheejung.github.io/pixel-jukebox/player.html</code>
-            <span>Extension이 재생 정보를 전달할 때 사용하는 연결 경로이며, 단독 실행 화면이 아닙니다.</span>
+          <p class="installer-summary">설치 도우미가 Extension 파일과 Player Bridge 설정을 자동으로 준비하고 Chrome 확장 관리 화면과 설치 폴더를 열어줍니다.</p>
+          <aside class="installer-warning" aria-label="Windows 설치 파일 안내">
+            <strong>WINDOWS SECURITY</strong>
+            <span>현재 설치 파일은 코드 서명되지 않아 Windows에서 ‘알 수 없는 게시자’ 경고가 표시될 수 있습니다.</span>
+            <details>
+              <summary>INSTALLER DETAILS</summary>
+              <code>SHA-256 · 3EF7D119495B3302D834193F0C36F00D1F4210CD112BF916BBE0179833BC434A</code>
+              <a href="./SHA256SUMS.txt" download>SHA256SUMS.txt ↓</a>
+            </details>
+          </aside>
+        </div>
+        <div class="install-guide">
+          <p class="note-label">CHROME · 2 STEPS</p>
+          <ol class="install-steps">
+            <li><span>01</span><p><strong>개발자 모드</strong> 켜기</p></li>
+            <li><span>02</span><p><strong>압축해제된 확장 프로그램을 로드합니다</strong> → 열린 Pixel Jukebox 폴더 선택</p></li>
+          </ol>
+          <p class="ai-install-note"><strong>KEEP THIS VIBE 사용 시에만</strong><span>Settings에서 OpenAI API Key를 입력하고 CONNECT합니다.</span></p>
+        </div>
+        <div class="end-user-journey" aria-labelledby="journey-title">
+          <div>
+            <p class="note-label">FINAL USER UX</p>
+            <h3 id="journey-title">Chrome Web Store 정식 배포 시</h3>
+            <p>설치 도구나 개발자 설정 없이 음악 재생까지 바로 이어지는 최종 사용자 흐름입니다.</p>
+          </div>
+          <div class="journey-grid">
+            <ol class="journey-track" aria-label="기본 재생 흐름">
+              <li>Chrome Web Store</li>
+              <li>ADD TO CHROME</li>
+              <li>Pixel Jukebox 실행</li>
+              <li>YouTube URL 입력</li>
+              <li>바로 재생</li>
+            </ol>
+            <ol class="journey-track" aria-label="AI 기능 흐름">
+              <li>AI 사용 시</li>
+              <li>API Key 입력</li>
+              <li>CONNECT</li>
+              <li>KEEP THIS VIBE</li>
+            </ol>
           </div>
         </div>
-        <ol class="install-steps">
-          <li><span>01</span><p><strong>Node.js 22.12+</strong> 준비 후 Repository clone</p></li>
-          <li><span>02</span><p><code>npm ci</code></p></li>
-          <li><span>03</span><p><code>bridge.config.local.json</code>에 Player Bridge URL 설정</p></li>
-          <li><span>04</span><p><code>npm run build</code></p></li>
-          <li><span>05</span><p>Chrome 확장 프로그램 페이지에서 <code>dist/</code> Load unpacked</p></li>
-          <li><span>06</span><p>KEEP THIS VIBE 사용 시 Settings의 OpenAI API Key 입력 후 <strong>CONNECT</strong></p></li>
-        </ol>
       </section>
     </main>
 

@@ -4,10 +4,11 @@ import { createServer } from 'node:http';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
-import { connectBrowser, connectTarget, evaluate, until } from './cdp.mjs';
+import { attach, connectBrowser, evaluate, until } from './cdp.mjs';
 
 const executable = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const root = resolve('player-bridge');
+const releaseRoot = resolve('release');
 const output = resolve('.chrome-test');
 const profile = resolve(output, `web-demo-profile-${process.pid}`);
 const debuggingPort = 16000 + (process.pid % 30000);
@@ -15,6 +16,10 @@ const mime = new Map([
   ['.html', 'text/html; charset=utf-8'],
   ['.js', 'text/javascript; charset=utf-8'],
   ['.css', 'text/css; charset=utf-8'],
+]);
+const downloads = new Map([
+  ['/PixelJukebox-Setup.exe', resolve(releaseRoot, 'PixelJukebox-Setup.exe')],
+  ['/SHA256SUMS.txt', resolve(releaseRoot, 'SHA256SUMS.txt')],
 ]);
 
 assert.ok(existsSync(executable), 'Chrome executable is unavailable');
@@ -27,8 +32,10 @@ const server = createServer(async (request, response) => {
   try {
     const pathname = decodeURIComponent(new URL(request.url ?? '/', 'http://localhost').pathname);
     const requested = pathname === '/' ? '/index.html' : pathname;
-    const file = resolve(root, `.${requested}`);
-    if (file !== root && !file.startsWith(`${root}${sep}`)) throw new Error('invalid path');
+    const file = downloads.get(requested) ?? resolve(root, `.${requested}`);
+    const isPageAsset = file === root || file.startsWith(`${root}${sep}`);
+    const isDownload = [...downloads.values()].includes(file);
+    if (!isPageAsset && !isDownload) throw new Error('invalid path');
     const body = await readFile(file);
     response.writeHead(200, {
       'content-type': mime.get(extname(file)) ?? 'application/octet-stream',
@@ -48,7 +55,7 @@ const address = server.address();
 assert.ok(address && typeof address === 'object');
 const origin = `http://127.0.0.1:${address.port}`;
 
-for (const path of ['/', '/demo.css', '/demo.js', '/player.html', '/player.css', '/player.js']) {
+for (const path of ['/', '/demo.css', '/demo.js', '/player.html', '/player.css', '/player.js', '/PixelJukebox-Setup.exe', '/SHA256SUMS.txt']) {
   const response = await fetch(`${origin}${path}`);
   assert.equal(response.status, 200, `${path} must be served without a 404`);
 }
@@ -77,7 +84,7 @@ const intactKoreanWords = `(() => {
     ['.demo-notes h3', '체험하세요.'],
     ['.workflow-section .section-heading > p', '실제'],
     ['.workflow-grid li:nth-child(5) p', '확인'],
-    ['.bridge-note span', '화면'],
+    ['.installer-warning > span', '설치'],
   ];
   return checks.every(([selector, word]) => {
     const root = document.querySelector(selector);
@@ -99,12 +106,20 @@ const intactKoreanWords = `(() => {
 
 async function page(width, height) {
   const { targetId } = await browser.send('Target.createTarget', { url: 'about:blank' });
-  const targets = await fetch(`http://127.0.0.1:${debuggingPort}/json/list`).then((response) => response.json());
-  const target = targets.find((item) => item.id === targetId);
-  assert.ok(target?.webSocketDebuggerUrl, 'Page target debugger is unavailable');
-  const connection = await connectTarget(target.webSocketDebuggerUrl);
+  const sessionId = await attach(browser, targetId);
+  const removeListeners = [];
+  const connection = {
+    send(method, params = {}) { return browser.send(method, params, sessionId); },
+    onEvent(listener) {
+      const remove = browser.onEvent((message) => {
+        if (message.sessionId === sessionId) listener(message);
+      });
+      removeListeners.push(remove);
+      return remove;
+    },
+    close() { for (const remove of removeListeners) remove(); },
+  };
   pages.push(connection);
-  await connection.send('Page.enable');
   await connection.send('Runtime.enable');
   await connection.send('Log.enable');
   await connection.send('Network.enable');
@@ -152,16 +167,18 @@ try {
   })()`), true, 'Demo console must match the Extension hardware structure and scale');
   assert.equal(await evaluate(desktop, undefined, intactKoreanWords), true, 'Desktop Korean words must not split across lines');
   assert.equal(await evaluate(desktop, undefined, `(() => {
-    const bridgeNote = document.querySelector('.bridge-note');
+    const installer = document.querySelector('a[href="./PixelJukebox-Setup.exe"]');
+    const warning = document.querySelector('.installer-warning');
     return document.querySelector('a[href="./player.html"]') === null
-      && bridgeNote?.textContent.includes('EXTENSION ONLY')
-      && bridgeNote?.textContent.includes('단독 실행 화면이 아닙니다');
-  })()`), true, 'Player Bridge must be documented as an Extension-only endpoint, not a launch link');
+      && installer?.hasAttribute('download')
+      && warning?.textContent.includes('코드 서명되지 않아');
+  })()`), true, 'The Windows installer must be the primary full-Extension path with a signing warning');
   assert.equal(await evaluate(desktop, undefined, "window.PixelJukeboxDemo.hasCompleted(sessionStorage)"), false, 'First session must be ready');
   for (const [width, height, selector, name] of [
     [1191, 335, '.problem-strip', 'problem-1191'],
     [1526, 1123, '#demo', 'demo-1526'],
     [1630, 902, '#workflow', 'workflow-1630'],
+    [1280, 1000, '#install', 'install-1280'],
     [502, 535, '#install', 'install-502'],
   ]) {
     await desktop.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
@@ -245,7 +262,7 @@ try {
   console.log('PASS: three selectable documented E2E fixtures, no local asset 404, no console error');
   console.log('PASS: verified result rows do not navigate to YouTube');
   console.log('PASS: D-pad, A/B, and SELECT navigate only inside the Demo screen; START is disabled');
-  console.log('PASS: Player Bridge is documented without a misleading launch link');
+  console.log('PASS: Windows installer and checksum are served without exposing build steps');
   console.log('PASS: existing player.html, player.css, and player.js remain available');
   console.log(`Screenshots: ${resolve(output, 'web-demo-{desktop,mobile-390}.png')}`);
   console.log(`Control screenshot: ${resolve(output, 'web-demo-controls-home.png')}`);

@@ -53,13 +53,22 @@ describe('GitHub Pages web demo', () => {
     expect(readme).toContain('Deploy web demo and player bridge');
     expect(pagesWorkflow).toContain('name: Deploy web demo and player bridge');
     expect(readme).not.toContain('Actions → Deploy player bridge');
-    expect(readme).toContain('## 전체 Extension 직접 실행 (선택)');
-    expect(readme).toContain('## 전체 Extension 설치 및 실행');
+    expect(readme).toContain('## 최종 사용자 UX');
+    expect(readme).toContain('## 전체 Extension 설치');
+    expect(readme).toContain('### Windows — 권장');
+    expect(readme).toContain('### 소스에서 직접 빌드 — 개발자용');
     expect(readme).toContain('> Web Demo가 공식 제출 경로다.');
+    expect(readme).toContain('Windows용 `PixelJukebox-Setup.exe`는 실제 YouTube Player와 OpenAI 연동을 포함한 전체 Extension을 추가로 확인할 때 사용하는 선택 설치 도우미다.');
+    expect(readme).toContain('설치 파일: [PixelJukebox-Setup.exe](release/PixelJukebox-Setup.exe)');
+    expect(readme).toContain('설치 도우미가 자동으로 처리하는 항목:');
+    expect(readme).toContain('설치 후 Chrome에서 다음 두 단계만 완료한다.');
+    expect(readme).toContain('Chrome 보안 정책상 개발자 모드 활성화와 압축해제된 Extension 로드는 설치 도우미가 대신할 수 없다.');
     expect(readme).toContain('Player Bridge URL은 Extension과 YouTube IFrame Player를 연결하는 HTTPS Bridge다.');
     expect(readme).toContain('검증 실패 Candidate를 제외하고 검증된 결과만 유지');
     expect(readme).not.toContain('## 빠른 실행');
     expect(readme).not.toContain('## 상세 설치 및 실행');
+    expect(readme).not.toContain('## 전체 Extension 설치 및 실행');
+    expect(readme).not.toContain('## 전체 Extension 직접 실행 (선택)');
   });
 
   it('keeps the demo and existing player bridge as separate Pages entries', () => {
@@ -67,8 +76,26 @@ describe('GitHub Pages web demo', () => {
     expect(html).toContain('href="./demo.css"');
     expect(readFileSync('player-bridge/player.html', 'utf8')).toContain('<title>Pixel Jukebox Player Bridge</title>');
     expect(html).not.toContain('href="./player.html"');
-    expect(html).toContain('PLAYER BRIDGE · EXTENSION ONLY');
-    expect(html).toContain('단독 실행 화면이 아닙니다');
+    expect(readme).toContain('Player Bridge URL은 Extension과 YouTube IFrame Player를 연결하는 HTTPS Bridge다.');
+    expect(readme).toContain('단독 실행 화면 아님');
+  });
+
+  it('presents the Windows installer and final end-user flow without build steps', () => {
+    expect(html).toContain('href="./PixelJukebox-Setup.exe" download');
+    expect(html).toContain('DOWNLOAD FOR WINDOWS ↓');
+    expect(html).toContain('CHROME · 2 STEPS');
+    expect(html).toContain('개발자 모드');
+    expect(html).toContain('압축해제된 확장 프로그램을 로드합니다');
+    expect(html).toContain('현재 설치 파일은 코드 서명되지 않아');
+    expect(html).toContain('Chrome Web Store 정식 배포 시');
+    expect(html).toContain('ADD TO CHROME');
+    expect(html).toContain('YouTube URL 입력');
+    expect(html).toContain('KEEP THIS VIBE');
+    expect(html).not.toContain('Node.js 22.12+');
+    expect(html).not.toContain('Repository clone');
+    expect(html).not.toContain('<code>npm ci</code>');
+    expect(html).not.toContain('<code>npm run build</code>');
+    expect(html).not.toContain('<code>dist/</code>');
   });
 
   it('uses the Extension hardware structure in the demo console', () => {

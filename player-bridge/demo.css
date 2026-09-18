@@ -43,7 +43,7 @@ main { overflow: hidden; }
 .eyebrow span { display: inline-block; padding: 7px 10px 6px; color: #fff; background: var(--purple); box-shadow: 3px 3px 0 var(--pink); }
 h1, h2, h3, .problem-lead { overflow-wrap: break-word; word-break: keep-all; text-wrap: balance; }
 p, li, dt, dd { overflow-wrap: break-word; word-break: keep-all; }
-.hero-description, .problem-answer, .section-heading > p, .demo-notes > p, .workflow-grid p, .feature-grid p, .install-copy > p, .install-steps p { text-wrap: pretty; }
+.hero-description, .problem-answer, .section-heading > p, .demo-notes > p, .workflow-grid p, .feature-grid p, .install-copy > p, .install-steps p, .end-user-journey p { text-wrap: pretty; }
 h1 { max-width: 760px; margin: 0; font-size: clamp(48px, 6vw, 82px); line-height: .98; letter-spacing: -5px; }
 h1 em { position: relative; z-index: 0; color: var(--pink); font-style: normal; }
 h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom: 4px; left: -8px; height: 17px; background: #d7cd64; transform: rotate(-1.5deg); opacity: .75; }
@@ -213,14 +213,32 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 .install-section .button { border-color: #fff; box-shadow: 4px 4px 0 #2e1722; }
 .install-section .button-primary { color: var(--pink-dark); background: #fff; }
 .install-section .button-quiet { color: #fff; background: transparent; }
-.bridge-note { display: grid; gap: 8px; max-width: 500px; margin-top: 20px; padding: 14px 16px; border-left: 3px solid #fff; background: #ffffff12; }
-.bridge-note strong { font: 900 10px/1.4 "Courier New", monospace; letter-spacing: .5px; }
-.bridge-note code { width: fit-content; max-width: 100%; overflow-wrap: anywhere; }
-.bridge-note span { color: #efdce5; font-size: 12px; line-height: 1.6; word-break: keep-all; overflow-wrap: break-word; }
+.installer-summary { font-weight: 700; }
+.installer-warning { display: grid; gap: 8px; max-width: 500px; margin-top: 20px; padding: 14px 16px; border-left: 3px solid #fff; background: #ffffff12; }
+.installer-warning > strong { font: 900 10px/1.4 "Courier New", monospace; letter-spacing: .5px; }
+.installer-warning > span { color: #efdce5; font-size: 12px; line-height: 1.6; word-break: keep-all; overflow-wrap: break-word; }
+.installer-warning details { display: grid; margin-top: 2px; }
+.installer-warning summary { width: fit-content; cursor: pointer; font: 900 10px/1.5 "Courier New", monospace; letter-spacing: .5px; }
+.installer-warning details code { display: block; margin-top: 10px; overflow-wrap: anywhere; }
+.installer-warning details a { display: inline-block; margin-top: 9px; color: #fff; font: 900 10px/1.4 "Courier New", monospace; }
+.install-guide { align-self: start; }
+.install-guide > .note-label { color: #f0b8d1; }
 .install-steps { margin: 0; padding: 0; border-top: 2px solid #fff; list-style: none; }
-.install-steps li { display: grid; grid-template-columns: 45px minmax(0, 1fr); gap: 10px; align-items: center; min-height: 72px; border-bottom: 1px solid #ffffff66; }
+.install-steps li { display: grid; grid-template-columns: 45px minmax(0, 1fr); gap: 10px; align-items: center; min-height: 94px; border-bottom: 1px solid #ffffff66; }
 .install-steps span { font: 900 11px/1 "Courier New", monospace; }
 .install-steps p { margin: 0; font-size: 14px; line-height: 1.6; }
+.ai-install-note { display: grid; gap: 7px; margin: 24px 0 0; padding: 17px 18px; border: 1px solid #ffffff66; background: #ffffff0c; }
+.ai-install-note strong { font: 900 11px/1.4 "Courier New", monospace; }
+.ai-install-note span { color: #efdce5; font-size: 13px; line-height: 1.6; }
+.end-user-journey { display: grid; grid-column: 1 / -1; grid-template-columns: minmax(260px, .65fr) minmax(480px, 1.35fr); gap: 60px; margin-top: 6px; padding-top: 54px; border-top: 1px solid #ffffff66; }
+.end-user-journey .note-label { margin-bottom: 13px; color: #f0b8d1; }
+.end-user-journey h3 { margin: 0; color: #fff; font-size: clamp(24px, 3vw, 38px); line-height: 1.15; letter-spacing: -1.5px; }
+.end-user-journey > div:first-child > p:last-child { max-width: 410px; margin: 18px 0 0; color: #efdce5; font-size: 13px; line-height: 1.7; }
+.journey-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.journey-track { margin: 0; padding: 20px 22px; border: 1px solid #ffffff66; background: #2e172226; list-style: none; }
+.journey-track li { position: relative; padding: 0 0 25px; font: 800 12px/1.45 "Courier New", monospace; }
+.journey-track li:not(:last-child)::after { content: "↓"; position: absolute; bottom: 5px; left: 2px; color: #f0b8d1; }
+.journey-track li:last-child { padding-bottom: 0; color: #fff; }
 code { padding: 3px 6px; color: var(--lcd-ink); background: var(--lcd); font: 800 12px/1.4 "Courier New", monospace; }
 
 .site-footer { display: flex; align-items: center; justify-content: space-between; gap: 30px; padding: 42px max(24px, calc((100vw - 1180px) / 2)); color: #d7d3db; background: #171419; }
@@ -247,6 +265,7 @@ code { padding: 3px 6px; color: var(--lcd-ink); background: var(--lcd); font: 80
   .demo-notes { max-width: 520px; }
   .workflow-grid { grid-template-columns: repeat(2, 1fr); }
   .install-section { grid-template-columns: 1fr; gap: 54px; }
+  .end-user-journey { grid-template-columns: 1fr; gap: 30px; margin-top: 0; }
 }
 
 @media (max-width: 680px) {
@@ -287,6 +306,7 @@ code { padding: 3px 6px; color: var(--lcd-ink); background: var(--lcd); font: 80
   .feature-grid article { grid-template-columns: 55px minmax(0, 1fr); min-height: 0; padding: 25px 21px; }
   .feature-grid article > span { width: 50px; height: 50px; }
   .install-steps li { grid-template-columns: 35px minmax(0, 1fr); }
+  .journey-grid { grid-template-columns: 1fr; }
   .site-footer { align-items: flex-start; flex-direction: column; }
   .footer-links { flex-wrap: wrap; gap: 18px; }
 }
