@@ -17,8 +17,9 @@ const mime = new Map([
   ['.js', 'text/javascript; charset=utf-8'],
   ['.css', 'text/css; charset=utf-8'],
 ]);
+const installerFilename = 'PixelJukebox-Setup-1.0.0.exe';
 const downloads = new Map([
-  ['/PixelJukebox-Setup.exe', resolve(releaseRoot, 'PixelJukebox-Setup.exe')],
+  [`/${installerFilename}`, resolve(releaseRoot, installerFilename)],
   ['/SHA256SUMS.txt', resolve(releaseRoot, 'SHA256SUMS.txt')],
 ]);
 
@@ -55,7 +56,7 @@ const address = server.address();
 assert.ok(address && typeof address === 'object');
 const origin = `http://127.0.0.1:${address.port}`;
 
-for (const path of ['/', '/demo.css', '/demo.js', '/player.html', '/player.css', '/player.js', '/PixelJukebox-Setup.exe', '/SHA256SUMS.txt']) {
+for (const path of ['/', '/demo.css', '/demo.js', '/player.html', '/player.css', '/player.js', `/${installerFilename}`, '/SHA256SUMS.txt']) {
   const response = await fetch(`${origin}${path}`);
   assert.equal(response.status, 200, `${path} must be served without a 404`);
 }
@@ -167,7 +168,7 @@ try {
   })()`), true, 'Demo console must match the Extension hardware structure and scale');
   assert.equal(await evaluate(desktop, undefined, intactKoreanWords), true, 'Desktop Korean words must not split across lines');
   assert.equal(await evaluate(desktop, undefined, `(() => {
-    const installer = document.querySelector('a[href="./PixelJukebox-Setup.exe"]');
+    const installer = document.querySelector('a[href="./${installerFilename}"]');
     const warning = document.querySelector('.installer-warning');
     const extensionsUrl = document.querySelector('.install-steps code');
     return document.querySelector('a[href="./player.html"]') === null

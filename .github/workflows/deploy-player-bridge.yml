@@ -35,13 +35,13 @@ jobs:
           test -f player-bridge/player.html
           test -f player-bridge/player.css
           test -f player-bridge/player.js
-          test -f release/PixelJukebox-Setup.exe
+          compgen -G 'release/PixelJukebox-Setup-*.exe' > /dev/null
           test -f release/SHA256SUMS.txt
       - name: Prepare Pages bundle
         run: |
           mkdir pages-bundle
           cp -R player-bridge/. pages-bundle/
-          cp release/PixelJukebox-Setup.exe pages-bundle/
+          cp release/PixelJukebox-Setup-*.exe pages-bundle/
           cp release/SHA256SUMS.txt pages-bundle/
       - uses: actions/upload-pages-artifact@v3
         with:

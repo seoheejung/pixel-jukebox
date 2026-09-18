@@ -2,7 +2,10 @@ import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const executable = readFileSync('release/PixelJukebox-Setup.exe');
+const installerFilename = 'PixelJukebox-Setup-1.0.0.exe';
+const executable = readFileSync(`release/${installerFilename}`);
+const installerIcon = readFileSync('installer/PixelJukebox.ico');
+const extensionIcon = readFileSync('public/icons/icon-128.png');
 const source = readFileSync('installer/PixelJukeboxSetup.cs', 'utf8');
 const buildScript = readFileSync('scripts/build-windows-installer.ps1', 'utf8');
 const bridgeConfig = readFileSync('installer/bridge.config.json', 'utf8');
@@ -15,11 +18,16 @@ describe('Windows Extension installer', () => {
   it('ships a Windows executable with the documented filename', () => {
     expect(executable.subarray(0, 2).toString('ascii')).toBe('MZ');
     expect(executable.length).toBeGreaterThan(30_000);
-    expect(readme).toContain('[PixelJukebox-Setup.exe 다운로드](https://seoheejung.github.io/pixel-jukebox/PixelJukebox-Setup.exe)');
+    expect(readme).toContain(`[${installerFilename} 다운로드](https://seoheejung.github.io/pixel-jukebox/${installerFilename})`);
     const hash = createHash('sha256').update(executable).digest('hex').toUpperCase();
-    expect(checksum).toBe(`${hash}  PixelJukebox-Setup.exe\n`);
+    expect(checksum).toBe(`${hash}  ${installerFilename}\n`);
     expect(readme).toContain(`SHA-256: \`${hash}\``);
     expect(html).toContain(`SHA-256 · ${hash}`);
+  });
+
+  it('uses the Extension icon for the Windows installer', () => {
+    expect(installerIcon.subarray(0, 6)).toEqual(Buffer.from([0, 0, 1, 0, 1, 0]));
+    expect(installerIcon.subarray(22)).toEqual(extensionIcon);
   });
 
   it('installs and replaces only the app-specific Extension directory', () => {
@@ -56,9 +64,10 @@ describe('Windows Extension installer', () => {
     expect(source).toContain('VerifyPayload();');
     expect(buildScript).toContain("& npm.cmd run build");
     expect(buildScript).toContain("Start-Process -FilePath $OutputPath -ArgumentList '--verify' -WindowStyle Hidden -Wait -PassThru");
-    expect(buildScript).toContain("'PixelJukebox-Setup.exe'");
+    expect(buildScript).toContain('PixelJukebox-Setup-$extensionVersion.exe');
+    expect(buildScript).toContain('"/win32icon:$installerRoot\\PixelJukebox.ico"');
     expect(buildScript).toContain('Update-ChecksumText');
-    expect(workflow).toContain('cp release/PixelJukebox-Setup.exe pages-bundle/');
+    expect(workflow).toContain("cp release/PixelJukebox-Setup-*.exe pages-bundle/");
     expect(workflow).toContain('cp release/SHA256SUMS.txt pages-bundle/');
   });
 });

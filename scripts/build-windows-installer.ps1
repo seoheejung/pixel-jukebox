@@ -8,6 +8,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $installerRoot = Join-Path $repoRoot 'installer'
 $releaseRoot = Join-Path $repoRoot 'release'
 $distRoot = Join-Path $repoRoot 'dist'
+$extensionManifestPath = Join-Path $repoRoot 'public\manifest.json'
 $bridgeConfigPath = Join-Path $repoRoot 'bridge.config.local.json'
 $installerBridgeConfigPath = Join-Path $installerRoot 'bridge.config.json'
 $sourcePath = Join-Path $installerRoot 'PixelJukeboxSetup.cs'
@@ -32,8 +33,29 @@ function Update-ChecksumText {
     [System.IO.File]::WriteAllText($Path, $updated, [System.Text.UTF8Encoding]::new($false))
 }
 
+function Update-InstallerFilenameText {
+    param(
+        [string]$Path,
+        [string]$Filename
+    )
+
+    $content = [System.IO.File]::ReadAllText($Path)
+    $updated = [System.Text.RegularExpressions.Regex]::Replace(
+        $content,
+        'PixelJukebox-Setup(?:-[0-9]+\.[0-9]+\.[0-9]+)?\.exe',
+        $Filename
+    )
+    [System.IO.File]::WriteAllText($Path, $updated, [System.Text.UTF8Encoding]::new($false))
+}
+
+$extensionVersion = (Get-Content -LiteralPath $extensionManifestPath -Raw | ConvertFrom-Json).version
+if ($extensionVersion -notmatch '^[0-9]+\.[0-9]+\.[0-9]+$') {
+    throw "Extension manifest version must use semantic versioning: $extensionVersion"
+}
+$installerFilename = "PixelJukebox-Setup-$extensionVersion.exe"
+
 if ([string]::IsNullOrWhiteSpace($OutputPath)) {
-    $OutputPath = Join-Path $releaseRoot 'PixelJukebox-Setup.exe'
+    $OutputPath = Join-Path $releaseRoot $installerFilename
 }
 
 $OutputPath = [System.IO.Path]::GetFullPath($OutputPath)
@@ -85,6 +107,7 @@ try {
         '/codepage:65001',
         "/out:$OutputPath",
         "/win32manifest:$manifestPath",
+        "/win32icon:$installerRoot\PixelJukebox.ico",
         "/resource:$payloadPath,PixelJukebox.Extension.zip",
         '/reference:System.dll',
         '/reference:System.Core.dll',
@@ -112,6 +135,8 @@ try {
     $siteChecksum = 'SHA-256 ' + [char]0x00B7 + ' ' + $hash.Hash
     Update-ChecksumText -Path $sitePath -Pattern 'SHA-256[^A-F0-9]+[A-F0-9]{64}' -Replacement $siteChecksum
     Update-ChecksumText -Path $readmePath -Pattern 'SHA-256: `[A-F0-9]{64}`' -Replacement ('SHA-256: `' + $hash.Hash + '`')
+    Update-InstallerFilenameText -Path $sitePath -Filename $artifact.Name
+    Update-InstallerFilenameText -Path $readmePath -Filename $artifact.Name
     Write-Output ("Created: {0}" -f $artifact.FullName)
     Write-Output ("Size: {0} bytes" -f $artifact.Length)
     Write-Output ("SHA256: {0}" -f $hash.Hash)

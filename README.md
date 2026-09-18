@@ -152,15 +152,16 @@ KEEP THIS VIBE
 ## 전체 Extension 설치
 
 > Web Demo가 공식 제출 경로다.
-> Windows용 `PixelJukebox-Setup.exe`는 실제 YouTube Player와 OpenAI 연동을 포함한 전체 Extension을 추가로 확인할 때 사용하는 선택 설치 도우미다.
+> Windows용 `PixelJukebox-Setup-1.0.0.exe`는 실제 YouTube Player와 OpenAI 연동을 포함한 전체 Extension을 추가로 확인할 때 사용하는 선택 설치 도우미다.
 >
 > 제공된 Player Bridge를 사용할 경우 별도 Fork나 Bridge 배포는 필요하지 않다.
 
 ### Windows — 권장
 
-설치 파일: [PixelJukebox-Setup.exe 다운로드](https://seoheejung.github.io/pixel-jukebox/PixelJukebox-Setup.exe)
+설치 파일: [PixelJukebox-Setup-1.0.0.exe 다운로드](https://seoheejung.github.io/pixel-jukebox/PixelJukebox-Setup-1.0.0.exe)
 
 설치 파일을 내려받아 실행한다. 관리자 권한은 필요하지 않다.
+새 버전이 올라오면 더 높은 버전 번호의 설치 파일을 내려받아 실행하면 기존 Extension 폴더가 새 내장 build로 교체된다.
 
 설치 도우미가 자동으로 처리하는 항목:
 
@@ -168,7 +169,7 @@ KEEP THIS VIBE
 - 제공된 HTTPS Player Bridge가 적용된 build 배치
 - 설치 위치 생성
 - 기존 버전 덮어쓰기
-- `chrome://extensions` 열기
+- `chrome://extensions` 실행 안내
 - Pixel Jukebox Extension 폴더 열기
 - 설치 안내 표시
 
@@ -191,7 +192,7 @@ Web Demo URL로 사용하지 않는다.
 <details>
 <summary>INSTALLER DETAILS</summary>
 
-- SHA-256: `D207A48F39BE7F26F63405577F6BB8FEFAE9A79C1CD1F04A09B61B4CE336D809`
+- SHA-256: `49E92D28F65FD69C84E5D2500C05AACE3F90D7D47365E56F5A95C53DAF1BF9ED`
 - Checksum: [SHA256SUMS.txt](release/SHA256SUMS.txt)
 
 </details>
