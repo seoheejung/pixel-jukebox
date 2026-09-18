@@ -161,7 +161,7 @@ KEEP THIS VIBE
 
 ### Windows — 권장
 
-설치 파일: [PixelJukebox-Setup.exe](release/PixelJukebox-Setup.exe)
+설치 파일: [PixelJukebox-Setup.exe 다운로드](https://seoheejung.github.io/pixel-jukebox/PixelJukebox-Setup.exe)
 
 설치 파일을 내려받아 실행한다. 관리자 권한은 필요하지 않다.
 

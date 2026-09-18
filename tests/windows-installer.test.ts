@@ -15,7 +15,7 @@ describe('Windows Extension installer', () => {
   it('ships a Windows executable with the documented filename', () => {
     expect(executable.subarray(0, 2).toString('ascii')).toBe('MZ');
     expect(executable.length).toBeGreaterThan(30_000);
-    expect(readme).toContain('[PixelJukebox-Setup.exe](release/PixelJukebox-Setup.exe)');
+    expect(readme).toContain('[PixelJukebox-Setup.exe 다운로드](https://seoheejung.github.io/pixel-jukebox/PixelJukebox-Setup.exe)');
     const hash = createHash('sha256').update(executable).digest('hex').toUpperCase();
     expect(checksum).toBe(`${hash}  PixelJukebox-Setup.exe\n`);
     expect(readme).toContain(`SHA-256: \`${hash}\``);
