@@ -227,6 +227,7 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 .install-steps li { display: grid; grid-template-columns: 45px minmax(0, 1fr); gap: 10px; align-items: center; min-height: 94px; border-bottom: 1px solid #ffffff66; }
 .install-steps span { font: 900 11px/1 "Courier New", monospace; }
 .install-steps p { margin: 0; font-size: 14px; line-height: 1.6; }
+.install-steps code { padding: 2px 4px; color: var(--pink-dark); background: #fff; font: 900 12px/1.4 "Courier New", monospace; }
 .ai-install-note { display: grid; gap: 7px; margin: 24px 0 0; padding: 17px 18px; border: 1px solid #ffffff66; background: #ffffff0c; }
 .ai-install-note strong { font: 900 11px/1.4 "Courier New", monospace; }
 .ai-install-note span { color: #efdce5; font-size: 13px; line-height: 1.6; }

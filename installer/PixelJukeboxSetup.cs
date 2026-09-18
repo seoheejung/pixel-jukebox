@@ -5,7 +5,6 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
-using Microsoft.Win32;
 
 [assembly: AssemblyTitle("Pixel Jukebox Setup")]
 [assembly: AssemblyDescription("Installs the Pixel Jukebox Chrome Extension files.")]
@@ -37,9 +36,8 @@ namespace PixelJukebox.Setup
 
                 string installDirectory = GetInstallDirectory();
                 InstallPayload(installDirectory);
-                bool chromeOpened = OpenChromeExtensions();
                 OpenInstallDirectory(installDirectory);
-                ShowInstructions(installDirectory, chromeOpened);
+                ShowInstructions(installDirectory);
                 return 0;
             }
             catch (Exception error)
@@ -205,67 +203,6 @@ namespace PixelJukebox.Setup
             }
         }
 
-        private static bool OpenChromeExtensions()
-        {
-            string chromePath = FindChromePath();
-            if (chromePath == null)
-            {
-                return false;
-            }
-
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = chromePath,
-                    Arguments = "--new-window chrome://extensions/",
-                    UseShellExecute = false
-                });
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static string FindChromePath()
-        {
-            string[] registryPaths =
-            {
-                @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe",
-                @"HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe",
-                @"HKEY_LOCAL_MACHINE\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe"
-            };
-
-            foreach (string registryPath in registryPaths)
-            {
-                object value = Registry.GetValue(registryPath, null, null);
-                string candidate = value as string;
-                if (!string.IsNullOrWhiteSpace(candidate) && File.Exists(candidate))
-                {
-                    return candidate;
-                }
-            }
-
-            string[] candidates =
-            {
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Google", "Chrome", "Application", "chrome.exe"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Google", "Chrome", "Application", "chrome.exe"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Google", "Chrome", "Application", "chrome.exe")
-            };
-
-            foreach (string candidate in candidates)
-            {
-                if (File.Exists(candidate))
-                {
-                    return candidate;
-                }
-            }
-
-            return null;
-        }
-
         private static void OpenInstallDirectory(string installDirectory)
         {
             Process.Start(new ProcessStartInfo
@@ -276,8 +213,9 @@ namespace PixelJukebox.Setup
             });
         }
 
-        private static void ShowInstructions(string installDirectory, bool chromeOpened)
+        private static void ShowInstructions(string installDirectory)
         {
+            bool chromeOpened = false;
             string chromeStep = chromeOpened
                 ? "Chrome 확장 프로그램 화면을 열었습니다."
                 : "Chrome을 찾지 못했거나 화면을 열 수 없습니다. Chrome에서 chrome://extensions/를 직접 여세요.";

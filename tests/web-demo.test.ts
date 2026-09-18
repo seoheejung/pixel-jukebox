@@ -83,7 +83,8 @@ describe('GitHub Pages web demo', () => {
   it('presents the Windows installer and final end-user flow without build steps', () => {
     expect(html).toContain('href="./PixelJukebox-Setup.exe" download');
     expect(html).toContain('DOWNLOAD FOR WINDOWS ↓');
-    expect(html).toContain('CHROME · 2 STEPS');
+    expect(html).toContain('CHROME · 3 STEPS');
+    expect(html).toContain('<code>chrome://extensions/</code>');
     expect(html).toContain('개발자 모드');
     expect(html).toContain('압축해제된 확장 프로그램을 로드합니다');
     expect(html).toContain('현재 설치 파일은 코드 서명되지 않아');

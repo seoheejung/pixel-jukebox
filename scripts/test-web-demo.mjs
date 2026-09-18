@@ -169,8 +169,10 @@ try {
   assert.equal(await evaluate(desktop, undefined, `(() => {
     const installer = document.querySelector('a[href="./PixelJukebox-Setup.exe"]');
     const warning = document.querySelector('.installer-warning');
+    const extensionsUrl = document.querySelector('.install-steps code');
     return document.querySelector('a[href="./player.html"]') === null
       && installer?.hasAttribute('download')
+      && extensionsUrl?.textContent === 'chrome://extensions/'
       && warning?.textContent.includes('코드 서명되지 않아');
   })()`), true, 'The Windows installer must be the primary full-Extension path with a signing warning');
   assert.equal(await evaluate(desktop, undefined, "window.PixelJukeboxDemo.hasCompleted(sessionStorage)"), false, 'First session must be ready');

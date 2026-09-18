@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const executable = readFileSync('release/PixelJukebox-Setup.exe');
@@ -31,8 +31,8 @@ describe('Windows Extension installer', () => {
     expect(source).toContain('Directory.Move(backupDirectory, installDirectory)');
   });
 
-  it('opens Chrome and the install folder before showing manual steps', () => {
-    expect(source).toContain('Arguments = "--new-window chrome://extensions/"');
+  it('opens the install folder and leaves Chrome internal-page navigation to the user', () => {
+    expect(source).not.toContain('--new-window chrome://extensions/');
     expect(source).not.toContain('SetForegroundWindow');
     expect(source).not.toContain('GetForegroundWindow');
     expect(source).not.toContain('Clipboard');
@@ -43,6 +43,11 @@ describe('Windows Extension installer', () => {
     expect(source).toContain('개발자 모드를 켜세요.');
     expect(source).toContain('압축해제된 확장 프로그램을 로드합니다');
     expect(source).toContain('API Key를 CONNECT 하세요.');
+  });
+
+  it('does not ship script-based browser automation', () => {
+    const releaseScripts = readdirSync('release').filter(file => /\.(vbs|cmd|bat|ps1)$/i.test(file));
+    expect(releaseScripts).toEqual([]);
   });
 
   it('builds and verifies the bundled Extension against the public Bridge', () => {
