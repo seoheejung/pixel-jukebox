@@ -83,6 +83,11 @@ describe('GitHub Pages web demo', () => {
   });
 
   it('presents the Windows installer and final end-user flow without build steps', () => {
+    expect(html).toContain('href="./favicon.png" type="image/png"');
+    expect(html).toContain('03 / RUN THE FULL EXTENSION');
+    expect(html).toContain('04 / AI WORKFLOW');
+    expect(html).toContain('05 / MORE THAN AI PICKS');
+    expect(readFileSync('player-bridge/demo.css', 'utf8')).toContain('.install-section { display: grid; order: 3;');
     expect(html).toContain('href="./PixelJukebox-Setup-1.0.0.exe" download');
     expect(html).toContain('DOWNLOAD FOR WINDOWS ↓');
     expect(html).toContain('FIRST INSTALL · 3 STEPS');

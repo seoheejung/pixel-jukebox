@@ -18,10 +18,10 @@ npm run chrome:start -- --headed
 두 번째 터미널에서 실제 측정을 시작한다.
 
 ```sh
-npm run test:openai:e2e -- --seed=Radiohead
+npm run test:openai:e2e -- --live --seed=Radiohead
 ```
 
-OpenAI가 연결되지 않은 경우 스크립트가 Pixel Jukebox 창을 앞으로 가져온다. 그 창에서 API Key를 입력하고 `CONNECT`를 누르면 같은 실행이 자동으로 이어진다. 측정이 끝나면 기존 테스트 Profile의 Playlist를 복원한다.
+`--live`와 단일 `--seed`가 없으면 실제 요청은 시작되지 않는다. OpenAI가 연결되지 않은 경우 스크립트가 Pixel Jukebox 창을 앞으로 가져온다. 그 창에서 API Key를 입력하고 `CONNECT`를 누르면 같은 실행이 자동으로 이어진다. 측정이 끝나면 기존 테스트 Profile의 Playlist를 복원한다.
 
 측정 종료 후 Chrome을 닫는다.
 

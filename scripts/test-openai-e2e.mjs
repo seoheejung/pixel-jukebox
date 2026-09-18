@@ -28,8 +28,11 @@ const seeds = [
   videoUrl: `https://www.youtube.com/watch?v=${track.videoId}`,
 }));
 const requestedSeed = process.argv.find((argument) => argument.startsWith('--seed='))?.slice('--seed='.length);
-const runSeeds = requestedSeed ? seeds.filter((seed) => seed.videoId === requestedSeed || seed.channelTitle.toLowerCase().includes(requestedSeed.toLowerCase())) : seeds;
-if (runSeeds.length === 0) throw new Error(`알 수 없는 seed: ${requestedSeed}`);
+const liveRunApproved = process.argv.includes('--live');
+if (!liveRunApproved) throw new Error('실제 OpenAI E2E는 명시적 --live 승인과 단일 --seed가 필요합니다. 예: npm run test:openai:e2e -- --live --seed=Radiohead');
+if (!requestedSeed) throw new Error('실제 OpenAI E2E는 단일 --seed가 필요합니다. 예: --seed=Radiohead');
+const runSeeds = seeds.filter((seed) => seed.videoId === requestedSeed || seed.channelTitle.toLowerCase().includes(requestedSeed.toLowerCase()));
+if (runSeeds.length !== 1) throw new Error(`단일 기준곡을 선택해야 합니다: ${requestedSeed}`);
 
 function sleep(ms) {
   return new Promise((resolveWait) => setTimeout(resolveWait, ms));

@@ -16,6 +16,7 @@ const mime = new Map([
   ['.html', 'text/html; charset=utf-8'],
   ['.js', 'text/javascript; charset=utf-8'],
   ['.css', 'text/css; charset=utf-8'],
+  ['.png', 'image/png'],
 ]);
 const installerFilename = 'PixelJukebox-Setup-1.0.0.exe';
 const downloads = new Map([
@@ -24,7 +25,7 @@ const downloads = new Map([
 ]);
 
 assert.ok(existsSync(executable), 'Chrome executable is unavailable');
-for (const file of ['index.html', 'demo.css', 'demo.js', 'player.html', 'player.css', 'player.js']) {
+for (const file of ['index.html', 'demo.css', 'demo.js', 'favicon.png', 'player.html', 'player.css', 'player.js']) {
   assert.ok(existsSync(resolve(root, file)), `Missing Pages asset: ${file}`);
 }
 await mkdir(profile, { recursive: true });
@@ -56,7 +57,7 @@ const address = server.address();
 assert.ok(address && typeof address === 'object');
 const origin = `http://127.0.0.1:${address.port}`;
 
-for (const path of ['/', '/demo.css', '/demo.js', '/player.html', '/player.css', '/player.js', `/${installerFilename}`, '/SHA256SUMS.txt']) {
+for (const path of ['/', '/demo.css', '/demo.js', '/favicon.png', '/player.html', '/player.css', '/player.js', `/${installerFilename}`, '/SHA256SUMS.txt']) {
   const response = await fetch(`${origin}${path}`);
   assert.equal(response.status, 200, `${path} must be served without a 404`);
 }
@@ -178,6 +179,12 @@ try {
       && document.querySelector('.install-section')?.textContent.includes('새로고침')
       && warning?.textContent.includes('코드 서명되지 않아');
   })()`), true, 'The Windows installer must be the primary full-Extension path with a signing warning');
+  assert.equal(await evaluate(desktop, undefined, `(() => {
+    const demo = document.querySelector('#demo')?.getBoundingClientRect();
+    const install = document.querySelector('#install')?.getBoundingClientRect();
+    const workflow = document.querySelector('#workflow')?.getBoundingClientRect();
+    return Boolean(demo && install && workflow && install.top > demo.bottom && workflow.top > install.bottom);
+  })()`), true, 'The full Extension download must be the third section, directly after the demo');
   assert.equal(await evaluate(desktop, undefined, "window.PixelJukeboxDemo.hasCompleted(sessionStorage)"), false, 'First session must be ready');
   for (const [width, height, selector, name] of [
     [1191, 335, '.problem-strip', 'problem-1191'],

@@ -135,10 +135,8 @@ flowchart TD
     Storage["Chrome Storage"]
     PiP["Document PiP"]
 
-    Discovery["Research Discovery"]
-    Extraction["Candidate Extraction"]
-    Candidate["Candidate Validation"]
-    Selection["Selection"]
+    Recommendation["One-shot Recommendation"]
+    Search["Responses API Web Search"]
     Resolver["YouTube Resolver"]
     Validation["Application Validation"]
 
@@ -150,11 +148,9 @@ flowchart TD
     UI --> PiP
 
     UI -->|"KEEP THIS VIBE"| Worker
-    Worker --> Discovery
-    Discovery --> Extraction
-    Extraction --> Candidate
-    Candidate --> Selection
-    Selection --> Resolver
+    Worker --> Recommendation
+    Recommendation --> Search
+    Search --> Resolver
     Resolver --> Validation
     Validation --> UI
 ```
@@ -364,22 +360,18 @@ API KEY
 
 ```text
 Current Track
-+ Playlist
-+ Recent Recommendations
         ↓
-Research Discovery
-20–30 Candidates
+OpenAI Responses API 1회 + Web Search
         ↓
-Candidate Extraction
+10 Primary + 2 Backup TRACK
         ↓
-Candidate Validation
+실제 Web Search YouTube 출처 연결
         ↓
-Selection
-12–20 Tracks
-        ↓
-YouTube Resolver
+URL / videoId / duplicate 검증
         ↓
 oEmbed Metadata Validation
+        ↓
+검증 통과 최대 10곡
         ↓
 KEEP THIS VIBE
 ```
@@ -388,33 +380,18 @@ KEEP THIS VIBE
 
 `.project/plan.md`에는 Prompt 전문을 중복 저장하지 않는다.
 
-### Discovery
+### One-shot Recommendation
 
-- Web Search 사용
-- Candidate 목표 20–30곡
-- 현재 Track·Playlist·최근 추천 중복 제외
-- 같은 곡의 재업로드·Cover·변형보다 새로운 곡 우선
-- 충분한 후보가 없으면 검증된 결과만 유지
-
-### Candidate Validation
-
-- Research 근거에 없는 Track 생성 금지
-- Artist / Track 필수
-- Artist + Track 중복 제거
-- Current Track 중복 제거
-- Playlist 중복 제거
-- Recent Recommendations 중복 제거
-- Candidate ID 형식·중복 검증
-
-### Selection
-
-- Web Search 미사용
-- Candidate Set 내부 ID만 선택
-- 목표 12–20곡
-- 후보가 충분한데 12곡 미만이면 1회 Retry
-- 각 Track의 독립 유사도보다 전체 재생 흐름 우선
-- 목록 밖 Candidate ID 차단
-- 중복 Candidate ID 차단
+- Cache miss당 Responses API 요청은 정확히 1회
+- 모델에는 현재 재생 중인 Track만 전달
+- Web Search는 단일 Responses 요청 안에서만 수행하며, 호출 수는 별도 계측한다
+- 응답은 10개 Primary와 2개 Backup의 `TRACK` line protocol만 허용한다
+- Cover·Karaoke·Reaction·Remix·변형·Compilation·Playlist·Shorts·불확실한 결과는 제외한다
+- 현재 Track 및 기존 Playlist / Recent videoId와 중복되는 결과는 애플리케이션에서 제거한다
+- Candidate pool, 별도 Discovery / Selection 요청, Selection retry, Supplemental Search를 두지 않는다
+- 모델 본문의 URL은 실제 Web Search source에 같은 videoId가 있을 때만 후보로 사용한다
+- source와 연결되지 않은 후보는 같은 응답의 실제 YouTube source를 oEmbed 검증 후보로만 보충한다
+- 추가 AI 요청 없이 oEmbed 통과 결과를 앞에서부터 최대 10곡만 표시한다
 
 Reason / Tag는 최종 UI에서 사용하지 않는다.
 
@@ -487,7 +464,7 @@ currentTrack.videoId
 playlistFingerprint
 ```
 
-- Cache Hit 시 OpenAI 요청 0건
+- Cache Hit 시 OpenAI Responses API 요청 0건
 - `MORE LIKE THIS`는 Cache 우회
 - 이전 추천은 Recent Recommendations에 반영
 
@@ -499,15 +476,13 @@ playlistFingerprint
 - Rate Limit
 - 사용량·결제
 - Network / Timeout
-- Discovery 실패
-- Candidate Extraction 실패
-- Selection 실패
+- One-shot Recommendation 실패
 - YouTube Source 없음
 - Resolver / Metadata 검증 실패
 
-Selection 실패 시 동일 Candidate Set으로 1회 Retry한다.
+별도 AI retry나 Supplemental Search는 수행하지 않는다.
 
-Partial JSON을 임의 복구하지 않는다.
+응답이 출력 토큰 제한으로 중단됐더라도 완결된 `TRACK` line은 기존 검증 규칙으로 처리한다.
 
 AI 오류는 Core Player와 격리한다.
 
@@ -531,10 +506,7 @@ API Key·Authorization·원본 API Response Body를 UI나 일반 로그에 노�
 - PiP 구조
 - Design 설정
 - OpenAI Key 연결 구조
-- Research Discovery
-- Candidate Extraction
-- Candidate Validation
-- Selection
+- One-shot Recommendation
 - YouTube Resolver
 - Recommendation Cache
 - AI / Core Player 오류 격리
@@ -543,11 +515,12 @@ API Key·Authorization·원본 API Response Body를 UI나 일반 로그에 노�
 
 ```text
 TypeScript Type Check
-Vitest 66 tests
+Vitest 87 tests
 Production Build
 Bridge Syntax Check
 Manifest Check
 Chrome UI Fixture
+Windows Installer Build / Payload Verification
 ```
 
 상세 구현·검증 이력은 `docs/results/*`에서 관리한다.
@@ -564,9 +537,9 @@ Chrome UI Fixture
 
 - 실제 OpenAI End-to-End
 - 서로 다른 기준 곡의 KEEP THIS VIBE 품질
-- Discovery Candidate 수
-- Candidate Extraction 통과 수
-- Selection 결과 수
+- Responses API Request Count
+- Web Search Tool Call Count
+- 반환 TRACK 수 / Primary 수 / Backup 수
 - YouTube 출처 발견 수
 - Resolver / Metadata 검증 통과 수
 - 최종 추천 수
@@ -578,7 +551,7 @@ Chrome UI Fixture
 
 실제 측정값과 검증 결과는 `docs/results/*`에 기록한다.
 
-실측 후에만 Candidate 수·Batch 크기·Retry 정책을 조정한다.
+실측 후에만 Web Search tool call 상한·응답 토큰 예산·oEmbed 검증 병렬성을 조정한다.
 
 ### 허용되는 변경
 
@@ -611,46 +584,38 @@ Chrome UI Fixture
 
 ### AI
 
-- [x] Discovery → Selection → Resolver → oEmbed 단계별 drop count 계측
-
-- [x] Research Discovery
-- [x] Candidate Extraction / Validation
-- [x] Selection
+- [x] Cache miss당 OpenAI Responses API 1회 구조
+- [x] `TRACK` 10 Primary + 2 Backup line protocol
+- [x] 실제 Web Search source와 URL / videoId 연결 검증
 - [x] YouTube Resolver
 - [x] Cache
 - [x] AI / Player 오류 격리
-- [x] 실제 OpenAI E2E
-- [x] 실제 UI AI 추천 결과 확인
-- [x] Discovery Candidate 규모 실측
-- [x] YouTube 중복 검증
-- [x] 계측 반영 새 실제 OpenAI E2E 실행
-- [x] Resolver 병목 수정 및 URL canonicalize 보정
-- [x] Timeout-safe 부분 계측 관측성 보강
-- [x] 관련 자동 검증
-- [x] Live measurement E2E 전달 경로 검증 및 수정
-- [ ] Tyler 동일 조건 E2E 1회 재실행
-- [ ] 지연 원인 판별
-- [ ] Resolver drop 감소 효과 검증
-- [ ] 최종 추천 최소 12곡 안정성 확인
+- [ ] Radiohead 기준 실제 one-shot E2E 1회
+- [x] 실제 E2E의 명시적 `--live` 승인과 단일 `--seed` 강제
+- [ ] Responses API Request Count = 1 확인
+- [ ] Web Search Tool Call Count와 OpenAI duration 기록
+- [ ] source 연결 / oEmbed 검증 / 최종 추천 수 기록
+- [ ] 기존 E2E와 시간·비용 비교
 - [ ] 추천 품질 청취 평가: 흐름·Scene·Artist 편중·탐색성·영상 정확성
 
 ### Known Limitations
 
-- 최종 추천 수가 내부 목표 12곡에 미달할 수 있음
+- oEmbed 통과 결과가 10곡에 미달할 수 있음
 - Resolver / video verification 처리 시간이 길 수 있음
-- E2E runner와 실제 UI 완료 상태의 동기화 문제가 남아 있음
-- [x] 실제 Usage·비용 확인
+- 실제 one-shot E2E의 시간·비용은 재측정이 필요함
 
 ### 제출
 
 - [ ] 제출 자료 완성
 - [x] 최종 Regression: Player·Playlist·Volume/Mute·Auto Skip Ads·PiP·Design·OpenAI BYOK·KEEP THIS VIBE·YouTube Resolver·Cache·AI/Player 장애 격리
-- [ ] 제출용 실행 경로 확정: Extension 설치/Release·Player Bridge·OpenAI API Key 연결
+- [x] 버전형 Windows 설치 파일: 내장 build 설치·안전한 기존 폴더 교체·동일 아이콘
+- [x] 처음 설치 / 업데이트 안내 분리
+- [ ] GitHub Pages에 현재 버전 설치 파일 배포
 - [x] 심사자 최소 실행 절차
 - [ ] GitHub Repository / Release 링크 정리
 - [ ] 제출 자료: 한 줄 설명·해결하려는 문제·AI 활용 방식·사용 AI Tool·서비스/설치 링크·대표 Screenshot·최소 실행 안내
 - [x] Fork용 Bridge 구성·배포 문서
-- [x] 제출용 Extension 실행·설치 경로: Repository clone → `npm ci` → Bridge local config → `npm run build` → `dist/` Load unpacked
+- [x] 개발자용 실행 경로: Repository clone → `npm ci` → Bridge local config → `npm run build` → `dist/` Load unpacked
 - [x] 심사자 실행 확인
 - [x] 서비스·설치 링크
 - [x] 제출 문구

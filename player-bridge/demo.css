@@ -36,7 +36,7 @@ button { font: inherit; }
 .site-header nav a { font: 800 11px/1 "Courier New", monospace; letter-spacing: 1px; text-decoration: none; }
 .site-header nav a:hover { color: var(--pink); }
 
-main { overflow: hidden; }
+main { display: flex; flex-direction: column; overflow: hidden; }
 .hero { position: relative; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr); gap: 60px; align-items: center; width: min(1180px, calc(100% - 48px)); min-height: 660px; margin: 0 auto; padding: 76px 0 94px; }
 .hero-copy { position: relative; z-index: 2; }
 .eyebrow, .section-number, .note-label { margin: 0 0 22px; font: 800 11px/1.4 "Courier New", monospace; letter-spacing: 1.5px; }
@@ -189,7 +189,7 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 .text-link { color: var(--pink-dark); font: 900 11px/1.5 "Courier New", monospace; text-underline-offset: 4px; }
 .session-message { margin: 24px 0 0; padding: 12px 14px; border-left: 4px solid var(--purple); background: #ffffff66; font: 700 11px/1.6 "Courier New", monospace; }
 
-.workflow-section { color: #fff; background: var(--ink); }
+.workflow-section { order: 4; color: #fff; background: var(--ink); }
 .workflow-section .section-number { color: #d598b5; }
 .workflow-section .section-heading > p { color: #bbb6bf; }
 .workflow-grid { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; padding: 0; border-top: 1px solid #736d77; border-left: 1px solid #736d77; list-style: none; }
@@ -199,7 +199,7 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 .workflow-grid p { max-width: 270px; margin: 16px 0 0; color: #bbb6bf; font-size: 13px; line-height: 1.65; }
 .workflow-grid li::after { content: "+"; position: absolute; right: -6px; bottom: -9px; z-index: 2; color: #d598b5; background: var(--ink); font: 20px/1 "Courier New", monospace; }
 
-.features-section { background: var(--paper); }
+.features-section { order: 5; background: var(--paper); }
 .features-section > h2 { max-width: 650px; }
 .feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; margin-top: 54px; border: 2px solid var(--ink); background: var(--ink); }
 .feature-grid article { display: grid; grid-template-columns: 66px minmax(0, 1fr); gap: 22px; min-height: 180px; padding: 34px; background: var(--paper); }
@@ -207,7 +207,7 @@ h1 em::after { content: ""; position: absolute; z-index: -1; right: -8px; bottom
 .feature-grid h3 { margin: 4px 0 13px; color: var(--purple); font: 900 13px/1 "Courier New", monospace; }
 .feature-grid p { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.7; }
 
-.install-section { display: grid; grid-template-columns: minmax(280px, .8fr) minmax(420px, 1.2fr); gap: 90px; color: #fff; background: var(--pink-dark); }
+.install-section { display: grid; order: 3; grid-template-columns: minmax(280px, .8fr) minmax(420px, 1.2fr); gap: 90px; color: #fff; background: var(--pink-dark); }
 .install-section .section-number { color: #f0b8d1; }
 .install-copy > p:not(.section-number) { max-width: 500px; margin: 26px 0 0; color: #efdce5; font-size: 15px; line-height: 1.8; }
 .install-section .button { border-color: #fff; box-shadow: 4px 4px 0 #2e1722; }
