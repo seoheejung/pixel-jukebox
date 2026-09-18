@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Pixel Jukebox Setup")]
@@ -45,7 +46,7 @@ namespace PixelJukebox.Setup
                 }
                 finally
                 {
-                    DeleteDirectoryIfPresent(cloneRoot);
+                    DeleteCloneDirectory(cloneRoot);
                 }
 
                 OpenInstallDirectory(installDirectory);
@@ -275,6 +276,27 @@ namespace PixelJukebox.Setup
             if (Directory.Exists(directory))
             {
                 Directory.Delete(directory, true);
+            }
+        }
+
+        private static void DeleteCloneDirectory(string directory)
+        {
+            const int attempts = 8;
+            for (int attempt = 0; attempt < attempts; attempt++)
+            {
+                try
+                {
+                    DeleteDirectoryIfPresent(directory);
+                    return;
+                }
+                catch (IOException)
+                {
+                    Thread.Sleep(500);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    Thread.Sleep(500);
+                }
             }
         }
 

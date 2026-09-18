@@ -57,7 +57,8 @@ describe('Windows Extension installer', () => {
     expect(source).toContain('RunCommand("npm.cmd", "ci --no-audit --no-fund"');
     expect(source).toContain('RunCommand("npm.cmd", "run build"');
     expect(source).toContain('InstallBuild(Path.Combine(repositoryDirectory, "dist"), installDirectory);');
-    expect(source).toContain('DeleteDirectoryIfPresent(cloneRoot);');
+    expect(source).toContain('DeleteCloneDirectory(cloneRoot);');
+    expect(source).toContain('const int attempts = 8;');
     expect(source).not.toContain('PixelJukebox.Extension.zip');
     expect(buildScript).not.toContain("& npm.cmd run build");
     expect(buildScript).not.toContain('/resource:');
