@@ -14,7 +14,7 @@ const workflow = readFileSync('.github/workflows/deploy-player-bridge.yml', 'utf
 describe('Windows Extension installer', () => {
   it('ships a Windows executable with the documented filename', () => {
     expect(executable.subarray(0, 2).toString('ascii')).toBe('MZ');
-    expect(executable.length).toBeGreaterThan(10_000);
+    expect(executable.length).toBeGreaterThan(30_000);
     expect(readme).toContain('[PixelJukebox-Setup.exe 다운로드](https://seoheejung.github.io/pixel-jukebox/PixelJukebox-Setup.exe)');
     const hash = createHash('sha256').update(executable).digest('hex').toUpperCase();
     expect(checksum).toBe(`${hash}  PixelJukebox-Setup.exe\n`);
@@ -39,10 +39,10 @@ describe('Windows Extension installer', () => {
     expect(source).not.toContain('SendInput');
     expect(source).not.toContain('SendKeys.SendWait');
     expect(source).toContain('FileName = "explorer.exe"');
-    expect(source).toContain('chrome://extensions/');
-    expect(source).toContain('개발자 모드');
+    expect(source).toContain('화면이 보이지 않으면 Chrome 주소창에 chrome://extensions/를 입력하세요.');
+    expect(source).toContain('개발자 모드를 켜세요.');
     expect(source).toContain('압축해제된 확장 프로그램을 로드합니다');
-    expect(source).toContain('API Key를 CONNECT');
+    expect(source).toContain('API Key를 CONNECT 하세요.');
   });
 
   it('does not ship script-based browser automation', () => {
@@ -50,18 +50,11 @@ describe('Windows Extension installer', () => {
     expect(releaseScripts).toEqual([]);
   });
 
-  it('clones, builds, and verifies the latest Extension against the public Bridge', () => {
+  it('builds and verifies the bundled Extension against the public Bridge', () => {
     expect(JSON.parse(bridgeConfig)).toEqual({ url: 'https://seoheejung.github.io/pixel-jukebox/player.html' });
-    expect(source).toContain('RepositoryUrl = "https://github.com/seoheejung/pixel-jukebox.git"');
-    expect(source).toContain('clone --depth 1 --branch');
-    expect(source).toContain('RunCommand("npm.cmd", "ci --no-audit --no-fund"');
-    expect(source).toContain('RunCommand("npm.cmd", "run build"');
-    expect(source).toContain('InstallBuild(Path.Combine(repositoryDirectory, "dist"), installDirectory);');
-    expect(source).toContain('DeleteCloneDirectory(cloneRoot);');
-    expect(source).toContain('const int attempts = 8;');
-    expect(source).not.toContain('PixelJukebox.Extension.zip');
-    expect(buildScript).not.toContain("& npm.cmd run build");
-    expect(buildScript).not.toContain('/resource:');
+    expect(source).toContain('ExpectedBridgeOrigin = "https://seoheejung.github.io"');
+    expect(source).toContain('VerifyPayload();');
+    expect(buildScript).toContain("& npm.cmd run build");
     expect(buildScript).toContain("Start-Process -FilePath $OutputPath -ArgumentList '--verify' -WindowStyle Hidden -Wait -PassThru");
     expect(buildScript).toContain("'PixelJukebox-Setup.exe'");
     expect(buildScript).toContain('Update-ChecksumText');

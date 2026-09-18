@@ -1,13 +1,13 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Reflection;
 using System.Text;
-using System.Threading;
 using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Pixel Jukebox Setup")]
-[assembly: AssemblyDescription("Builds and installs the latest Pixel Jukebox Chrome Extension from GitHub.")]
+[assembly: AssemblyDescription("Installs the Pixel Jukebox Chrome Extension files.")]
 [assembly: AssemblyCompany("Pixel Jukebox")]
 [assembly: AssemblyProduct("Pixel Jukebox Setup")]
 [assembly: AssemblyVersion("1.0.0.0")]
@@ -17,9 +17,8 @@ namespace PixelJukebox.Setup
 {
     internal static class Program
     {
-        private const string RepositoryUrl = "https://github.com/seoheejung/pixel-jukebox.git";
-        private const string RepositoryBranch = "main";
-        private const string ExpectedBridgeUrl = "https://seoheejung.github.io/pixel-jukebox/player.html";
+        private const string PayloadResource = "PixelJukebox.Extension.zip";
+        private const string ExpectedBridgeOrigin = "https://seoheejung.github.io";
 
         [STAThread]
         private static int Main(string[] args)
@@ -29,7 +28,7 @@ namespace PixelJukebox.Setup
             {
                 if (verifyOnly)
                 {
-                    VerifyInstallerConfiguration();
+                    VerifyPayload();
                     return 0;
                 }
 
@@ -37,18 +36,7 @@ namespace PixelJukebox.Setup
                 Application.SetCompatibleTextRenderingDefault(false);
 
                 string installDirectory = GetInstallDirectory();
-                string cloneRoot = Path.Combine(Path.GetTempPath(), "pixel-jukebox-clone-" + Guid.NewGuid().ToString("N"));
-                try
-                {
-                    string repositoryDirectory = CloneLatestRepository(cloneRoot);
-                    BuildExtension(repositoryDirectory);
-                    InstallBuild(Path.Combine(repositoryDirectory, "dist"), installDirectory);
-                }
-                finally
-                {
-                    DeleteCloneDirectory(cloneRoot);
-                }
-
+                InstallPayload(installDirectory);
                 OpenInstallDirectory(installDirectory);
                 ShowInstructions(installDirectory);
                 return 0;
@@ -79,66 +67,73 @@ namespace PixelJukebox.Setup
 
             string appRoot = Path.GetFullPath(Path.Combine(localAppData, "Pixel Jukebox"));
             string installDirectory = Path.GetFullPath(Path.Combine(appRoot, "extension"));
-            EnsureChildPath(appRoot, installDirectory, "설치 경로");
+            string expectedPrefix = appRoot.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            if (!installDirectory.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("안전한 설치 경로를 확인하지 못했습니다.");
+            }
+
             return installDirectory;
         }
 
-        private static string CloneLatestRepository(string cloneRoot)
+        private static void VerifyPayload()
         {
-            Directory.CreateDirectory(cloneRoot);
-            string repositoryDirectory = Path.Combine(cloneRoot, "pixel-jukebox");
-            EnsureChildPath(cloneRoot, repositoryDirectory, "clone 경로");
-
-            RunCommand("git.exe", "--version", cloneRoot, "Git");
-            RunCommand(
-                "git.exe",
-                "clone --depth 1 --branch " + Quote(RepositoryBranch) + " -- " + Quote(RepositoryUrl) + " " + Quote(repositoryDirectory),
-                cloneRoot,
-                "Git clone");
-
-            if (!File.Exists(Path.Combine(repositoryDirectory, "package-lock.json")))
+            using (Stream payload = OpenPayload())
+            using (ZipArchive archive = new ZipArchive(payload, ZipArchiveMode.Read, false))
             {
-                throw new InvalidDataException("Clone한 저장소에 package-lock.json이 없습니다.");
+                ZipArchiveEntry manifest = archive.GetEntry("manifest.json");
+                if (manifest == null)
+                {
+                    throw new InvalidDataException("Extension payload에 manifest.json이 없습니다.");
+                }
+
+                using (Stream manifestStream = manifest.Open())
+                using (StreamReader reader = new StreamReader(manifestStream, Encoding.UTF8, true))
+                {
+                    string manifestText = reader.ReadToEnd();
+                    if (manifestText.IndexOf("\"name\": \"Pixel Jukebox\"", StringComparison.Ordinal) < 0)
+                    {
+                        throw new InvalidDataException("Extension payload의 이름이 올바르지 않습니다.");
+                    }
+
+                    if (manifestText.IndexOf(ExpectedBridgeOrigin, StringComparison.Ordinal) < 0)
+                    {
+                        throw new InvalidDataException("Extension payload에 제공된 Player Bridge가 적용되지 않았습니다.");
+                    }
+                }
+            }
+        }
+
+        private static Stream OpenPayload()
+        {
+            Stream payload = Assembly.GetExecutingAssembly().GetManifestResourceStream(PayloadResource);
+            if (payload == null)
+            {
+                throw new InvalidDataException("내장된 Extension payload를 찾지 못했습니다.");
             }
 
-            return repositoryDirectory;
+            return payload;
         }
 
-        private static void BuildExtension(string repositoryDirectory)
+        private static void InstallPayload(string installDirectory)
         {
-            RunCommand("npm.cmd", "--version", repositoryDirectory, "npm");
-            WriteBridgeConfiguration(repositoryDirectory);
-            RunCommand("npm.cmd", "ci --no-audit --no-fund", repositoryDirectory, "npm ci");
-            RunCommand("npm.cmd", "run build", repositoryDirectory, "Extension build");
-        }
+            VerifyPayload();
 
-        private static void WriteBridgeConfiguration(string repositoryDirectory)
-        {
-            string configurationPath = Path.Combine(repositoryDirectory, "bridge.config.local.json");
-            string configuration = "{\n  \"url\": \"" + ExpectedBridgeUrl + "\"\n}\n";
-            File.WriteAllText(configurationPath, configuration, new UTF8Encoding(false));
-        }
-
-        private static void InstallBuild(string buildDirectory, string installDirectory)
-        {
-            VerifyBuild(buildDirectory);
-
-            DirectoryInfo parent = Directory.GetParent(installDirectory);
-            if (parent == null)
-            {
-                throw new InvalidOperationException("설치 폴더의 상위 경로를 확인할 수 없습니다.");
-            }
-
-            string appRoot = parent.FullName;
+            string appRoot = Directory.GetParent(installDirectory).FullName;
             Directory.CreateDirectory(appRoot);
+
             string stagingDirectory = Path.Combine(appRoot, ".install-" + Guid.NewGuid().ToString("N"));
             string backupDirectory = Path.Combine(appRoot, ".backup-" + Guid.NewGuid().ToString("N"));
-            EnsureChildPath(appRoot, stagingDirectory, "임시 설치 경로");
-            EnsureChildPath(appRoot, backupDirectory, "백업 경로");
+            Directory.CreateDirectory(stagingDirectory);
 
             try
             {
-                CopyDirectory(buildDirectory, stagingDirectory);
+                ExtractPayload(stagingDirectory);
+                if (!File.Exists(Path.Combine(stagingDirectory, "manifest.json")))
+                {
+                    throw new InvalidDataException("압축 해제된 Extension에 manifest.json이 없습니다.");
+                }
+
                 bool hadPreviousInstall = Directory.Exists(installDirectory);
                 if (hadPreviousInstall)
                 {
@@ -159,150 +154,54 @@ namespace PixelJukebox.Setup
                     throw;
                 }
 
-                DeleteDirectoryIfPresent(backupDirectory);
+                if (Directory.Exists(backupDirectory))
+                {
+                    Directory.Delete(backupDirectory, true);
+                }
             }
             finally
             {
-                DeleteDirectoryIfPresent(stagingDirectory);
-            }
-        }
-
-        private static void VerifyBuild(string buildDirectory)
-        {
-            string manifestPath = Path.Combine(buildDirectory, "manifest.json");
-            if (!File.Exists(manifestPath))
-            {
-                throw new InvalidDataException("빌드 결과에 manifest.json이 없습니다.");
-            }
-
-            string manifest = File.ReadAllText(manifestPath, Encoding.UTF8);
-            if (manifest.IndexOf("\"name\": \"Pixel Jukebox\"", StringComparison.Ordinal) < 0)
-            {
-                throw new InvalidDataException("빌드 결과가 Pixel Jukebox 확장 프로그램이 아닙니다.");
-            }
-
-            if (manifest.IndexOf(ExpectedBridgeUrl, StringComparison.Ordinal) < 0)
-            {
-                throw new InvalidDataException("빌드 결과에 공식 Player Bridge가 적용되지 않았습니다.");
-            }
-        }
-
-        private static void CopyDirectory(string sourceDirectory, string destinationDirectory)
-        {
-            if (!Directory.Exists(sourceDirectory))
-            {
-                throw new DirectoryNotFoundException("빌드 폴더를 찾을 수 없습니다: " + sourceDirectory);
-            }
-
-            string sourceRoot = Path.GetFullPath(sourceDirectory).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-            Directory.CreateDirectory(destinationDirectory);
-            foreach (string sourcePath in Directory.GetFiles(sourceDirectory, "*", SearchOption.AllDirectories))
-            {
-                string relativePath = sourcePath.Substring(sourceRoot.Length);
-                string destinationPath = Path.GetFullPath(Path.Combine(destinationDirectory, relativePath));
-                EnsureChildPath(destinationDirectory, destinationPath, "빌드 파일");
-                string destinationParent = Path.GetDirectoryName(destinationPath);
-                if (!string.IsNullOrEmpty(destinationParent))
+                if (Directory.Exists(stagingDirectory))
                 {
-                    Directory.CreateDirectory(destinationParent);
-                }
-
-                File.Copy(sourcePath, destinationPath, false);
-            }
-        }
-
-        private static void RunCommand(string fileName, string arguments, string workingDirectory, string label)
-        {
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
-                FileName = fileName,
-                Arguments = arguments,
-                WorkingDirectory = workingDirectory,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true
-            };
-
-            using (Process process = Process.Start(startInfo))
-            {
-                if (process == null)
-                {
-                    throw new InvalidOperationException(label + " 프로세스를 시작하지 못했습니다.");
-                }
-
-                string output = process.StandardOutput.ReadToEnd();
-                string error = process.StandardError.ReadToEnd();
-                process.WaitForExit();
-                if (process.ExitCode != 0)
-                {
-                    throw new InvalidOperationException(label + " 실패 (exit " + process.ExitCode + "): " + SummarizeProcessOutput(error, output));
+                    Directory.Delete(stagingDirectory, true);
                 }
             }
         }
 
-        private static string SummarizeProcessOutput(string error, string output)
+        private static void ExtractPayload(string destinationRoot)
         {
-            string message = string.IsNullOrWhiteSpace(error) ? output : error;
-            message = message.Trim();
-            return message.Length <= 600 ? message : message.Substring(0, 600) + "…";
-        }
-
-        private static void VerifyInstallerConfiguration()
-        {
-            if (!Uri.IsWellFormedUriString(RepositoryUrl, UriKind.Absolute) || !RepositoryUrl.EndsWith(".git", StringComparison.Ordinal))
+            string rootPrefix = Path.GetFullPath(destinationRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            using (Stream payload = OpenPayload())
+            using (ZipArchive archive = new ZipArchive(payload, ZipArchiveMode.Read, false))
             {
-                throw new InvalidDataException("GitHub 저장소 URL이 올바르지 않습니다.");
-            }
-
-            if (!Uri.IsWellFormedUriString(ExpectedBridgeUrl, UriKind.Absolute))
-            {
-                throw new InvalidDataException("Player Bridge URL이 올바르지 않습니다.");
-            }
-        }
-
-        private static void EnsureChildPath(string parentDirectory, string childPath, string description)
-        {
-            string parentPrefix = Path.GetFullPath(parentDirectory).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-            string absoluteChild = Path.GetFullPath(childPath);
-            if (!absoluteChild.StartsWith(parentPrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException(description + "가 예상 경로를 벗어났습니다.");
-            }
-        }
-
-        private static void DeleteDirectoryIfPresent(string directory)
-        {
-            if (Directory.Exists(directory))
-            {
-                Directory.Delete(directory, true);
-            }
-        }
-
-        private static void DeleteCloneDirectory(string directory)
-        {
-            const int attempts = 8;
-            for (int attempt = 0; attempt < attempts; attempt++)
-            {
-                try
+                foreach (ZipArchiveEntry entry in archive.Entries)
                 {
-                    DeleteDirectoryIfPresent(directory);
-                    return;
-                }
-                catch (IOException)
-                {
-                    Thread.Sleep(500);
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    Thread.Sleep(500);
+                    string relativePath = entry.FullName.Replace('/', Path.DirectorySeparatorChar);
+                    string destinationPath = Path.GetFullPath(Path.Combine(destinationRoot, relativePath));
+                    if (!destinationPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidDataException("Extension payload에 안전하지 않은 경로가 포함되어 있습니다.");
+                    }
+
+                    if (string.IsNullOrEmpty(entry.Name))
+                    {
+                        Directory.CreateDirectory(destinationPath);
+                        continue;
+                    }
+
+                    string parent = Path.GetDirectoryName(destinationPath);
+                    if (!string.IsNullOrEmpty(parent))
+                    {
+                        Directory.CreateDirectory(parent);
+                    }
+
+                    using (Stream source = entry.Open())
+                    using (FileStream destination = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    {
+                        source.CopyTo(destination);
+                    }
                 }
             }
-        }
-
-        private static string Quote(string value)
-        {
-            return "\"" + value.Replace("\"", "\\\"") + "\"";
         }
 
         private static void OpenInstallDirectory(string installDirectory)
@@ -310,22 +209,27 @@ namespace PixelJukebox.Setup
             Process.Start(new ProcessStartInfo
             {
                 FileName = "explorer.exe",
-                Arguments = Quote(installDirectory),
+                Arguments = "\"" + installDirectory + "\"",
                 UseShellExecute = false
             });
         }
 
         private static void ShowInstructions(string installDirectory)
         {
+            bool chromeOpened = false;
+            string chromeStep = chromeOpened
+                ? "Chrome 확장 프로그램 화면을 열었습니다."
+                : "Chrome을 찾지 못했거나 화면을 열 수 없습니다. Chrome에서 chrome://extensions/를 직접 여세요.";
+
             string message =
-                "GitHub의 최신 Pixel Jukebox를 빌드해 설치했습니다.\n\n" +
-                "설치 폴더를 열었습니다. 임시 clone 폴더는 삭제되었습니다.\n\n" +
-                "1. Chrome에서 chrome://extensions/를 엽니다.\n" +
-                "2. 개발자 모드를 켭니다.\n" +
-                "3. '압축해제된 확장 프로그램을 로드합니다'를 누릅니다.\n" +
-                "4. 다음 폴더를 선택합니다.\n" + installDirectory + "\n\n" +
-                "이미 설치했다면 확장 프로그램의 새로고침 버튼을 누르세요.\n" +
-                "KEEP THIS VIBE는 Settings에서 API Key를 CONNECT한 뒤 사용할 수 있습니다.";
+                "Extension 파일 설치가 완료되었습니다.\n\n" +
+                chromeStep + "\n" +
+                "화면이 보이지 않으면 Chrome 주소창에 chrome://extensions/를 입력하세요.\n" +
+                "설치 폴더도 함께 열었습니다.\n\n" +
+                "1. 개발자 모드를 켜세요.\n" +
+                "2. '압축해제된 확장 프로그램을 로드합니다'를 누르세요.\n" +
+                "3. 다음 폴더를 선택하세요.\n" + installDirectory + "\n" +
+                "4. AI 기능 사용 시 Settings에서 API Key를 CONNECT 하세요.";
 
             MessageBox.Show(
                 message,

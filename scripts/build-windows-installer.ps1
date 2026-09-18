@@ -7,6 +7,9 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $installerRoot = Join-Path $repoRoot 'installer'
 $releaseRoot = Join-Path $repoRoot 'release'
+$distRoot = Join-Path $repoRoot 'dist'
+$bridgeConfigPath = Join-Path $repoRoot 'bridge.config.local.json'
+$installerBridgeConfigPath = Join-Path $installerRoot 'bridge.config.json'
 $sourcePath = Join-Path $installerRoot 'PixelJukeboxSetup.cs'
 $manifestPath = Join-Path $installerRoot 'app.manifest'
 $sitePath = Join-Path $repoRoot 'player-bridge\index.html'
@@ -34,7 +37,36 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
 }
 
 $OutputPath = [System.IO.Path]::GetFullPath($OutputPath)
-New-Item -ItemType Directory -Path (Split-Path -Parent $OutputPath) -Force | Out-Null
+$hadBridgeConfig = Test-Path -LiteralPath $bridgeConfigPath
+$previousBridgeConfig = if ($hadBridgeConfig) { [System.IO.File]::ReadAllBytes($bridgeConfigPath) } else { $null }
+$workRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('pixel-jukebox-installer-' + [guid]::NewGuid().ToString('N'))
+$payloadPath = Join-Path $workRoot 'extension.zip'
+
+try {
+    New-Item -ItemType Directory -Path $workRoot -Force | Out-Null
+    New-Item -ItemType Directory -Path (Split-Path -Parent $OutputPath) -Force | Out-Null
+
+    [System.IO.File]::WriteAllBytes(
+        $bridgeConfigPath,
+        [System.IO.File]::ReadAllBytes($installerBridgeConfigPath)
+    )
+
+    Push-Location $repoRoot
+    try {
+        & npm.cmd run build
+        if ($LASTEXITCODE -ne 0) {
+            throw "Extension build failed with exit code $LASTEXITCODE."
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    if (-not (Test-Path -LiteralPath (Join-Path $distRoot 'manifest.json'))) {
+        throw 'Built Extension is missing dist/manifest.json.'
+    }
+
+    Compress-Archive -Path (Join-Path $distRoot '*') -DestinationPath $payloadPath -CompressionLevel Optimal
 
     $compilerCandidates = @(
         (Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'),
@@ -53,9 +85,12 @@ New-Item -ItemType Directory -Path (Split-Path -Parent $OutputPath) -Force | Out
         '/codepage:65001',
         "/out:$OutputPath",
         "/win32manifest:$manifestPath",
+        "/resource:$payloadPath,PixelJukebox.Extension.zip",
         '/reference:System.dll',
         '/reference:System.Core.dll',
         '/reference:System.Windows.Forms.dll',
+        '/reference:System.IO.Compression.dll',
+        '/reference:System.IO.Compression.FileSystem.dll',
         $sourcePath
     )
 
@@ -79,4 +114,17 @@ New-Item -ItemType Directory -Path (Split-Path -Parent $OutputPath) -Force | Out
     Update-ChecksumText -Path $readmePath -Pattern 'SHA-256: `[A-F0-9]{64}`' -Replacement ('SHA-256: `' + $hash.Hash + '`')
     Write-Output ("Created: {0}" -f $artifact.FullName)
     Write-Output ("Size: {0} bytes" -f $artifact.Length)
-Write-Output ("SHA256: {0}" -f $hash.Hash)
+    Write-Output ("SHA256: {0}" -f $hash.Hash)
+}
+finally {
+    if ($hadBridgeConfig) {
+        [System.IO.File]::WriteAllBytes($bridgeConfigPath, $previousBridgeConfig)
+    }
+    elseif (Test-Path -LiteralPath $bridgeConfigPath) {
+        Remove-Item -LiteralPath $bridgeConfigPath -Force
+    }
+
+    if (Test-Path -LiteralPath $workRoot) {
+        Remove-Item -LiteralPath $workRoot -Recurse -Force
+    }
+}
