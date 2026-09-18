@@ -4,6 +4,7 @@ import { createAiService } from './ai';
 import { createRecommendationService } from './recommendation';
 import { OPENAI_ORIGIN } from '../shared/ai';
 import { registerAdSkip } from './ad-skip';
+import { openOrFocusPlayerWindow } from './player-window';
 
 registerAdSkip();
 
@@ -35,3 +36,6 @@ const connections = createConnections(chrome.runtime.getURL('sidepanel.html'), {
   recommendations: createRecommendationService(ai),
 });
 chrome.runtime.onConnect.addListener(connections);
+chrome.action.onClicked.addListener(() => {
+  void openOrFocusPlayerWindow(chrome.windows, chrome.runtime.getURL('sidepanel.html?window=1'));
+});

@@ -54,7 +54,6 @@ const aiPicksLoading = document.querySelector<HTMLElement>('#ai-picks-loading')!
 const aiPicksProgress = document.querySelector<HTMLElement>('#ai-picks-progress')!;
 const menuView = document.querySelector<HTMLElement>('#menu-view')!;
 const playerRoot = document.querySelector<HTMLElement>('#player')!;
-const openWindowButton = document.querySelector<HTMLButtonElement>('#open-window');
 const standaloneWindow = new URLSearchParams(location.search).get('window') === '1';
 document.documentElement.classList.toggle('standalone-window', standaloneWindow);
 function resizeStandaloneWindow() {
@@ -71,7 +70,6 @@ if (windowShell) {
 }
 resizeStandaloneWindow();
 if (standaloneWindow) {
-  openWindowButton?.remove();
   const lifecycleCopy = document.querySelector<HTMLElement>('.game-boy header p');
   if (lifecycleCopy) lifecycleCopy.textContent = 'WINDOW PLAYER · STAYS OPEN';
 }
@@ -283,6 +281,7 @@ function renderPlayer() {
   aiPicks.hidden = needsAiKey;
   aiPicks.disabled = !selectedRecommendationTrack() || recommendationLoading;
   aiPicks.textContent = recommendationLoading ? 'CURATING' : hasRecommendations ? 'MORE LIKE THIS' : 'KEEP THIS VIBE';
+  emptyPlayerLink.hidden = coreState.playlist.length > 0;
   aiPicks.setAttribute('aria-label', recommendationLoading ? 'Curating the next tracks' : hasRecommendations ? 'Find more tracks that keep this vibe' : 'Keep this vibe going');
   renderRecommendationStatus();
   renderPlaylist();
@@ -356,6 +355,10 @@ const player = createPlayer(playerRoot, handlePlayerAction, (event) => {
   if (recommendationSourceId !== playing.videoId) selectRecommendationSource(playing.videoId);
   if (!hasRecommendations || recommendationSource?.videoId !== playing.videoId) requestRecommendations();
 });
+const emptyPlayerLink = playerRoot.querySelector<HTMLElement>('#empty-player-link')!;
+const emptyPlayerUrl = playerRoot.querySelector<HTMLInputElement>('#empty-player-url')!;
+const emptyPlayerAdd = playerRoot.querySelector<HTMLButtonElement>('#empty-player-add')!;
+const emptyPlayerMessage = playerRoot.querySelector<HTMLParagraphElement>('#empty-player-message')!;
 aiPicks = document.querySelector<HTMLButtonElement>('#ai-picks')!;
 document.querySelector('#lcd-screen')?.append(menuView);
 const videoView = playerRoot.querySelector<HTMLElement>('#video-view')!;
@@ -729,12 +732,12 @@ function connect() {
   } catch { videoMessage.textContent = 'RELOAD EXTENSION.'; }
 }
 
-function openVideoFromInput() {
-  const id = videoIdFromUrl(videoUrl.value.trim());
-  if (!id) { videoMessage.textContent = 'INVALID LINK.'; return; }
+function openVideoFromInput(input: HTMLInputElement = videoUrl, message: HTMLElement = videoMessage) {
+  const id = videoIdFromUrl(input.value.trim());
+  if (!id) { message.textContent = 'INVALID LINK.'; return; }
   const track = trackFromVideoId(id);
-  videoMessage.textContent = '';
-  videoUrl.value = '';
+  message.textContent = '';
+  input.value = '';
   loadTrack(track, true, true);
 }
 
@@ -791,7 +794,11 @@ function requestRecommendations() {
 
 for (const control of [shellTone, screenTone, buttonTone]) control.addEventListener('input', previewDesign);
 saveDesign.addEventListener('click', () => send({ type: MESSAGE.coreEdit, change: { kind: 'design', settings: draftSettings } }));
-addVideo.addEventListener('click', openVideoFromInput);
+addVideo.addEventListener('click', () => openVideoFromInput());
+emptyPlayerAdd.addEventListener('click', () => openVideoFromInput(emptyPlayerUrl, emptyPlayerMessage));
+emptyPlayerUrl.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') { event.preventDefault(); openVideoFromInput(emptyPlayerUrl, emptyPlayerMessage); }
+});
 aiConnect.addEventListener('click', () => connectAi(aiKey, aiConnect, aiMessage, 'settings'));
 similarVibesConnectButton.addEventListener('click', () => connectAi(similarVibesKey, similarVibesConnectButton, similarVibesConnectMessage, 'similar-vibes'));
 similarVibesSourceTrigger.addEventListener('click', () => setSourcePicker(!sourcePickerOpen));
@@ -826,17 +833,6 @@ similarVibesSourceList.addEventListener('focusout', (event) => {
 });
 similarVibesOpenPlaylist.addEventListener('click', () => showScreen('playlist'));
 aiPicks.addEventListener('click', requestRecommendations);
-openWindowButton?.addEventListener('click', () => {
-  void chrome.windows.create({
-    url: `${chrome.runtime.getURL('sidepanel.html')}?window=1`,
-    type: 'popup',
-    width: 380,
-    height: 650,
-  }).then(() => {
-    if (snapshot.track?.playbackState === 'playing' || snapshot.track?.playbackState === 'buffering') player.command('pause');
-    window.close();
-  }).catch(() => { videoMessage.textContent = 'WINDOW COULD NOT OPEN.'; });
-});
 renderDesign(coreState.settings);
 renderPlayer();
 renderScreen();

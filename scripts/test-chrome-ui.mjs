@@ -275,6 +275,7 @@ try {
   await key('Enter');
   assert.equal(await screen(), 'now-playing', 'Enter submits Playlist link');
   await until(() => evaluate(browser, panel, "document.querySelector('#player').dataset.playbackState === 'playing'"), 'Fixture track playback');
+  assert.equal(await evaluate(browser, panel, "document.querySelector('#empty-player-link').hidden"), true, 'Now Playing link input must hide while Playlist has tracks');
   assert.equal(await evaluate(browser, panel, "document.querySelector('.power-light').classList.contains('is-playing')"), true, 'POWER light must turn on while music is playing');
   const recommendationRequestsBeforeConnect = await evaluate(browser, panel, "window.__uiMessages.filter((message) => message.type === 'AI_RECOMMEND').length");
   await click('.mini-disc');
@@ -628,6 +629,7 @@ try {
   await click('[data-open="ai-picks"]');
   await evaluate(browser, panel, "window.__emitUiMessage({ type: 'CORE_STATE', state: { playlist: [], settings: { shell: '#e0dfd0', screen: '#9bbc0f', button: '#a13b6d' } } })");
   assert.equal(await evaluate(browser, panel, "document.querySelector('#similar-vibes-source-trigger').disabled && document.querySelector('#ai-picks').disabled && !document.querySelector('#similar-vibes-empty').hidden && !document.querySelector('#similar-vibes-open-playlist').hidden"), true, 'Empty Playlist must disable source and GET PICKS and offer Playlist navigation');
+  assert.equal(await evaluate(browser, panel, "!document.querySelector('#empty-player-link').hidden"), true, 'Empty Playlist must show a YouTube link input in Now Playing');
   console.log('PASS navigation: SELECT/Home, A/Enter, B/Escape, START, D-pad, body focus and form isolation');
   console.log('PASS actions: Enter submits Playlist link, saves Appearance, connects OpenAI; B restores unsaved Appearance');
   console.log('PASS playback: menu entry pauses; Now Playing stays paused until A resumes');

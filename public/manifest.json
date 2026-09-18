@@ -16,7 +16,6 @@
   "background": { "service_worker": "background.js", "type": "module" },
   "action": {
     "default_title": "Pixel Jukebox 열기",
-    "default_popup": "sidepanel.html",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png"

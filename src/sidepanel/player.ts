@@ -35,6 +35,11 @@ export function createPlayer(root: HTMLElement, onCommand: (action: PlayerAction
           <h2 class="track-title">Paste a YouTube link to start.</h2>
           <p class="channel-title"></p><p class="playback-status" role="status" aria-live="polite"></p>
         </div>
+        <div id="empty-player-link" class="empty-player-link">
+          <label for="empty-player-url">YOUTUBE LINK</label>
+          <div><input id="empty-player-url" type="url" autocomplete="off" spellcheck="false" placeholder="https://youtu.be/..." /><button id="empty-player-add" type="button">PLAY</button></div>
+          <p id="empty-player-message" role="status" aria-live="polite"></p>
+        </div>
         <button class="mini-disc" type="button" aria-label="Keep this vibe going" title="Keep This Vibe" aria-expanded="false" aria-controls="continue-drawer"><i aria-hidden="true"></i></button>
         <div class="track-controls" aria-label="Playback order controls">
           <button class="track-previous" type="button" aria-label="Previous track">◀ PREV</button>

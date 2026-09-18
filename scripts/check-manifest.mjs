@@ -10,7 +10,7 @@ assert.deepEqual(manifest.content_scripts, [{ matches: ['https://www.youtube.com
 assert.equal(manifest.host_permissions, undefined);
 assert.deepEqual(manifest.optional_host_permissions, ['https://api.openai.com/*', 'https://www.youtube.com/*']);
 assert.equal(manifest.background.type, 'module');
-assert.equal(manifest.action.default_popup, 'sidepanel.html');
+assert.equal(manifest.action.default_popup, undefined);
 const expectedIcons = {
   16: 'icons/icon-16.png',
   32: 'icons/icon-32.png',
@@ -34,7 +34,7 @@ if (existsSync('dist/manifest.json')) {
   const expected = JSON.parse(renderBridgeAsset(JSON.stringify(manifest), bridge));
   assert.deepEqual(JSON.parse(readFileSync('dist/manifest.json', 'utf8')), expected);
   assert.equal(readFileSync('dist/youtube-controls-v3.js', 'utf8'), renderBridgeAsset(readFileSync('public/youtube-controls-v3.js', 'utf8'), bridge));
-  for (const entry of [manifest.background.service_worker, manifest.action.default_popup, 'youtube-controls-v3.js', ...Object.values(manifest.icons)]) {
+  for (const entry of [manifest.background.service_worker, 'youtube-controls-v3.js', ...Object.values(manifest.icons)]) {
     assert.ok(existsSync(`dist/${entry}`), `Missing built entry: ${entry}`);
   }
   console.log('PASS: Built manifest and entry files');
